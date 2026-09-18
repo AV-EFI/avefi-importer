@@ -72,6 +72,32 @@ Stellschrauben:
 | `A11Y_BASE` | `http://localhost:3000` | Adresse der Anwendung. Ueber HTTPS aufrufen, sonst greift das Sitzungscookie nicht. |
 | `A11Y_USER` / `A11Y_PASS` | keine | Anmeldung. Aus der Umgebung, siehe unten. |
 | `A11Y_THEMES` | `light,dark` | Farbschemata, die geprueft werden. |
+| `A11Y_VIEWPORT` | `1500x1100` | Fenstermass fuer den Hauptdurchlauf. |
+| `A11Y_VIEWPORT_SCHMAL` | `390x844` | Fenstermass fuer den Abschnitt „Schmale Darstellung". Muss unter 820 Pixeln liegen, sonst greift der Umbruch nicht und der Abschnitt prueft dieselbe Darstellung ein zweites Mal. |
+
+### Schmale Darstellung
+
+Bis zum 18.09.2026 lief die Pruefung nur mit 1500 x 1100. Unterhalb von 820
+Pixeln (`app.css`, `@media`) liegt die Navigation hinter einem Aufklappknopf —
+und genau dieser Zweig war einmal fehlerhaft: Er stand auf `display:none`, was
+ihn aus dem Barrierebaum nimmt, sodass die Ziele weder mit der Tabulatortaste
+noch mit der Suche des Browsers zu finden waren. Repariert wurde das im August,
+geprueft wurde es nie (#11).
+
+Der Abschnitt am Ende des Laufs stellt das Fenster auf `A11Y_VIEWPORT_SCHMAL`
+und prueft eine Auswahl von Seiten — Startseite, Zuordnungsprofile, Zuordnung,
+Datensaetze, Pruefbericht, Konten — sowie den Aufklappknopf in beiden
+Zustaenden. Dabei wird nicht nur axe befragt, sondern auch nachgesehen, ob
+`aria-expanded` dem Zustand folgt und ob aufgeklappt ueberhaupt ein erreichbares
+Ziel darin steht.
+
+Geprueft wird eine Auswahl und nicht alles noch einmal: Der ganze Lauf ein
+zweites Mal wuerde die Dauer verdoppeln, um ueberwiegend dieselben Regeln an
+denselben Bausteinen zu pruefen.
+
+**Das ersetzt den Nachtest durch einen Menschen nicht.** axe findet, was messbar
+ist. Ob die Bedienung mit der Tabulatortaste in dieser Breite ertraeglich ist,
+findet es nicht.
 
 ### Ergebnis
 

@@ -32,6 +32,28 @@ const BASIS = process.env.A11Y_BASE ?? 'http://localhost:3000'
 const NUTZER = process.env.A11Y_USER ?? 'admin@av-efi.net'
 const PASSWORT = process.env.A11Y_PASS ?? 'changeme'
 const SCHEMATA = (process.env.A11Y_THEMES ?? 'light,dark').split(',').map((s) => s.trim()).filter(Boolean)
+
+/*
+ * Zwei Fenstermasse, und der zweite ist der Grund fuer diesen Abschnitt.
+ *
+ * Bis zum 18.09.2026 lief die ganze Pruefung ausschliesslich mit 1500 x 1100.
+ * Unterhalb von 820 Pixeln (app.css, @media) liegt die Navigation aber hinter
+ * einem Aufklappknopf — und genau dieser Zweig war einmal fehlerhaft: Er stand
+ * auf display:none, was ihn aus dem Barrierebaum nimmt, sodass die Ziele weder
+ * mit der Tabulatortaste noch mit der Suche des Browsers zu finden waren.
+ * Repariert wurde das, geprueft wurde es nie (Stefan Stretz, #11).
+ *
+ * 390 x 844 statt knapp unter 820: Wer die Grenze nur streift, prueft die
+ * Grenze. Geprueft werden soll die Darstellung, die Menschen benutzen.
+ */
+function fenstermass(wert, vorgabeBreite, vorgabeHoehe) {
+  const treffer = /^(\d+)x(\d+)$/.exec(String(wert ?? '').trim())
+  if (treffer === null) return { width: vorgabeBreite, height: vorgabeHoehe }
+  return { width: Number(treffer[1]), height: Number(treffer[2]) }
+}
+
+const BREIT = fenstermass(process.env.A11Y_VIEWPORT, 1500, 1100)
+const SCHMAL = fenstermass(process.env.A11Y_VIEWPORT_SCHMAL, 390, 844)
 /** Ab dieser Schwere gilt die Pruefung als nicht bestanden. */
 const HART = new Set(['critical', 'serious'])
 const REGELN = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
@@ -312,7 +334,7 @@ let seite = null
 
 async function browserStarten() {
   browser = await chromium.launch({ args: ['--ignore-certificate-errors', '--disable-dev-shm-usage'] })
-  kontext = await browser.newContext({ viewport: { width: 1500, height: 1100 }, locale: 'de-DE', ignoreHTTPSErrors: true })
+  kontext = await browser.newContext({ viewport: { ...BREIT }, locale: 'de-DE', ignoreHTTPSErrors: true })
   seite = await kontext.newPage()
   // Farbuebergaenge aus: Nach einem Themenwechsel wandert die Farbe eines
   // Knopfes ueber 300 ms von alt nach neu. Wer in dieser Zeit misst, misst eine
@@ -597,6 +619,90 @@ try {
       }
     }
   })
+  /* ------------------------------------------- Schmale Darstellung (#11) */
+
+  /*
+   * Alles bis hierher lief mit dem breiten Fenster. Was jetzt kommt, prueft
+   * den Zweig unterhalb von 820 Pixeln: Navigation hinter dem Aufklappknopf,
+   * einspaltige Raster, ausgeblendete Anmeldeillustration.
+   *
+   * Geprueft wird eine Auswahl und nicht alles noch einmal. Der ganze Lauf ein
+   * zweites Mal wuerde die Dauer verdoppeln, um ueberwiegend dieselben Regeln
+   * an denselben Bausteinen zu pruefen. Interessant ist, was sich unter der
+   * Grenze anders verhaelt — und das sind der Kopfbereich, die Formulare und
+   * die Tabellen.
+   *
+   * Der Tastatur- und Screenreader-Nachtest durch einen Menschen ersetzt das
+   * nicht. axe findet, was messbar ist; ob die Bedienung mit der Tabulatortaste
+   * in dieser Breite ertraeglich ist, findet es nicht.
+   */
+  await abschnitt('Schmale Darstellung', async () => {
+    await seite.setViewportSize({ ...SCHMAL })
+    const mass = `${SCHMAL.width}x${SCHMAL.height}`
+
+    for (const adresse of [
+      '/',
+      '/mappings',
+      zurZuordnung,
+      zuDatensaetzen,
+      importId !== '' ? `/imports/${importId}/report` : null,
+      '/users'
+    ].filter((a) => a !== null)) {
+      await seite.goto(BASIS + adresse, { waitUntil: 'networkidle' })
+      await seite.waitForTimeout(1500)
+      for (const schema of SCHEMATA) {
+        await seite.evaluate((x) => document.documentElement.setAttribute('data-theme', x), schema)
+        await seite.waitForTimeout(400)
+        await pruefe(seite, `${adresse} [${schema}] ${mass}`)
+      }
+    }
+
+    /*
+     * Der Aufklappknopf selbst, zu und offen. Zu ist der Zustand, in dem die
+     * Navigation frueher aus dem Barrierebaum verschwand; offen ist der, den
+     * ausser dieser Pruefung niemand automatisiert ansieht.
+     */
+    await seite.goto(`${BASIS}/`, { waitUntil: 'networkidle' })
+    await seite.waitForTimeout(1200)
+    const knopf = seite.locator('.apphead .navtoggle').first()
+    if ((await knopf.count()) === 0) {
+      throw new Error(
+        `Kein Aufklappknopf bei ${mass} gefunden. Entweder greift der Umbruch nicht mehr `
+        + 'bei 820 Pixeln, oder der Knopf heisst anders — in beiden Faellen prueft dieser '
+        + 'Abschnitt ab sofort nichts mehr und muesste angepasst werden.'
+      )
+    }
+
+    const zuStand = await knopf.getAttribute('aria-expanded')
+    if (zuStand !== 'false') {
+      befunde.push(`Aufklappknopf ${mass}: aria-expanded ist "${zuStand}", erwartet "false".`)
+    }
+    await pruefe(seite, `/ · Navigation zu ${mass}`)
+
+    await knopf.click()
+    await seite.waitForTimeout(700)
+    const offenStand = await knopf.getAttribute('aria-expanded')
+    if (offenStand !== 'true') {
+      befunde.push(`Aufklappknopf ${mass}: nach dem Klick ist aria-expanded "${offenStand}", erwartet "true".`)
+    }
+
+    /*
+     * Die eigentliche Regression von damals: Die Ziele waren zwar da, aber
+     * unsichtbar fuer alles, was den Barrierebaum liest. Sichtbarkeit im Sinne
+     * von Playwright ist genau die Frage — display:none zaehlt als unsichtbar.
+     */
+    const sichtbareZiele = await seite.locator('#hauptnavigation a:visible').count()
+    if (sichtbareZiele === 0) {
+      befunde.push(
+        `Navigation ${mass}: aufgeklappt, aber kein erreichbares Ziel. Das ist der Zustand `
+        + 'vom August, in dem der Zweig mit display:none aus dem Barrierebaum fiel.'
+      )
+    }
+    await pruefe(seite, `/ · Navigation offen ${mass}`)
+
+    await seite.setViewportSize({ ...BREIT })
+  })
+
 } finally {
   if (browser !== null) await browser.close()
 }
