@@ -290,8 +290,9 @@ geaendert haben.
 
 Die PHP-Version ist im Tag `php-final` erhalten und wird nicht mehr
 weiterentwickelt. Ein `git switch -c php php-final` holt sie zurueck; die
-Startkonfiguration fehlt dabei, weil `docker-compose.dev.yml` nie im Repository
-lag.
+Startkonfiguration fehlt dabei, weil `docker-compose.dev.yml` damals nicht im
+Repository lag. Seit dem 18.09.2026 liegt sie dort (#23), aber eben erst ab
+diesem Stand.
 
 ## Lizenz
 

@@ -14,6 +14,7 @@ Kurzfassung für Ungeduldige:
 ```bash
 git clone https://github.com/AV-EFI/avefi-importer.git
 cd avefi-importer/src
+cp .env.example .env          # mindestens DB_PASS und SESSION_SECRET setzen
 docker compose -f docker-compose.dev.yml up -d --build
 docker compose -f docker-compose.dev.yml exec web npm run migrate
 docker compose -f docker-compose.dev.yml exec web npm run seed
@@ -22,9 +23,14 @@ docker compose -f docker-compose.dev.yml exec web npm run seed
 `seed` legt Institution und Verwaltungskonto an und gibt das Passwort einmalig
 aus. Mit `SEED_PASSWORD` lässt es sich vorgeben.
 
-Die Compose-Datei liegt bewusst nicht im Repository — sie enthält Domain,
-Traefik-Labels und Zugangsdaten. `src/.env.example` zeigt, welche Variablen
-gesetzt sein müssen.
+Die Compose-Datei liegt im Repository und enthält keine Zugangsdaten: Was
+geheim ist oder nur auf einem bestimmten Server gilt — Passwörter, Domain,
+Reverse Proxy —, kommt aus `.env`, und die bleibt draussen. `src/.env.example`
+zeigt, welche Variablen es gibt. Ohne `DB_PASS` und `SESSION_SECRET` startet
+Compose gar nicht erst, sondern sagt, welche Variable fehlt.
+
+Eine eigene Auslieferung, die mehr ändert als diese Variablen, gehört in eine
+Kopie namens `docker-compose.local.yml`; die bleibt ebenfalls draussen.
 
 ## Vor dem ersten Produktivstart
 

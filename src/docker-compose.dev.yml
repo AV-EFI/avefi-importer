@@ -1,0 +1,146 @@
+# AVefi Importer — Entwicklungs- und Testaufbau.
+#
+#     cp .env.example .env     # Zugangsdaten eintragen
+#     docker compose -f docker-compose.dev.yml up -d --build
+#
+# Diese Datei enthaelt keine Zugangsdaten und nichts, was nur auf einem
+# bestimmten Server gilt. Beides steht in `.env`, und die gehoert nicht ins
+# Repository. Wer eine eigene Auslieferung baut — andere Marken, anderer
+# Reverse Proxy, andere Namen —, kopiert diese Datei nach
+# `docker-compose.local.yml`; auch die bleibt aussen vor.
+#
+# Bis zum 18.09.2026 lag es andersherum: Die Datei stand in .gitignore, weil
+# sie Passwoerter und die Traefik-Konvention eines einzelnen Servers trug.
+# Damit verwies die Anleitung an dreizehn Stellen auf eine Datei, die im
+# Liefergegenstand nicht existierte (#23).
+#
+# Der Testbetrieb laeuft im Entwicklungsmodus: Code ist gemountet, Aenderungen
+# sind sofort wirksam. Der Auslieferungspfad (npm run build) ist im Dockerfile
+# als eigene Stufe enthalten und wird in der README beschrieben.
+
+services:
+  web:
+    build:
+      context: .
+      target: base
+    container_name: ${COMPOSE_PREFIX:-avefi}_web
+    hostname: ${APP_DOMAIN:-localhost}
+    restart: always
+    environment:
+      - NODE_ENV=development
+      - APP_HOST=${APP_DOMAIN:-localhost}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-avefi}
+      - DB_USER=${DB_USER:-avefi}
+      - DB_PASS=${DB_PASS:?DB_PASS fehlt — siehe .env.example}
+      - FILES_PATH=/mnt/files
+      - EFI_CONV_URL=http://efi-conv:8000
+      - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET fehlt — siehe .env.example}
+      - NUXT_PUBLIC_API_BASE=/api
+      # Normdaten: Die Vorschau des Editors schlaegt mit denselben Einstellungen
+      # nach wie der Hintergrundprozess. Steht das hier auf aus und dort auf an,
+      # zeigt der Editor etwas anderes als der Export — genau der Fehler, den
+      # der Anwender gemeldet hat.
+      - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-1}
+      - AUTHORITY_LIMIT=${AUTHORITY_LIMIT:-500}
+    # Ohne Reverse Proxy stehen die Marken auf false und richten nichts an;
+    # Traefik liest sie dann gar nicht erst.
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE:-false}"
+      - "traefik.http.routers.${TRAEFIK_ROUTER:-avefi}.rule=Host(`${APP_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${TRAEFIK_ROUTER:-avefi}.entryPoints=${TRAEFIK_ENTRYPOINTS:-http,https}"
+      - "traefik.http.services.${TRAEFIK_ROUTER:-avefi}.loadbalancer.server.port=3000"
+    volumes:
+      - ./:/app:rw
+      - avefi_files:/mnt/files
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      target: base
+    container_name: ${COMPOSE_PREFIX:-avefi}_worker
+    restart: always
+    # Kein tsx watch: der Ueberwachungsprozess ueberlebt das Prozessende, dadurch
+    # bleibt der Container nach der Hoechstlaufzeit stehen und restart:always
+    # greift nicht. Der Worker endet regulaer, Docker zieht ihn frisch hoch.
+    command: npm run worker
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-avefi}
+      - DB_USER=${DB_USER:-avefi}
+      - DB_PASS=${DB_PASS:?DB_PASS fehlt — siehe .env.example}
+      - FILES_PATH=/mnt/files
+      - EFI_CONV_URL=http://efi-conv:8000
+      # Gegen den Geisterprozess: der Worker beendet sich regelmaessig selbst,
+      # restart:always zieht ihn mit aktuellem Code wieder hoch.
+      - WORKER_MAX_UPTIME=600
+      - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-1}
+      - AUTHORITY_LIMIT=${AUTHORITY_LIMIT:-500}
+    volumes:
+      - ./:/app:rw
+      - avefi_files:/mnt/files
+    depends_on:
+      db:
+        condition: service_healthy
+
+  efi-conv:
+    build:
+      context: ./efi-conv
+      args:
+        # Auf den Paket-A-Stand zeigen: EFI_CONV_REPO/EFI_CONV_REF setzen.
+        EFI_CONV_REPO: ${EFI_CONV_REPO:-github.com/AV-EFI/efi-conv.git}
+        EFI_CONV_REF: ${EFI_CONV_REF:-main}
+    container_name: ${COMPOSE_PREFIX:-avefi}_efi_conv
+    restart: always
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: postgres:16
+    container_name: ${COMPOSE_PREFIX:-avefi}_db
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME:-avefi}
+      - POSTGRES_USER=${DB_USER:-avefi}
+      # Dasselbe Passwort wie oben: Die Datenbank wird beim ersten Start damit
+      # angelegt, und die Anwendung meldet sich damit an. Zwei Variablen waeren
+      # zwei Gelegenheiten, sie auseinanderlaufen zu lassen.
+      - POSTGRES_PASSWORD=${DB_PASS:?DB_PASS fehlt — siehe .env.example}
+    volumes:
+      - avefi_pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-avefi} -d ${DB_NAME:-avefi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer
+    container_name: ${COMPOSE_PREFIX:-avefi}_adminer
+    restart: always
+    # Nur auf der Schleife: Adminer sieht die Datenbank ohne Anmeldung an der
+    # Anwendung. Wer ihn nach aussen oeffnet, oeffnet die Daten.
+    ports:
+      - "${ADMINER_BIND:-127.0.0.1:8081}:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=db
+      - ADMINER_DESIGN=dracula
+    depends_on:
+      - db
+
+volumes:
+  avefi_pgdata:
+  avefi_files:
