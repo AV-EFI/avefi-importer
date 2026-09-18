@@ -10,6 +10,7 @@
 
 import type { CompletenessHint, Severity } from '#shared/types/domain'
 import type { AvefiRecord, AvefiValue } from './builder.js'
+import { PFLICHTFELDER } from './pflichtfelder.js'
 
 function asNode(v: unknown): AvefiValue {
   return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as AvefiValue) : {}
@@ -111,8 +112,20 @@ export function completenessIssues(record: AvefiRecord): CompletenessHint[] {
   const w = record.work
   const codes: Array<{ level: Severity | 'ok'; code: string }> = []
 
-  if (!hasName(w['has_primary_title'])) codes.push({ level: 'error', code: 'hint.noPrimaryTitle' })
-  if (isEmpty(w['type'])) codes.push({ level: 'error', code: 'hint.noWorkType' })
+  /*
+   * Pflichtangaben des Schemas. Bis zum 18.09.2026 standen Haupttitel und
+   * Werkart hier von Hand — dieselbe Frage, die runner.ts an anderer Stelle
+   * ebenfalls von Hand beantwortete, mit unterschiedlichem Ergebnis. Jetzt
+   * sagt PFLICHTFELDER es einmal, und beide lesen dort.
+   *
+   * Immer 'error', unabhaengig von `schwere`: Das dort ist die Strenge in der
+   * ZUORDNUNG, wo eine fehlende Angabe noch nachgetragen werden kann. Hier
+   * steht ein fertiger Datensatz, und an dem fehlt sie wirklich.
+   */
+  for (const feld of PFLICHTFELDER) {
+    if (!feld.belegt(record)) codes.push({ level: 'error', code: feld.codeHinweis })
+  }
+
   if (!hasEventDate(w['has_event'])) codes.push({ level: 'warning', code: 'hint.noProductionYear' })
   if (asList(w['has_subject']).length === 0) codes.push({ level: 'warning', code: 'hint.noSubjects' })
   if (!hasActivities(w['has_event'])) codes.push({ level: 'warning', code: 'hint.noActivities' })
@@ -138,11 +151,13 @@ export function completenessIssues(record: AvefiRecord): CompletenessHint[] {
  */
 export const BERICHTSTEXT: Record<string, string> = {
   'hint.noPrimaryTitle':
-    'Der Datensatz hat keinen Haupttitel. Das AVefi-Schema verlangt ihn am Werk nicht, aber ohne Titel ist '
-    + 'ein Werk im Verbund nicht auffindbar und mit keinem Bestand abzugleichen. Entweder fuehrt keine Spalte '
+    'Der Datensatz hat keinen Haupttitel. Das AVefi-Schema verlangt ihn am WorkVariant, und ohne Titel ist '
+    + 'ein Werk im Verbund weder auffindbar noch mit einem Bestand abzugleichen. Entweder fuehrt keine Spalte '
     + 'auf einen Titel, oder die Zelle dieser Zeile ist leer.',
   'hint.noWorkType':
-    'Der Datensatz hat keine Werkart. Das Schema verlangt sie.'
+    'Der Datensatz hat keine Werkart. Das AVefi-Schema verlangt sie am WorkVariant. Entweder fuehrt keine '
+    + 'Spalte auf "Werk > Werkart", oder die Zelle dieser Zeile ist leer; ein Festwert traegt die Angabe '
+    + 'fuer den ganzen Bestand.'
 }
 
 /**
@@ -162,11 +177,12 @@ export const BERICHTSTEXT: Record<string, string> = {
  *   gelb   empfohlene Felder fehlen
  *   gruen  alle vier Kernfelder belegt
  *
- * Welche Felder Pflicht sind, sagt nicht diese Funktion, sondern
- * completenessIssues: Was dort 'error' ist, ist Pflicht. Heute sind das
- * Haupttitel und Werkart, also genau die beiden, die das AVefi-Schema
- * zwingend verlangt. Kommt ein drittes dazu, faerbt sich die Plakette von
- * selbst mit.
+ * Welche Felder Pflicht sind, sagt weder diese Funktion noch
+ * completenessIssues, sondern PFLICHTFELDER in pflichtfelder.ts — dieselbe
+ * Liste, gegen die auch die Zuordnung geprueft wird und die
+ * tests/pruefung/pflichtfelder.test.ts gegen das Schemadokument haelt. Heute
+ * sind das Haupttitel und Werkart. Kommt ein drittes dazu, faerbt sich die
+ * Plakette von selbst mit, und der Pruefbericht sagt dasselbe.
  */
 export type CoreState = 'danger' | 'part' | 'full'
 

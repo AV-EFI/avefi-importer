@@ -192,3 +192,12 @@ export {
   coreState
 } from './completeness.js'
 export type { CoreFieldKey, CoreSummary, CoreTally } from './completeness.js'
+
+/* ------------------------------------------------------------ Pflichtfelder */
+export {
+  PFLICHTFELDER,
+  VOM_ERZEUGER_GESETZT,
+  pflichtSchluessel,
+  pflichtfeldZuHinweis
+} from './pflichtfelder.js'
+export type { Pflichtfeld, PflichtKlasse } from './pflichtfelder.js'

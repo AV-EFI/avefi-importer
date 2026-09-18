@@ -29,7 +29,7 @@ import { buildFromInternal } from '../../lib/converters/avefi'
 import { analyzeParse, diagnosticsToIssues } from '../../lib/converters/parseDiagnostics'
 import { IssueCollector, type AvefiNode } from '../../lib/converters/types'
 import { checkCrossref, checkRecords, querSicht } from '../validate'
-import { BERICHTSTEXT, completenessIssues } from '../../lib/mapping/index'
+import { BERICHTSTEXT, completenessIssues, pflichtfeldZuHinweis } from '../../lib/mapping/index'
 
 /** So viele Datensaetze gehen in einem Rutsch in die Datenbank. */
 const INSERT_BATCH = 200
@@ -204,17 +204,26 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
       }
 
       /*
-       * Vollstaendigkeit: unsere eigenen Pflichtangaben.
+       * Pflichtangaben am fertigen Datensatz.
        *
-       * Der Dienst efi-conv prueft das AVefi-Schema, und das verlangt
-       * `has_primary_title` am WorkVariant nicht — nachgeprueft am 10.09.2026
-       * gegen den laufenden Dienst, ein Werk ohne jeden Titel kommt dort mit
-       * ok=true zurueck. Ein Datensatz ohne Titel ging deshalb als "keine
+       * Vorgeschichte: Ein Datensatz ohne Titel ging als "keine
        * Beanstandungen" durch, waehrend die Plakette daneben rot war und die
-       * Belegungsstatistik "Haupttitel 0 von N" zeigte (Luca Wollny, 10.09.).
+       * Belegungsstatistik "Haupttitel 0 von N" zeigte (Luca Wollny,
+       * 10.09.2026). Nachgeprueft gegen den laufenden Dienst kam ein Werk ohne
+       * jeden Titel mit ok=true zurueck, und daraus wurde geschlossen, das
+       * Schema verlange den Haupttitel nicht — die Meldung galt seither als
+       * unsere eigene Regel und trug `source: 'completeness'`.
        *
-       * Die Meldung traegt `source: 'completeness'`, damit im Bericht steht,
-       * dass hier unsere Regel greift und nicht die des Verbunds.
+       * Der Schluss war falsch. Elias Oltmanns am 14.09. in #20:
+       * `has_primary_title` und `type` sind am WorkVariant verpflichtend; die
+       * Pflicht entsteht ueber ein geerbtes Attribut mit ueberschriebener
+       * Eigenschaft, und die TypeScript-Abbildung des Schemas verliert sie
+       * dabei. Das ok=true kam also von einer luckenhaften Pruefung und nicht
+       * von einer Erlaubnis des Schemas.
+       *
+       * Deshalb tragen Beanstandungen zu einem Pflichtfeld jetzt
+       * `source: 'schema'` — es sind Regeln des Verbunds. Was darueber
+       * hinausgeht, bleibt `source: 'completeness'`.
        */
       const kanon = pendingRecords[pendingRecords.length - 1]
       if (kanon !== undefined) {
@@ -222,7 +231,7 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
           if (hinweis.level !== 'error') continue
           issues.add({
             severity: 'error',
-            source: 'completeness',
+            source: pflichtfeldZuHinweis(hinweis.code) !== undefined ? 'schema' : 'completeness',
             code: hinweis.code,
             message: BERICHTSTEXT[hinweis.code] ?? hinweis.text,
             ...(source.row !== undefined ? { row: source.row } : {}),

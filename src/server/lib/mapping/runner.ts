@@ -33,6 +33,7 @@ import {
 } from './transform.js'
 import { AvefiBuilder, acceptsAuthority } from './builder.js'
 import { authorityKindLabel, expectedAuthorityKinds, expectedChainType, getTarget, targetExists } from './targets.js'
+import { PFLICHTFELDER } from './pflichtfelder.js'
 
 /**
  * Beanstandung des Mappings. Erweitert ValidationIssue um den Vorschlag zum
@@ -137,9 +138,12 @@ export function staticCheck(mapping: MappingJson, schema: SchemaModel = getSchem
    * anderen Ebene greift die Uebernahme (Warnung), nirgends ist ein Fehler.
    */
   const titelEbenen = new Set<string>()
-  const merkeTitel = (key: string): void => {
+  const zugeordnet: TargetDefinition[] = []
+  const merkeZiel = (key: string): void => {
     const t = getTarget(key)
-    if (t !== undefined && t.writer.kind === 'title' && t.writer.primary) titelEbenen.add(t.level)
+    if (t === undefined) return
+    zugeordnet.push(t)
+    if (t.writer.kind === 'title' && t.writer.primary) titelEbenen.add(t.level)
   }
 
   for (const [col, spec] of columnsOf(mapping)) {
@@ -156,7 +160,7 @@ export function staticCheck(mapping: MappingJson, schema: SchemaModel = getSchem
         })
         continue
       }
-      merkeTitel(key)
+      merkeZiel(key)
 
       const post = Array.isArray(binding.post) ? binding.post : []
       const chain = [...pre, ...post]
@@ -282,7 +286,7 @@ export function staticCheck(mapping: MappingJson, schema: SchemaModel = getSchem
 
   for (const d of mapping.defaults ?? []) {
     const key = String(d.target ?? '')
-    merkeTitel(key)
+    merkeZiel(key)
     if (!targetExists(key)) {
       out.push({
         severity: 'error', code: 'default.unknown-target',
@@ -291,26 +295,42 @@ export function staticCheck(mapping: MappingJson, schema: SchemaModel = getSchem
     }
   }
 
-  if (!titelEbenen.has('work')) {
-    if (titelEbenen.size > 0) {
-      out.push({
-        severity: 'warning', code: 'work.no-title',
-        message: 'Keine Spalte auf "Werk > Haupttitel" gemappt. Ersatzweise wird der Titel der Manifestation '
-          + 'oder des Exemplars uebernommen.'
-      })
-    } else {
-      // Blockiert das Speichern. Ein Lauf, der garantiert Datensaetze ohne
-      // Titel erzeugt, soll gar nicht erst starten: Der Fehler steckt in der
-      // Zuordnung, nicht in den Daten, und er ist hier zu sehen, bevor jemand
-      // zehntausend Saetze konvertiert.
-      out.push({
-        severity: 'error', code: 'title.nowhere',
-        message: 'Auf keiner Ebene ist eine Spalte auf einen Haupttitel gemappt — weder am Werk noch an '
-          + 'Manifestation oder Exemplar. Die Datensaetze haetten dann keinen Titel, und ohne Titel ist ein '
-          + 'Werk im Verbund nicht auffindbar. Infrage kommen "Haupttitel" oder "Archivtitel" auf einer der '
-          + 'drei Ebenen; ein Festwert geht auch.'
-      })
-    }
+  /*
+   * Pflichtangaben des Schemas: kommt ueberhaupt ein Ziel an, das sie fuellt?
+   *
+   * Welche Felder das sind, sagt PFLICHTFELDER — dieselbe Liste, aus der
+   * completeness.ts den Hinweis am fertigen Datensatz zieht. Bis zum
+   * 18.09.2026 stand hier nur der Titel, von Hand; die Werkart fehlte, obwohl
+   * das Schema sie verlangt und die Plakette ihr Fehlen laengst rot faerbte.
+   *
+   * Wie schwer die Meldung wiegt, sagt das Feld selbst. Ein Fehler blockiert
+   * das Speichern nicht, wohl aber das Konvertieren (siehe
+   * ERST_BEIM_KONVERTIEREN): Es ist keine falsche Angabe, sondern eine
+   * fehlende, und wer eine Zuordnung von oben nach unten aufbaut, hat
+   * zwischendurch immer eine offen. Verhindert werden muss nur, dass mit einer
+   * solchen Zuordnung konvertiert wird.
+   */
+  for (const feld of PFLICHTFELDER) {
+    if (zugeordnet.some((t) => feld.trifftZiel(t))) continue
+    out.push({
+      severity: feld.schwere, source: 'schema', code: feld.codeOhneZuordnung,
+      targetField: feld.schemaPfad, message: feld.meldungOhneZuordnung
+    })
+  }
+
+  /*
+   * Zusatz, den nur der Titel kennt: gemappt, aber nicht am Werk. Dann greift
+   * die Uebernahme von der Manifestation oder vom Exemplar, der Datensatz
+   * bekommt also einen Titel — nur nicht den, den jemand ausgesucht hat.
+   * Warnung, kein Fehler.
+   */
+  if (titelEbenen.size > 0 && !titelEbenen.has('work')) {
+    out.push({
+      severity: 'warning', source: 'schema', code: 'work.no-title',
+      targetField: 'WorkVariant.has_primary_title.has_name',
+      message: 'Keine Spalte auf "Werk > Haupttitel" gemappt. Ersatzweise wird der Titel der Manifestation '
+        + 'oder des Exemplars uebernommen.'
+    })
   }
 
   return out
@@ -331,13 +351,20 @@ function opLabel(op: string): string {
  * eine Kette, die nicht aufgeht. Sie zu speichern hat keinen Sinn, deshalb
  * blockieren sie das Speichern.
  *
- * `title.nowhere` ist anders. Es ist keine falsche Angabe, sondern eine
- * fehlende — wer eine Zuordnung von oben nach unten aufbaut, hat irgendwann
- * die Kennung und noch keinen Titel. Diesen Zwischenstand nicht parken zu
- * duerfen waere eine Strafe fuer die Reihenfolge der Arbeit. Verhindert werden
- * muss nur das eine: dass mit einer solchen Zuordnung konvertiert wird.
+ * Die fehlenden Pflichtangaben sind anders. Sie sind keine falsche Angabe,
+ * sondern eine fehlende — wer eine Zuordnung von oben nach unten aufbaut, hat
+ * irgendwann die Kennung und noch keinen Titel. Diesen Zwischenstand nicht
+ * parken zu duerfen waere eine Strafe fuer die Reihenfolge der Arbeit.
+ * Verhindert werden muss nur das eine: dass mit einer solchen Zuordnung
+ * konvertiert wird.
+ *
+ * Die Menge kommt aus PFLICHTFELDER und nicht aus einer zweiten Aufzaehlung.
+ * Sonst waere ein neues Pflichtfeld sofort ein Speicherblocker, ohne dass das
+ * jemand entschieden haette.
  */
-const ERST_BEIM_KONVERTIEREN: ReadonlySet<string> = new Set(['title.nowhere'])
+const ERST_BEIM_KONVERTIEREN: ReadonlySet<string> = new Set(
+  PFLICHTFELDER.filter((p) => p.schwere === 'error').map((p) => p.codeOhneZuordnung)
+)
 
 /** Blockiert eine der Beanstandungen das Speichern? */
 export function hasBlocker(checks: readonly MappingCheck[]): boolean {
