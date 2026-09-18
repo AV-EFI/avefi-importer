@@ -299,7 +299,7 @@
         "completeness": "Completeness",
         "konvertierung": "Conversion"
       },
-      "sourceLegend": "Where the finding comes from: “AVefi schema” and “Across records” are checked by the efi-conv service against the consortium schema. “Completeness” are rules of this application that go beyond it — a work without a main title is valid against the schema but cannot be found in the consortium. “Conversion” was noticed while reading the file."
+      "sourceLegend": "Where the finding comes from: “AVefi schema” are rules of the consortium — what the efi-conv service checks against the schema, plus the mandatory fields this application already checks in the mapping and on the finished record. “Across records” is checked by efi-conv across several records. “Completeness” are rules of this application that go beyond the schema and recommend what makes a record comparable with other holdings. “Conversion” was noticed while reading the file."
     },
     "sheets": {
       "crumb": "Sheets",

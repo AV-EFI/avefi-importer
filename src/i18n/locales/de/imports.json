@@ -299,7 +299,7 @@
         "completeness": "Vollständigkeit",
         "konvertierung": "Konvertierung"
       },
-      "sourceLegend": "Woher die Beanstandung kommt: „AVefi-Schema\" und „Satzübergreifend\" prüft der Dienst efi-conv gegen das Schema des Verbunds. „Vollständigkeit\" sind Regeln dieser Anwendung, die darüber hinausgehen — ein Werk ohne Haupttitel ist schemakonform, im Verbund aber nicht auffindbar. „Konvertierung\" ist beim Lesen der Datei aufgefallen."
+      "sourceLegend": "Woher die Beanstandung kommt: „AVefi-Schema“ sind Regeln des Verbunds — was der Dienst efi-conv gegen das Schema prüft, dazu die Pflichtangaben, die diese Anwendung schon in der Zuordnung und am fertigen Datensatz prüft. „Satzübergreifend“ prüft efi-conv über mehrere Datensätze hinweg. „Vollständigkeit“ sind Regeln dieser Anwendung, die über das Schema hinausgehen und empfehlen, was einen Abgleich mit anderen Beständen trägt. „Konvertierung“ ist beim Lesen der Datei aufgefallen."
     },
     "sheets": {
       "crumb": "Tabellenblätter",
