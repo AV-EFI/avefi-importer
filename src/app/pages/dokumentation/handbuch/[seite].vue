@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { dokuPfade, type DokuKapitel } from '~/services/doku'
-const doku = dokuPfade()
 /**
  * Ein einzelnes Handbuchkapitel.
  *
@@ -15,7 +13,7 @@ const { t } = useI18n()
 const route = useRoute()
 const kennung = computed(() => String(route.params.seite ?? ''))
 
-const { data, error } = await useFetch<DokuKapitel>(() => doku.handbuchKapitel(kennung.value))
+const { data, error } = await useHandbuchKapitel(kennung)
 
 if (error.value) {
   throw createError({ statusCode: 404, statusMessage: t('doku.error.missing'), fatal: true })

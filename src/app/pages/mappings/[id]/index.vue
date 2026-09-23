@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mappingsService, type MappingDetail } from '~/services/mappings'
+import { mappingsService } from '~/services/mappings'
 /**
  * Ein Zuordnungsprofil: Zuordnungen, Versionen, Verwaltung.
  *
@@ -15,7 +15,7 @@ const route = useRoute()
 const { t, te } = useI18n()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, error, refresh } = await useFetch<MappingDetail>(() => zuordnungen.einerPfad(id.value))
+const { data, error, refresh } = await useZuordnung(id)
 
 const loadError = computed(() => (error.value ? failureText(t, te, mappingFailure(error.value)) : ''))
 const profile = computed(() => data.value?.profile ?? null)

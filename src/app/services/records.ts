@@ -20,12 +20,10 @@ export function recordsService(): {
   speichern: (importId: string, recordId: string, datensatz: AvefiRecord) => Promise<SaveResponse>
   normdatenSuche: (kind: string, q: string) => Promise<AuthoritySearchResponse>
   normdatenDetail: (source: string, id: string) => Promise<AuthorityDetailResponse | null>
-  konfiguration: () => string
 } {
   const api = useApi()
   return {
     konfigurationPfad: () => api('/records/config'),
-    konfiguration: () => api('/records/config'),
     datensatzPfad: (importId, recordId) => api(`/imports/${importId}/records/${recordId}`),
     pruefen: (datensatz) =>
       $fetch<CheckResponse>(api('/records/validate'), { method: 'POST', body: datensatz as unknown as Record<string, unknown> }),

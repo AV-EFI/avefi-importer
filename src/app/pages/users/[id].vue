@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usersService, type UserResponse } from '~/services/users'
+import { usersService } from '~/services/users'
 /**
  * Ein Nutzerkonto bearbeiten.
  *
@@ -16,7 +16,7 @@ const { t, te } = useI18n()
 const zeit = useDateTime()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, error, refresh } = await useFetch<UserResponse>(() => nutzerDienst.einerPfad(id.value))
+const { data, error, refresh } = await useKonto(id)
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value), ['admin', 'imports']) : ''))
 const user = computed(() => data.value?.user ?? null)

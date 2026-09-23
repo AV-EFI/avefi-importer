@@ -6,13 +6,13 @@
  * Uebersicht des Handbuchs und die der Oberflaechenbeschreibungen
  * deklarierten sogar dasselbe Interface zweimal, Wort fuer Woert gleich.
  *
- * Warum Adressen und Typen und nicht fertige Lader: `useFetch` muss im Setup
- * der Seite stehen, damit Nuxt es beim Serverlauf mitbekommt und nicht
- * doppelt holt. In einen Helfer verpackt, leitet Nuxt seinen Schluessel von
- * der Stelle im Helfer ab statt von der Seite — zwei Seiten teilen sich dann
- * einen Zwischenspeicher. Deshalb ruft die Seite `useFetch` weiterhin selbst,
- * bekommt aber Adresse und Typ von hier. Kein Pfad und keine Antwortform
- * steht mehr in einer Seite.
+ * Geladen wird nicht hier, sondern in composables/useDoku.ts (#9). Bis zum
+ * 23.09.2026 stand an dieser Stelle die Begruendung, warum `useFetch` in der
+ * Seite bleiben muesse: In einen Helfer verpackt, teilten sich zwei Seiten
+ * einen Zwischenspeicher. Das stimmte fuer Nuxt 4 nicht — der Schluessel wird
+ * dort aus Aufrufstelle, Adresse und Abfrage gebildet, verschiedene Adressen
+ * bekommen verschiedene Eintraege. Die Composables geben ihren Schluessel
+ * trotzdem ausdruecklich an, damit er nicht von dieser Einzelheit abhaengt.
  */
 
 export interface DokuKapitelRef {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mappingsService, type EditorAntwort } from '~/services/mappings'
+import { mappingsService } from '~/services/mappings'
 /**
  * Normdaten eines Profils zuordnen — als eigener Schritt.
  *
@@ -28,7 +28,7 @@ const route = useRoute()
 const { t, te } = useI18n()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, error } = await useFetch<EditorAntwort>(() => zuordnungen.editorPfad(id.value))
+const { data, error } = await useZuordnungsEditor(id)
 const failure = computed(() => (error.value ? mappingFailure(error.value) : null))
 const loadError = computed(() => failureText(t, te, failure.value))
 const subject = computed(() => data.value?.payload.subject ?? id.value)

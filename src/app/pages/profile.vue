@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usersService, type ProfileResponse } from '~/services/users'
+import { usersService } from '~/services/users'
 /**
  * Das eigene Profil: Anzeigename und Passwort.
  *
@@ -15,7 +15,7 @@ const nutzerDienst = usersService()
 
 const { t, te } = useI18n()
 const { refresh: refreshAuth } = useAuth()
-const { data, error, refresh } = await useFetch<ProfileResponse>(nutzerDienst.profilPfad())
+const { data, error, refresh } = await useEigenesProfil()
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value), ['admin', 'imports']) : ''))
 const user = computed(() => data.value?.user ?? null)

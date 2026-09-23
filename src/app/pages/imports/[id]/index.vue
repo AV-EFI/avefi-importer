@@ -11,7 +11,7 @@ import { importsService } from '~/services/imports'
  */
 import { apiFailure, failureText } from '~/components/imports/errors'
 import { fileSize, formatDetailLabel, formatNumber } from '~/components/imports/format'
-import { BUSY_STATES, type ImportDetailResponse } from '~/components/imports/types'
+import { BUSY_STATES } from '~/components/imports/types'
 
 const importe = importsService()
 
@@ -19,7 +19,7 @@ const route = useRoute()
 const { t, te, locale } = useI18n()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, refresh, error } = await useFetch<ImportDetailResponse>(() => importe.einerPfad(id.value))
+const { data, refresh, error } = await useImport(id)
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value)) : ''))
 const item = computed(() => data.value?.import ?? null)

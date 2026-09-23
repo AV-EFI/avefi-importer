@@ -42,7 +42,13 @@ src/
     error.vue
     layouts/            default (angemeldet), auth (Anmeldung)
     middleware/auth.global.ts   ohne Anmeldung nur /login
-    composables/useAuth.ts
+    services/           je Fachbereich: Adressen, Antwortformen, schreibende
+                        Aufrufe mit $fetch
+    composables/        useAuth, useApi (API-Basis) und je Fachbereich der
+                        lesende Weg ueber useFetch (useImporte, useDatensaetze,
+                        useZuordnungen, useReviews, useKonten, useDoku,
+                        useSystem). Pages, Layouts und Komponenten fragen den
+                        Server nicht selbst ab (tests/frontend/abfragen.test.ts)
     pages/              siehe „Seiten"
     components/
       imports/          Importliste, Upload, Pipeline, Statusabzeichen, Befundlisten

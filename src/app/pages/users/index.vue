@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usersService, type UsersResponse, type UserWithInstitution } from '~/services/users'
+import { usersService, type UserWithInstitution } from '~/services/users'
 /**
  * Nutzerverwaltung.
  *
@@ -14,7 +14,7 @@ import type { InstitutionRow, UserRow } from '#shared/types/domain'
 const nutzerDienst = usersService()
 
 const { t, te } = useI18n()
-const { data, error, refresh } = await useFetch<UsersResponse>(nutzerDienst.listePfad())
+const { data, error, refresh } = await useKontenListe()
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value), ['admin', 'imports']) : ''))
 const users = computed(() => data.value?.users ?? [])

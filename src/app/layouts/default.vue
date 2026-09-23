@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { Vorgabebefund } from '~/components/imports/types'
-import { reviewsService } from '~/services/reviews'
 /** Rahmen fuer angemeldete Seiten. Kopfzeile, Navigation, Nutzermenue. */
 const { user, logout } = useAuth()
 
@@ -16,10 +14,7 @@ const { user, logout } = useAuth()
  * `default: []` statt eines Fehlers: Der Streifen ist eine Beigabe. Wenn der
  * Endpunkt nicht antwortet, faellt er weg und nicht die Seite.
  */
-const { data: vorgabewerte } = await useFetch<{ befunde: Vorgabebefund[] }>(
-  '/api/system/vorgabewerte',
-  { default: () => ({ befunde: [] }), server: false, immediate: true }
-)
+const { data: vorgabewerte } = await useVorgabewerte()
 const befunde = computed(() => (user.value?.is_admin ? vorgabewerte.value?.befunde ?? [] : []))
 const route = useRoute()
 const { t } = useI18n()
@@ -68,10 +63,7 @@ const initials = computed(() => {
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || n[0]!.toUpperCase()
 })
 
-const { data: reviewCount } = await useFetch<{ open: number }>(reviewsService().anzahlPfad(), {
-  default: () => ({ open: 0 }),
-  immediate: true
-})
+const { data: reviewCount } = await usePruefungsAnzahl()
 
 function onDocClick(e: MouseEvent) {
   if (menuOpen.value && menuRoot.value && !menuRoot.value.contains(e.target as Node)) menuOpen.value = false

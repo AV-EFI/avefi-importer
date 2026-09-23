@@ -8,6 +8,7 @@
 import type {
   AuthorityValuesResponse, CandidateResponse, EditorPayload
 } from '~/components/mapping/types'
+import type { MappingJson, TargetEntry } from '#shared/types/domain'
 
 export interface ProfileRow {
   id: number
@@ -55,6 +56,14 @@ export interface MappingDetail {
 
 export interface EditorAntwort {
   payload: EditorPayload
+}
+
+/** Eine gespeicherte Profilversion; stand bis zum 23.09.2026 in der Seite selbst. */
+export interface VersionAntwort {
+  profile: { id: number; name: string; currentVersion: number }
+  version: { version: number; name: string; createdAt: string | null; userName: string | null; isCurrent: boolean }
+  mapping: MappingJson
+  targets: Array<TargetEntry & { schemaPath: string }>
 }
 
 export interface EinfuhrAntwort {

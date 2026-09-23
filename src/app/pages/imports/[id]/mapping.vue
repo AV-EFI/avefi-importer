@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { importsService, type ImportMappingResponse } from '~/services/imports'
 /**
  * Zuordnung fuer einen Import.
  *
@@ -11,13 +10,11 @@ import MappingEditor from '~/components/mapping/Editor.vue'
 import { failureText, mappingFailure } from '~/components/mapping/errors'
 import type { EditorPayload } from '~/components/mapping/types'
 
-const importe = importsService()
-
 const route = useRoute()
 const { t, te } = useI18n()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, error } = await useFetch<ImportMappingResponse>(() => importe.zuordnungPfad(id.value))
+const { data, error } = await useImportZuordnung(id)
 
 const loadError = computed(() => (error.value ? failureText(t, te, mappingFailure(error.value)) : ''))
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { mappingsService, type EditorAntwort } from '~/services/mappings'
 /**
  * Zuordnung eines gespeicherten Profils bearbeiten — ohne Import.
  *
@@ -11,13 +10,11 @@ import MappingEditor from '~/components/mapping/Editor.vue'
 import { failureText, mappingFailure } from '~/components/mapping/errors'
 import type { EditorPayload } from '~/components/mapping/types'
 
-const zuordnungen = mappingsService()
-
 const route = useRoute()
 const { t, te } = useI18n()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, error } = await useFetch<EditorAntwort>(() => zuordnungen.editorPfad(id.value))
+const { data, error } = await useZuordnungsEditor(id)
 
 const failure = computed(() => (error.value ? mappingFailure(error.value) : null))
 const loadError = computed(() => failureText(t, te, failure.value))

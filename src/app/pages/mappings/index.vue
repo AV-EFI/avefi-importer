@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mappingsService, type MappingListResponse, type ProfileRow } from '~/services/mappings'
+import { mappingsService, type ProfileRow } from '~/services/mappings'
 /**
  * Uebersicht der Mappingprofile.
  *
@@ -14,7 +14,7 @@ const zuordnungen = mappingsService()
 const { t, te, locale } = useI18n()
 useHead({ title: () => t('mapping.list.title') })
 
-const { data, error, refresh } = await useFetch<MappingListResponse>(zuordnungen.listePfad())
+const { data, error, refresh } = await useZuordnungsListe()
 
 const loadError = computed(() => (error.value ? failureText(t, te, mappingFailure(error.value)) : ''))
 const alleProfile = computed(() => data.value?.profiles ?? [])

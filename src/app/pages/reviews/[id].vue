@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reviewsService, type ReviewDetail } from '~/services/reviews'
+import { reviewsService } from '~/services/reviews'
 /**
  * Eine Aufgabe der Formatpruefung entscheiden.
  *
@@ -16,7 +16,7 @@ const router = useRouter()
 const { t, te } = useI18n()
 
 const id = computed(() => String(route.params.id ?? ''))
-const { data, error } = await useFetch<ReviewDetail>(() => pruefung.einerPfad(id.value))
+const { data, error } = await usePruefung(id)
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value), ['admin', 'imports']) : ''))
 const review = computed(() => data.value?.review ?? null)

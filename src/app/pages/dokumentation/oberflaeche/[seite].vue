@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { dokuPfade, type DokuKapitel } from '~/services/doku'
+import { dokuPfade } from '~/services/doku'
 const doku = dokuPfade()
 /**
  * Eine einzelne Oberflaechenbeschreibung.
@@ -12,7 +12,7 @@ const { t } = useI18n()
 const route = useRoute()
 const kennung = computed(() => String(route.params.seite ?? ''))
 
-const { data, error } = await useFetch<DokuKapitel>(() => doku.oberflaecheSeite(kennung.value))
+const { data, error } = await useOberflaechenSeite(kennung)
 
 if (error.value) {
   throw createError({ statusCode: 404, statusMessage: t('doku.error.missing'), fatal: true })

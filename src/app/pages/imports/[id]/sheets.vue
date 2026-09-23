@@ -9,7 +9,6 @@ import { importsService } from '~/services/imports'
  */
 import { apiFailure, failureText, type ApiFailure } from '~/components/imports/errors'
 import { formatNumber } from '~/components/imports/format'
-import type { SheetsResponse } from '~/components/imports/types'
 
 const importe = importsService()
 
@@ -17,7 +16,7 @@ const route = useRoute()
 const { t, te, locale } = useI18n()
 const id = computed(() => String(route.params.id ?? ''))
 
-const { data, error } = await useFetch<SheetsResponse>(() => importe.blaetterPfad(id.value))
+const { data, error } = await useImportBlaetter(id)
 
 const loadFailure = computed<ApiFailure | null>(() => (error.value ? apiFailure(error.value) : null))
 const loadError = computed(() => failureText(t, te, loadFailure.value))

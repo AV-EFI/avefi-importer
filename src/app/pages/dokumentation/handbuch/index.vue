@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { dokuPfade, type DokuUebersicht } from '~/services/doku'
-const doku = dokuPfade()
 /**
  * Uebersicht des Handbuchs.
  *
@@ -9,7 +7,7 @@ const doku = dokuPfade()
  * Listen und Tabellen vorfinden und nicht Rauten und Sternchen.
  */
 const { t } = useI18n()
-const { data, error } = await useFetch<DokuUebersicht>(doku.handbuch())
+const { data, error } = await useHandbuch()
 
 useHead({ title: () => t('doku.handbuch.pageTitle') })
 

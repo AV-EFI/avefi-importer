@@ -13,7 +13,6 @@ import { importsService } from '~/services/imports'
  */
 import { apiFailure, failureText } from '~/components/records/errors'
 import { formatNumber } from '~/components/imports/format'
-import type { RecordListResponse } from '~/components/records/types'
 
 const importe = importsService()
 
@@ -31,13 +30,7 @@ const limit = 50
 // Immer laden, auch wenn gerade der Editor angezeigt wird: Diese Komponente
 // bleibt beim Wechsel in den Editor stehen. Wuerde sie beim Einstieg ueber einen
 // Deeplink auf einen Datensatz nichts laden, waere die Liste danach leer.
-const { data, error, refresh } = await useFetch<RecordListResponse>(
-  () => importe.datensaetzePfad(importId.value),
-  {
-    query: { q: query, limit, offset },
-    watch: [query, offset]
-  }
-)
+const { data, error, refresh } = await useImportDatensaetze(importId, { q: query, limit, offset })
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value)) : ''))
 const item = computed(() => data.value?.import ?? null)

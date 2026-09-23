@@ -21,10 +21,7 @@ import {
   serializeRecord, splitMatches, DEFAULT_ALT_TITLE_TYPE, DEFAULT_PRIMARY_TITLE_TYPE,
   type UiIdentifier, type UiItem, type UiManifestation, type UiRecord, type UiValue
 } from '~/components/records/model'
-import type {
-
-  AuthoritySearchResponse, CheckResponse, EditorConfig, RecordDetailResponse, SaveResponse
-} from '~/components/records/types'
+import type { AuthoritySearchResponse, CheckResponse, SaveResponse } from '~/components/records/types'
 
 const datensaetze = recordsService()
 
@@ -38,10 +35,8 @@ const { hinweis } = useMeldungstext()
 const importId = computed(() => String(route.params.id ?? ''))
 const recordId = computed(() => String(route.params.recordId ?? ''))
 
-const { data: config, error: configError } = await useFetch<EditorConfig>(datensaetze.konfigurationPfad())
-const { data: detail, error: detailError } = await useFetch<RecordDetailResponse>(
-  () => datensaetze.datensatzPfad(importId.value, recordId.value)
-)
+const { data: config, error: configError } = await useEditorKonfiguration()
+const { data: detail, error: detailError } = await useDatensatz(importId, recordId)
 
 const loadError = computed(() => {
   const e = detailError.value ?? configError.value

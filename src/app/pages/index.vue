@@ -9,7 +9,7 @@ import { importsService } from '~/services/imports'
  */
 import { apiFailure, failureText, type ApiFailure } from '~/components/imports/errors'
 import { formatNumber } from '~/components/imports/format'
-import { BUSY_STATES, type ImportListResponse, type ImportStatusResponse } from '~/components/imports/types'
+import { BUSY_STATES, type ImportStatusResponse } from '~/components/imports/types'
 
 const importe = importsService()
 
@@ -33,17 +33,7 @@ const auswahl = computed<Record<string, string>>(() => {
   return raus
 })
 
-const { data, refresh, error } = await useFetch<ImportListResponse>(
-  () => importe.listePfad(auswahl.value),
-  {
-    default: () => ({
-      imports: [],
-      sort: { field: 'created' as const, dir: 'desc' as const },
-      counts: { total: 0, loaded: 0, shown: 0 },
-      kpi: { records: 0, awaiting: 0 }
-    })
-  }
-)
+const { data, refresh, error } = await useImportListe(auswahl)
 
 const sortierung = computed(() => data.value?.sort ?? { field: 'created' as const, dir: 'desc' as const })
 const counts = computed(() => data.value?.counts ?? { total: 0, loaded: 0, shown: 0 })

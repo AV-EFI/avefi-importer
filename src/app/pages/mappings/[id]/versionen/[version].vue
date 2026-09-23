@@ -12,26 +12,15 @@
  * Ein Klick auf Speichern schriebe den alten Stand als neuen fort. Hier gibt es
  * nichts zu klicken, was etwas veraendert.
  */
-import { mappingsService } from '~/services/mappings'
-import type { MappingJson, TargetEntry, TransformStep } from '#shared/types/domain'
+import type { TargetEntry, TransformStep } from '#shared/types/domain'
 
-interface VersionAntwort {
-  profile: { id: number; name: string; currentVersion: number }
-  version: { version: number; name: string; createdAt: string | null; userName: string | null; isCurrent: boolean }
-  mapping: MappingJson
-  targets: Array<TargetEntry & { schemaPath: string }>
-}
-
-const zuordnungen = mappingsService()
 const route = useRoute()
 const { t, te } = useI18n()
 
 const id = computed(() => String(route.params.id ?? ''))
 const version = computed(() => Number(route.params.version ?? 0))
 
-const { data, error } = await useFetch<VersionAntwort>(
-  () => zuordnungen.versionPfad(id.value, version.value)
-)
+const { data, error } = await useZuordnungsVersion(id, version)
 
 const zielIndex = computed(() => {
   const m = new Map<string, TargetEntry & { schemaPath: string }>()

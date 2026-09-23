@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reviewsService, type ReviewListResponse, type ReviewTask } from '~/services/reviews'
+import type { ReviewTask } from '~/services/reviews'
 /**
  * Warteschlange der Formatpruefung.
  *
@@ -12,12 +12,10 @@ import { reviewsService, type ReviewListResponse, type ReviewTask } from '~/serv
  */
 import { apiFailure, failureText } from '~/components/records/errors'
 
-const pruefung = reviewsService()
-
 const { t, te } = useI18n()
 const route = useRoute()
 
-const { data, error } = await useFetch<ReviewListResponse>(pruefung.listePfad())
+const { data, error } = await usePruefungsListe()
 
 const loadError = computed(() => (error.value ? failureText(t, te, apiFailure(error.value), ['admin', 'imports']) : ''))
 const tasks = computed(() => data.value?.tasks ?? [])
