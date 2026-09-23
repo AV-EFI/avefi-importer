@@ -30,6 +30,103 @@ GitHub weiter.
 
 ---
 
+## 2026-09-23 — Stefan Stretz, Jasper Stratil und ein a11y-Lauf, der etwas fand
+
+Live auf `https://avefiimporter.goo1.de`.
+
+### API-Zugriffe liegen jetzt vollständig in Services und Composables (#9)
+
+**Gemeldet von Stefan Stretz (15.09.).** Die fünf ursprünglich beanstandeten
+Dateien waren umgestellt, das Muster aber nur gewandert: 27 Aufrufe von
+`useFetch` in 24 Pages und Layouts.
+
+Unsere Rückfrage vom 18.09. hatte zwei Wege zur Wahl gestellt: `useFetch` in der
+Seite mit Adressen aus dem Service, oder `$fetch` im Service ohne
+Serverrendern. Das war eine falsche Wahl, denn es gibt einen dritten Weg.
+Fachliche Composables in `app/composables/` (`useImporte`, `useDatensaetze`,
+`useZuordnungen`, `useReviews`, `useKonten`, `useDoku`, `useSystem`) rufen
+`useFetch` selbst auf. Sie laufen ebenso im Setup, das Serverrendern bleibt,
+und in Pages, Layouts und Komponenten steht kein `useFetch`, kein `$fetch` und
+keine feste `/api/`-Adresse mehr. Die Services bleiben die Stelle für
+Adressen, Antwortformen und schreibende Aufrufe.
+
+Jede Abfrage trägt einen ausdrücklichen Schlüssel aus Bereich und Adresse
+(`importe:/api/imports/…`). Nachgeprüft im Serverrendern der Demo: Die Daten
+kommen mit der Seite, auch bei Suche und Blättern in den Datensätzen.
+
+`tests/frontend/abfragen.test.ts` liest den Quelltext von Pages, Layouts,
+Komponenten und Middleware und schlägt fehl, sobald dort wieder ein Aufruf
+auftaucht.
+
+Dabei gefunden:
+
+* **Das Layout rief `/api/system/vorgabewerte` mit fester Adresse auf**, an
+  `useApi()` und damit an der konfigurierbaren API-Basis vorbei. Jetzt über
+  `services/system.ts`.
+* **Die Begründung in `services/doku.ts` stimmte nicht.** Dort stand, ein
+  `useFetch` in einem Helfer teile sich zwischen zwei Seiten den
+  Zwischenspeicher. In Nuxt 4 wird der Schlüssel aber aus Aufrufstelle,
+  Adresse und Abfrage gebildet. Genau diese Annahme hatte zur falschen Wahl in
+  der Rückfrage geführt.
+* `recordsService().konfiguration()` war eine ungenutzte Kopie von
+  `konfigurationPfad()`. Entfernt.
+* Das README nannte als bekannte Einschränkung 35 offene Befunde von
+  `npm run typecheck`. Der Typecheck läuft inzwischen ohne Befund, der Hinweis
+  ist entfernt.
+
+### Titel in eckigen Klammern (#5)
+
+**Bestätigt von Jasper Stratil (23.09.)** mit einer neuen Datei: Zuordnung zum
+Archivtitel und Abschneiden der Klammern funktionieren. Geschlossen.
+
+### Der erweiterte a11y-Lauf, einmal komplett gegen die Demo (#11)
+
+Mit `aa0f0d1` gebaut, am 23.09. zum ersten Mal ganz durchgefahren: 107
+Zustände, breit und schmal (390 × 844), helles und dunkles Schema. Die
+Prüfungen am Aufklappknopf der schmalen Navigation (`aria-expanded`,
+erreichbares Ziel) sind bestanden.
+
+**Gefunden: 57 Kontrastbefunde, alle im hellen Schema und alle an derselben
+Stelle.** Es ist der Nebentext im Hinweisstreifen der Startprüfung aus #19. Der
+Streifen erscheint nur für Administratoren, solange die Startprüfung etwas
+findet, also auf der Demo auf jeder Seite. `.dim` lag auf dem getönten Grund bei
+4,44:1 statt der verlangten 4,5:1. Der Nebentext in Hinweiskästen nimmt jetzt
+die Grundschrift und setzt sich über das Gewicht ab.
+Danach lief das helle Schema noch einmal komplett durch: 58 Zustände, kein
+Befund ab „serious“.
+
+Warum das bis jetzt niemand gesehen hat: Den Streifen gibt es seit dem 09.09.,
+und seitdem ist der Lauf nicht mehr mit einem Verwaltungskonto gefahren.
+
+Für den Lauf gab es vorübergehend ein eigenes Konto (`a11y-lauf@goo1.de`, mit
+Verwaltungsrechten, weil „Konten" zum Prüfumfang gehört). Es wurde direkt
+danach gelöscht. Weiterhin offen ist der Tastatur- und Screenreader-Nachtest
+durch einen Menschen.
+
+---
+
+## 2026-09-14 und 15 — Elias Oltmanns und Stefan Stretz, umgesetzt am 18.09.
+
+Commits `966c782`, `7712d8f`, `b8105fb`, `aa0f0d1`. Nachgetragen am 23.09.;
+die Einzelheiten stehen in den Commits und Issues.
+
+* **Pflichtfelder aus dem Schema (#20, #21, Elias Oltmanns).** `has_primary_title`
+  und `type` sind am `WorkVariant` Pflicht. Die TypeScript-Abbildung des
+  Schemas verliert das, das JSON-Schema führt es korrekt. Drei Stellen im Code
+  zählten Pflichtfelder von Hand, die Funktion, die sie aus dem Schema gelesen
+  hätte, wurde nie aufgerufen. Jetzt gibt es eine Liste (`pflichtfelder.ts`),
+  die ein Test gegen das Schemadokument hält. Eine fehlende Werkart wird in der
+  Zuordnung angemahnt.
+* **Zwölf Meldungscodes ohne Übersetzung (#10, Stefan Stretz).** Gemeldet waren
+  drei, nachgezählt neun, dazu zwei neue. Ein Test liest die Codes aus dem
+  Quelltext und verlangt für jeden einen Text in beiden Sprachen.
+* **`docker-compose.dev.yml` fehlte im Repository (#23, Elias Oltmanns).** Die
+  allgemeine Fassung liegt jetzt im Repo, alles Geheime kommt aus `.env`.
+  Ohne `DB_PASS` und `SESSION_SECRET` startet Compose nicht.
+* **Der a11y-Lauf prüft auch die schmale Darstellung (#11, Stefan Stretz).**
+
+---
+
 ## 2026-09-10, nachmittags — Luca Wollny, ein Titel, den niemand vermisste
 
 Commits `9fc75ef` (Titel), `8176d6b` (Umzug und Zugangsdaten).

@@ -235,14 +235,6 @@ Wer einen anderen vorgelagerten Server einsetzt, prueft das nach.
   Lieferungen desselben Werks werden nicht zusammengefuehrt.
 * **Tausendertrennzeichen** erkennt der `number`-Konverter nicht; das
   Dezimalzeichen wird angegeben.
-* **`npm run typecheck` meldet 35 offene Befunde.** Das Skript war bis zum
-  01.09.2026 gar nicht lauffaehig, weil `vue-tsc` fehlte; es ist jetzt als
-  Entwicklungsabhaengigkeit dabei. Die Befunde stammen aus der Zeit davor und
-  liegen samtlich ausserhalb des vertraglichen Kernablaufs — im Editor fuer
-  einzelne Datensaetze, in der Nutzerverwaltung, im Format-Review und in drei
-  Auslieferungsendpunkten. Es sind fehlende Nullpruefungen auf Werten, die
-  `useFetch` als moeglicherweise undefiniert fuehrt. Tests und Build laufen
-  davon unberuehrt durch.
 
 ## Was ueber den Auftragsumfang hinausgeht
 

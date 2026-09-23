@@ -409,6 +409,12 @@ tbody tr:hover{background:var(--surface-2)}
    als der Weg hierher erwarten laesst. */
 .ui-alert-warn{border:1px solid var(--warn);background:var(--warn-bg);color:var(--warn);border-radius:9px;
   padding:10px 12px;font-size:13px;font-weight:600}
+/* Nebentext in einem Hinweiskasten. `.dim` ist fuer den Seitenhintergrund
+   gewaehlt; auf dem getoenten Grund des Kastens lag es im hellen Schema bei
+   4,44:1 und damit knapp unter 4,5:1 (a11y-Lauf vom 23.09.2026, 57 Befunde, alle
+   im Hinweisstreifen der Startpruefung, #19). Der Nebentext nimmt deshalb die
+   Grundschrift und setzt sich nur ueber das Gewicht ab. */
+.ui-alert .dim,.ui-alert-ok .dim,.ui-alert-warn .dim{color:var(--ink);font-weight:400}
 
 /* ------- Filterleiste ueber der Importliste ------- */
 .listfilter{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
