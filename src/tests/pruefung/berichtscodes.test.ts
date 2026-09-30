@@ -109,3 +109,4 @@ describe('Berichtscodes', () => {
     expect([...BRAUCHT_BAUSTEINE].filter((c) => !erzeugt.has(c))).toEqual([])
   })
 })
+
