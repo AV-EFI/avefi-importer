@@ -9,7 +9,10 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { bracketTitleChecks, pickExamples } from '../../server/lib/mapping/preview.js'
+import {
+  bracketTitleChecks, KLAMMERN_ABSCHNEIDEN, klammerVorschlaege, pickExamples
+} from '../../server/lib/mapping/preview.js'
+import { runChain } from '../../server/lib/mapping/transform.js'
 import { emptyMapping } from '../../server/lib/mapping/profile.js'
 import { runRow } from '../../server/lib/mapping/runner.js'
 import { testSchema } from './fixtures.js'
@@ -66,8 +69,11 @@ describe('Wo der Vorschlag nicht hingehoert', () => {
     expect(pruefe(GEMISCHT, 'work.title.alternative')).toEqual([])
   })
 
-  it('nicht am Archivtitel selbst', () => {
-    expect(pruefe(GEMISCHT, 'work.title.supplied')).toEqual([])
+  it('am Archivtitel nicht die Umwidmung, sondern nur das Abschneiden', () => {
+    // Bis zum 30.09.2026 schwieg der Editor am Archivtitel ganz (#5, Jasper am
+    // 24.09.: von Hand gewaehlt, Klammern blieben stehen).
+    const codes = pruefe(GEMISCHT, 'work.title.supplied').map((c) => c.code)
+    expect(codes).toEqual(['data.bracketTitleStrip'])
   })
 
   it('nicht an einem Ziel ausserhalb der Titel', () => {
@@ -252,5 +258,61 @@ describe('Klammern: was das Profil entscheidet', () => {
       expect(r.canonical.work['has_alternative_title']).toBeUndefined()
       expect(r.errors ?? []).toEqual([])
     }
+  })
+})
+
+describe('Archivtitel von Hand gewaehlt (#5, Nachtest vom 24.09.)', () => {
+  it('bietet an, die Klammern abzuschneiden', () => {
+    const [c] = pruefe(ALLE, 'work.title.supplied')
+    expect(c?.code).toBe('data.bracketTitleStrip')
+    expect(c?.fix).toEqual(KLAMMERN_ABSCHNEIDEN)
+    expect(c?.severity).toBe('warning')
+  })
+
+  it('schneidet nicht von selbst ab — das Profil bleibt, wie es ist', () => {
+    const m = profil('work.title.supplied')
+    const r = runRow(m, { Titel: '[Betriebsausflug 1962]' }, 'r1', { schema: testSchema })
+    expect(JSON.stringify(r.canonical.work)).toContain('[Betriebsausflug 1962]')
+  })
+
+  it('schweigt, wenn die Kette die Klammern schon behandelt', () => {
+    expect(pruefe(ALLE, 'work.title.supplied', undefined, [{ ...KLAMMERN_ABSCHNEIDEN }])).toEqual([])
+  })
+
+  it('schweigt, wenn der Vorschlag abgelehnt wurde', () => {
+    const dismissed = [{ code: 'data.bracketTitleStrip', target: 'work.title.supplied' }]
+    expect(pruefe(ALLE, 'work.title.supplied', dismissed)).toEqual([])
+  })
+
+  it('schweigt ohne eingeklammerte Werte', () => {
+    expect(pruefe(KEINE, 'work.title.supplied')).toEqual([])
+  })
+
+  it('der Schritt laesst Werte ohne Klammern unveraendert und meldet nichts', () => {
+    for (const [ein, aus] of [['[ohne Titel]', 'ohne Titel'], ['Metropolis', 'Metropolis'],
+      ['Der blaue Engel [Fragment]', 'Der blaue Engel [Fragment]'], ['[a] und [b]', '[a] und [b]']]) {
+      const r = runChain([{ ...KLAMMERN_ABSCHNEIDEN }], ein!, {})
+      expect(r.value).toBe(aus)
+      expect(r.errors).toEqual([])
+    }
+  })
+})
+
+describe('Erstvorschlag bei eingeklammerten Titeln (#5)', () => {
+  const vorschlag = { Titel: [{ target: 'work.title.primary', score: 90 }, { target: 'work.note', score: 20 }] }
+  const verteilt = (werte: string[]) => ({ Titel: werte.map((value) => ({ value, count: 1 })) })
+
+  it('nennt den Archivtitel samt Abschneiden, wenn alle Werte eingeklammert sind', () => {
+    const [erst, zweit] = klammerVorschlaege(vorschlag, verteilt(ALLE))['Titel']!
+    expect(erst).toEqual({ target: 'work.title.supplied', score: 90, post: [KLAMMERN_ABSCHNEIDEN], reason: 'bracketTitle' })
+    expect(zweit).toEqual({ target: 'work.note', score: 20 })
+  })
+
+  it('bleibt beim Haupttitel, wenn die Spalte gemischt ist', () => {
+    expect(klammerVorschlaege(vorschlag, verteilt(GEMISCHT))['Titel']![0]?.target).toBe('work.title.primary')
+  })
+
+  it('bleibt beim Haupttitel bei einem einzigen Wert', () => {
+    expect(klammerVorschlaege(vorschlag, verteilt(['[x]']))['Titel']![0]?.target).toBe('work.title.primary')
   })
 })

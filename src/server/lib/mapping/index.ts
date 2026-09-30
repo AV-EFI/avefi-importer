@@ -152,6 +152,8 @@ export {
   SAMPLE_DISTINCT_LIMIT,
   MAX_PREVIEW_ROWS,
   MAX_SCHEMA_ISSUES,
+  klammerVorschlaege,
+  KLAMMERN_ABSCHNEIDEN,
   pickExamples,
   previewChain,
   previewRowIndices,
@@ -163,7 +165,8 @@ export type {
   PreviewColumn,
   PreviewInput,
   PreviewOptions,
-  PreviewResult
+  PreviewResult,
+  TitelVorschlag
 } from './preview.js'
 
 /* ----------------------------------------------------------- Vorschlaege */

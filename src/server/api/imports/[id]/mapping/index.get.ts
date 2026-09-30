@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const profile = await findOwnProfile(sql, user.institution_id, source.headerHash)
   const payload = await editorPayload(sql, {
     mode: 'import',
-    endpoint: `/api/imports/${row.id}/mapping`,
+    endpoint: `/imports/${row.id}/mapping`,
     subject: row.filename,
     canStart: true,
     source,

@@ -90,8 +90,10 @@ function paramId(param: TransformParamSpec): string {
         <span class="bd" />{{ t('mapping.chain.slow') }}
       </span>
       <span v-if="meta === null" class="badge b-danger"><span class="bd" />{{ t('mapping.chain.unknownOp') }}</span>
-      <button type="button" class="iconbtn-del" :aria-label="t('mapping.chain.removeStep', { name: opLabel })"
-              @click="emit('remove')">✕</button>
+      <!-- Sichtbar beschriftet: Das ✕ sah aus wie „Schliessen" (Test 3). -->
+      <button type="button" class="btn btn-outline btn-sm step-remove"
+              :aria-label="t('mapping.chain.removeStep', { name: opLabel })"
+              @click="emit('remove')"><span aria-hidden="true">🗑</span> {{ t('mapping.chain.remove') }}</button>
     </div>
 
     <div v-if="params.length" class="ui-step-params">

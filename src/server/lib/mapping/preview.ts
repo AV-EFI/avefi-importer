@@ -14,7 +14,8 @@
  * Zeilen") faellt aus derselben Rechnung ab und wird mitgeliefert.
  */
 
-import type { MappingJson, ProfileSample } from '#shared/types/domain'
+import type { MappingJson, ProfileSample, TransformStep } from '#shared/types/domain'
+import type { TargetSuggestion } from './suggest.js'
 import { meldungstext } from './meldungen.js'
 import type { MappingMessage } from '#shared/types/domain'
 import type { SourceRow } from './header.js'
@@ -343,6 +344,60 @@ function isBracketed(raw: string): boolean {
 }
 
 /**
+ * Klammern abschneiden, ohne andere Werte anzufassen.
+ *
+ * Ersetzen statt Herausloesen (`capture`): Ein Wert ohne Klammern bleibt so,
+ * wie er ist, und erzeugt keine Meldung „passt nicht zum Muster". Damit taugt
+ * derselbe Schritt fuer durchgehend und fuer teilweise eingeklammerte Spalten.
+ */
+export const KLAMMERN_ABSCHNEIDEN: TransformStep = { op: 'regex', pattern: '^\\[([^\\[\\]]*)\\]$', with: '$1' }
+
+/** Ob eine Kette die Klammern schon behandelt: mit einem Waechter oder einem Klammermuster. */
+function hatKlammerschritt(kette: ReadonlyArray<TransformStep | undefined>): boolean {
+  return kette.some((st) => canonicalOp(String(st?.op ?? '')) === 'only')
+    || kette.some((st) => String(st?.pattern ?? '').includes('\\['))
+}
+
+export interface TitelVorschlag extends TargetSuggestion {
+  /** Schritte, die mit dem Ziel zusammen angelegt werden. */
+  post?: TransformStep[]
+  /** Warum der Vorschlag vom reinen Spaltennamen abweicht. */
+  reason?: 'bracketTitle'
+}
+
+/**
+ * Erstvorschlag bei durchgehend eingeklammerten Titeln (#5, Jasper am 24.09.).
+ *
+ * Die Vorschlaege unter einer Spalte kommen aus dem Spaltennamen. „Titel" fuehrt
+ * zum Haupttitel, und erst danach meldete der Editor, dass die Werte in
+ * Klammern stehen. Stehen ALLE Werte der Spalte in Klammern, schlaegt schon der
+ * Erstvorschlag den Archivtitel vor, samt Abschneiden. Es bleibt ein Vorschlag:
+ * Uebernommen wird er erst mit einem Klick, und im Profil steht er sichtbar.
+ *
+ * Bei gemischten Spalten bleibt es beim Haupttitel; dort fuehrt der bekannte
+ * Hinweis zur Aufteilung in zwei Zweige.
+ */
+export function klammerVorschlaege(
+  suggestions: Record<string, TargetSuggestion[]>,
+  distinct: Record<string, ReadonlyArray<{ value: string; count: number }>>
+): Record<string, TitelVorschlag[]> {
+  const out: Record<string, TitelVorschlag[]> = {}
+  for (const [col, liste] of Object.entries(suggestions)) {
+    const werte = (distinct[col] ?? []).filter((v) => v.value.trim() !== '')
+    const gefuellt = werte.reduce((summe, v) => summe + v.count, 0)
+    const durchgehend = gefuellt >= 2 && werte.every((v) => isBracketed(v.value))
+    out[col] = liste.map((s) => {
+      const m = /^(work|manifestation|item)\.title\.primary$/.exec(s.target)
+      if (!durchgehend || m === null) return s
+      const ersatz = `${m[1]}.title.supplied`
+      if (getTarget(ersatz) === undefined) return s
+      return { target: ersatz, score: s.score, post: [{ ...KLAMMERN_ABSCHNEIDEN }], reason: 'bracketTitle' as const }
+    })
+  }
+  return out
+}
+
+/**
  * Vorschlaege fuer eingeklammerte Titel.
  *
  * Zwei Lagen, zwei verschiedene Vorschlaege:
@@ -455,7 +510,29 @@ export function bracketTitleChecks(
       // Nur der einwertige Primaerplatz ist betroffen. An einem mehrwertigen
       // Ziel draengen sich zwei Titel nicht gegenseitig weg.
       if (target === undefined || target.writer.kind !== 'title' || !target.writer.primary) continue
-      if (target.writer.titleType === 'SuppliedDevisedTitle') continue
+
+      if (target.writer.titleType === 'SuppliedDevisedTitle') {
+        // #5, Jasper am 24.09.: Wer den Archivtitel von Hand waehlt, bekam kein
+        // Angebot, die Klammern abzuschneiden; nur der Weg ueber den Vorschlag
+        // am Haupttitel tat es. Abgeschnitten wird auch hier nicht von selbst —
+        // ob eine Klammer Kennzeichnung ist, bleibt eine Entscheidung (Elias).
+        const kette = [...pre, ...(Array.isArray(binding.post) ? binding.post : [])]
+        if (hatKlammerschritt(kette)) continue
+        if (abgelehnt.some((d) => d.code === 'data.bracketTitleStrip' && d.target === key)) continue
+        out.push({
+          severity: 'warning',
+          code: 'data.bracketTitleStrip',
+          sourceField: col,
+          targetField: key,
+          params: { n: geklammert, von: gefuellt.length, label: target.label },
+          message: `${geklammert} von ${gefuellt.length} betrachteten Werten stehen in eckigen Klammern. `
+            + `Am Archivtitel sind die Klammern die Kennzeichnung der Quelldatei, nicht Teil des Namens. `
+            + '"Klammern abschneiden" nimmt sie heraus; Werte ohne Klammern bleiben, wie sie sind.',
+          fix: { ...KLAMMERN_ABSCHNEIDEN },
+          fixLabel: 'mapping.check.fixBracketStrip'
+        })
+        break
+      }
 
       const ersatz = `${target.level}.title.supplied`
       if (getTarget(ersatz) === undefined) continue
@@ -466,8 +543,7 @@ export function bracketTitleChecks(
       // Wer schon einen Waechter oder eine Klammerbehandlung in der Kette hat,
       // hat die Entscheidung getroffen.
       const kette = [...pre, ...(Array.isArray(binding.post) ? binding.post : [])]
-      if (kette.some((st) => canonicalOp(String(st?.op ?? '')) === 'only')) continue
-      if (kette.some((st) => String(st?.pattern ?? '').includes('\\['))) continue
+      if (hatKlammerschritt(kette)) continue
 
       // Die Klammern schneidet der Importer beim Schreiben eines Titels
       // ohnehin ab, unabhaengig vom Profil. Die Vorschlaege muessen sich also
@@ -539,6 +615,12 @@ export function dataChecks(mapping: MappingJson, columns: Record<string, Preview
     for (const binding of spec.targets ?? []) {
       const target = getTarget(String(binding.target ?? ''))
       if (target === undefined || !target.multi) continue
+      // Kennungen sind mehrwertig, aber ein Trennzeichen darin ist fast nie eine
+      // Liste: Signaturen wie „FMP 188/35" (Sabrina Klewitz, Test 3) und jede
+      // AVefi-PID („21.11155/…") enthalten einen Schraegstrich. Der Vorschlag
+      // haette jede Kennung zerlegt. Wer wirklich mehrere Kennungen in einer
+      // Zelle hat, setzt „Aufteilen" von Hand.
+      if (target.writer.kind === 'identifier') continue
 
       const chain = [...pre, ...(Array.isArray(binding.post) ? binding.post : [])]
       if (chain.some((s) => canonicalOp(String(s?.op ?? '')) === 'split')) continue

@@ -96,7 +96,8 @@ export interface EditorPayload {
   avefiSchemaVersion: string | null
   targets: EditorTarget[]
   transforms: TransformOpMeta[]
-  suggestions: Record<string, Array<{ target: string; score: number }>>
+  /** `post` und `reason` nur beim Archivtitel-Vorschlag fuer geklammerte Titel (#5) */
+  suggestions: Record<string, Array<{ target: string; score: number; post?: TransformStep[]; reason?: 'bracketTitle' }>>
   hints: Record<string, Array<{ target: string; count: number }>>
   vocabulary: Record<string, string[]>
   values: Record<string, Array<{ value: string; count: number }>>

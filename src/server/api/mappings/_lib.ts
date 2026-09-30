@@ -23,10 +23,10 @@ import { db } from '../../db'
 import { requireUser } from '../../utils/session'
 import {
   allTargets, checkProfileColumns, computeComplete, createSchemaModel, EMPTY_SCHEMA_MODEL, emptyMapping,
-  isEmptyRow, normalizeMapping, openColumns, setSchemaModel, suggestForColumns,
+  isEmptyRow, klammerVorschlaege, normalizeMapping, openColumns, setSchemaModel, suggestForColumns,
   suggestProfileName, targetHintsFromMappings, targetsForFrontend, transformCatalogForEditor,
   vocabularyCandidates,
-  type ProfileColumnReport, type SchemaModel, type SourceRow, type TargetSuggestion, type TransformOpMeta
+  type ProfileColumnReport, type SchemaModel, type SourceRow, type TargetSuggestion, type TitelVorschlag, type TransformOpMeta
 } from '../../lib/mapping/index'
 import { schemaInfo } from '../../worker/validate'
 
@@ -494,7 +494,12 @@ export function sourceFromSample(
 
 export interface EditorPayload {
   mode: 'import' | 'profile'
-  /** Basis der POST-Aufrufe: <endpoint>/preview, /save, /candidates, /adopt. */
+  /**
+   * Basis der POST-Aufrufe: <endpoint>/preview, /save, /candidates, /adopt.
+   * Relativ zur API-Basis, also ohne `/api` — die Basis setzt die Oberflaeche
+   * mit useApi() davor. Bis zum 30.09.2026 stand hier `/api/...` fest, und der
+   * Editor ging als einziger Aufruf an der konfigurierbaren Basis vorbei (#9).
+   */
   endpoint: string
   /** Datei- bzw. Profilname in der Ueberschrift. */
   subject: string
@@ -511,7 +516,7 @@ export interface EditorPayload {
   avefiSchemaVersion: string | null
   targets: EditorTarget[]
   transforms: TransformOpMeta[]
-  suggestions: Record<string, TargetSuggestion[]>
+  suggestions: Record<string, TitelVorschlag[]>
   hints: Record<string, Array<{ target: string; count: number }>>
   vocabulary: Record<string, string[]>
   /** Verschiedene Werte je Spalte mit Haeufigkeit — Grundlage der Wertelisten. */
@@ -592,7 +597,9 @@ export async function editorPayload(sql: Sql, options: PayloadOptions): Promise<
     avefiSchemaVersion: version,
     targets,
     transforms: editorTransforms(),
-    suggestions: suggestForColumns(source.columns),
+    // Aus dem Spaltennamen, bei durchgehend eingeklammerten Titeln der
+    // Archivtitel statt des Haupttitels (#5)
+    suggestions: klammerVorschlaege(suggestForColumns(source.columns), source.distinct),
     hints: targetHintsFromMappings(source.columns, others),
     vocabulary: vocabularyCandidates(distinctCounts),
     values,

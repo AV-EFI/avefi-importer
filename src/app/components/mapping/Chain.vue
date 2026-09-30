@@ -66,7 +66,7 @@ function add(meta: TransformOpMeta) {
   // gemeint ist, davor dagegen fast nie.
   props.chain.splice(insertAt(meta), 0, step)
   close()
-  emit('change')
+  geaendert()
 }
 
 function phaseOfStep(step: TransformStep): number {
@@ -87,11 +87,40 @@ function insertAt(meta: TransformOpMeta): number {
   return at
 }
 
+/**
+ * Entfernen, mit Rueckweg.
+ *
+ * Sabrina Klewitz (Test 3): Am Konverter war nicht klar, ob das ✕ das
+ * Bearbeitungsfeld schliesst oder den Konverter verwirft. Es verwarf ihn, ohne
+ * Rueckfrage und ohne Spur. Der Knopf heisst jetzt sichtbar „Entfernen", und
+ * bis zur naechsten Aenderung steht darunter, was entfernt wurde, mit
+ * „Rueckgaengig". Eine Rueckfrage vorab waere beim Aufbauen einer Kette laestig.
+ */
+const entfernt = ref<{ step: TransformStep; index: number; name: string } | null>(null)
+
 function remove(index: number) {
-  props.chain.splice(index, 1)
+  const [step] = props.chain.splice(index, 1)
+  if (step !== undefined) {
+    const meta = metaOf(String(step.op))
+    entfernt.value = { step, index, name: meta !== null ? opLabel(meta) : String(step.op) }
+  }
   // Der Knopf des geloeschten Schritts ist weg; der Fokus geht auf „Schritt
-  // hinzufuegen" statt auf <body>.
+  // hinzufuegen" statt auf <body>. Die Meldung sagt die Statuszeile an.
   void nextTick(() => addButton.value?.focus())
+  emit('change')
+}
+
+function rueckgaengig() {
+  const e = entfernt.value
+  if (e === null) return
+  props.chain.splice(Math.min(e.index, props.chain.length), 0, e.step)
+  entfernt.value = null
+  emit('change')
+}
+
+/** Jede weitere Aenderung an dieser Kette beendet das Angebot. */
+function geaendert() {
+  entfernt.value = null
   emit('change')
 }
 
@@ -100,7 +129,7 @@ function move(index: number, delta: number) {
   if (to < 0 || to >= props.chain.length) return
   const [step] = props.chain.splice(index, 1)
   if (step !== undefined) props.chain.splice(to, 0, step)
-  emit('change')
+  geaendert()
 }
 
 function close() {
@@ -144,7 +173,7 @@ onBeforeUnmount(() => {
       <MappingStep :step="step" :meta="metaOf(String(step.op))" :columns="columns" :enum-values="enumValues"
                    :enum-name="enumName ?? ''"
                    :source-values="sourceValues" :id-base="`${idBase}-s${i}`" :position="i + 1"
-                   @change="emit('change')" @remove="remove(i)" />
+                   @change="geaendert" @remove="remove(i)" />
       <div v-if="chain.length > 1" style="display:flex;gap:4px;margin:-4px 0 7px">
         <button type="button" class="linkbtn" :disabled="i === 0"
                 :aria-label="t('mapping.chain.moveUp', { n: i + 1 })" @click="move(i, -1)">↑</button>
@@ -152,6 +181,14 @@ onBeforeUnmount(() => {
                 :aria-label="t('mapping.chain.moveDown', { n: i + 1 })" @click="move(i, 1)">↓</button>
       </div>
     </div>
+
+    <p class="chain-removed small" role="status" aria-live="polite">
+      <template v-if="entfernt">
+        {{ t('mapping.chain.removed', { name: entfernt.name }) }}
+        <button type="button" class="linkbtn" :aria-label="t('mapping.chain.undoLabel', { name: entfernt.name })"
+                @click="rueckgaengig">{{ t('mapping.chain.undo') }}</button>
+      </template>
+    </p>
 
     <div class="chain-add">
       <button ref="addButton" type="button" class="btn btn-outline btn-sm"

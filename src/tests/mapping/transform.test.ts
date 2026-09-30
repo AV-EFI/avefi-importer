@@ -324,3 +324,16 @@ describe('Reihenfolge der Kette', () => {
     }
   })
 })
+
+describe('Spalten verbinden: Artikel und Titel (Sabrina Klewitz, Test 3)', () => {
+  it('steht wieder im Katalog des Editors', () => {
+    expect(transformCatalogForEditor().map((m) => m.op)).toContain('concat')
+  })
+
+  it('setzt den Artikel vor den Titel und laesst einen leeren Artikel weg', () => {
+    const kette = [{ op: 'concat', columns: ['Titel'] }]
+    const zeile = (Artikel: string, Titel: string) => ({ Artikel, Titel })
+    expect(runChain(kette, 'Die', { row: zeile('Die', 'Kinder des Olymp') }).value).toBe('Die Kinder des Olymp')
+    expect(runChain(kette, '', { row: zeile('', 'Fahr zur Hölle, Liebling') }).value).toBe('Fahr zur Hölle, Liebling')
+  })
+})

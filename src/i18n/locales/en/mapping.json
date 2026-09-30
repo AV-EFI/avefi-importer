@@ -61,7 +61,8 @@
       "hintFor": "Apply target {target} known from other profiles to column “{column}”",
       "chooseTargetFor": "Choose a target for column “{column}”",
       "skip": "Skip the mapping table (no rows) | Skip the mapping table (one row) | Skip the mapping table ({n} rows)",
-      "sideLabel": "Result and settings"
+      "sideLabel": "Result and settings",
+      "suggestionBracket": "All values in this column are enclosed in square brackets. Suggested: {path}, with the brackets cut off (step “regex”, visible and changeable)."
     },
     "branch": {
       "preLabel": "Converters for every target of this column",
@@ -91,7 +92,11 @@
       "closePicker": "Close the list",
       "moveUp": "Move converter {n} earlier",
       "moveDown": "Move converter {n} later",
-      "addStepLabel": "Add converter"
+      "addStepLabel": "Add converter",
+      "remove": "Remove",
+      "removed": "Converter “{name}” removed.",
+      "undo": "Undo",
+      "undoLabel": "Restore converter “{name}”"
     },
     "target": {
       "search": "Search a field — name, label or schema path",
@@ -119,7 +124,8 @@
       "dismissedHeading": "One suggestion was dismissed: | {n} suggestions were dismissed:",
       "undismiss": "show again",
       "fixBracketSplit": "Split the column",
-      "fixBracketAll": "Use as archive title"
+      "fixBracketAll": "Use as archive title",
+      "fixBracketStrip": "Cut off brackets"
     },
     "columns": {
       "heading": "Header and profile differ.",
@@ -962,7 +968,8 @@
       "transform_unknownOpPlain": "Unknown operation “{op}”",
       "value_truncated": "“{field}” takes only one value; further values in this cell are left out.",
       "work_no_title": "No column leads to “Work › Titles › Main title”. The title of the manifestation or item is used instead.",
-      "worktype_nowhere": "No column leads to “Work › Work type”. The AVefi schema requires the work type at the work, so the conversion enters “Monographic” — for every record of this holding, unchecked. Where that is wrong, map a column to “Work › Work type” or add a fixed value with the correct type."
+      "worktype_nowhere": "No column leads to “Work › Work type”. The AVefi schema requires the work type at the work, so the conversion enters “Monographic” — for every record of this holding, unchecked. Where that is wrong, map a column to “Work › Work type” or add a fixed value with the correct type.",
+      "data_bracketTitleStrip": "{n} of {von} sampled values are enclosed in square brackets. On the archive title the brackets mark the source file and are not part of the name. “Cut off brackets” removes them; values without brackets stay as they are."
     },
     "versionView": {
       "crumb": "Version {n}",

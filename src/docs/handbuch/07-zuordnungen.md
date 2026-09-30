@@ -127,6 +127,11 @@ Werte in einer Titelspalte, schlägt sie etwas vor, führt es aber nicht von sel
   Vorschlag hängt sie auf „Archivtitel" um.
 - Sind sie **gemischt**, teilt der Vorschlag die Spalte in zwei Zweige: eingeklammerte
   Werte werden zum Archivtitel, alle anderen bleiben Haupttitel.
+- Stehen alle Werte in Klammern, nennt schon der **Erstvorschlag** unter der Spalte
+  „Archivtitel" statt „Haupttitel". Ein Klick übernimmt das Ziel samt dem Schritt, der
+  die Klammern abschneidet; beides ist danach in der Kette sichtbar und änderbar.
+- Wählen Sie „Archivtitel" **von Hand**, bietet der Editor „Klammern abschneiden" an.
+  Werte ohne Klammern bleiben dabei, wie sie sind.
 
 Nehmen Sie den Vorschlag an, fallen die Klammern weg: Der Titeltyp sagt dann schon,
 dass das Archiv den Titel vergeben hat, und die Klammern würden dieselbe Aussage ein
@@ -265,6 +270,25 @@ abzugleichen. Die Prüfung im Editor unterscheidet deshalb drei Fälle:
 
 Ein Festwert genügt als Titel, wenn die Lieferung keine Titelspalte enthält und
 das Archiv einen einheitlichen Ersatz vergeben will.
+
+### Artikel und Titel in zwei Spalten
+
+Manche Tabellen führen den Artikel getrennt: „Kinder des Olymp" in der Spalte *Titel*,
+„Die" in der Spalte *Artikel*. So setzen Sie beides zusammen:
+
+1. Die Spalte **Artikel** auf „Werk › Titel › Haupttitel" legen.
+2. In deren Kette den Konverter **„Spalten verbinden"** (Gruppe *Struktur*) hinzufügen
+   und darin die Spalte *Titel* ankreuzen. Als Trennzeichen genügt die Vorgabe, ein
+   Leerzeichen.
+3. Die Spalte **Titel** selbst nicht mehr auf den Haupttitel legen, sonst stünde er
+   zweimal da. „Nicht übernehmen" wählen oder ihr ein anderes Ziel geben.
+
+Ergebnis: „Die Kinder des Olymp". Ist der Artikel leer, bleibt der Titel allein stehen,
+etwa „Fahr zur Hölle, Liebling". Der eigene Wert der Spalte kommt immer zuerst, die
+angekreuzten Spalten dahinter.
+
+Eine Ordnungsform mit nachgestelltem Artikel („Kinder des Olymp, Die", im Schema
+`has_ordering_name`) erzeugt der CSV-Weg derzeit nicht.
 
 ### Festwerte
 

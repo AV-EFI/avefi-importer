@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
   const payload = await editorPayload(sql, {
     mode: 'profile',
-    endpoint: `/api/mappings/${profile.id}`,
+    endpoint: `/mappings/${profile.id}`,
     subject: profile.name,
     canStart: false,
     source,

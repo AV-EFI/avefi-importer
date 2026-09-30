@@ -68,3 +68,20 @@ describe('Serverabfragen stehen in Services und Composables', () => {
     expect(treffer).toEqual([])
   })
 })
+
+describe('Adressen, die der Server der Oberflaeche mitgibt', () => {
+  // Stefan Stretz in #9 (29.09.): editorAktion nutzte payload.endpoint ohne
+  // useApi(). Der Server schickte `/api/...` fest, und der Zuordnungseditor
+  // ging als einziger an der konfigurierbaren API-Basis vorbei.
+  it.each(['server/api/mappings/[id]/editor.get.ts', 'server/api/imports/[id]/mapping/index.get.ts'])(
+    '%s nennt den Editor-Endpunkt relativ zur API-Basis', (datei) => {
+      const text = readFileSync(join(wurzel, datei), 'utf8')
+      expect(text).toMatch(/endpoint: `\//)
+      expect(text).not.toMatch(/endpoint: `\/api\//)
+    })
+
+  it('editorAktion setzt die Basis mit useApi davor', () => {
+    const text = readFileSync(join(wurzel, 'app/services/mappings.ts'), 'utf8')
+    expect(text).toMatch(/editorAktion:[\s\S]{0,200}\$fetch\(api\(`\$\{endpoint\}/)
+  })
+})

@@ -537,17 +537,24 @@ damit alte Profile nicht brechen, erscheinen im Editorkatalog aber nicht mehr.
 | `template` | `prefix` / `suffix` | `pattern` mit Platzhalter `{value}` |
 | `year` | `regex` mit `capture` | keine |
 | `substring` | kein Nachfolger | `start`, `length` (optional, negativ erlaubt) |
-| `concat` | kein Nachfolger | `columns`, `sep` (Vorgabe Leerzeichen) |
 
 ```jsonc
 { "op": "template", "pattern": "Sig. {value}" }   // "40K" -> "Sig. 40K"
 { "op": "year" }                                  // "um 1935" -> "1935"
 { "op": "substring", "start": 0, "length": 4 }    // "3000040K" -> "3000"
-{ "op": "concat", "columns": ["Untertitel"], "sep": " – " }
 ```
 
-`concat` ist die einzige Operation, die die ganze Quellzeile braucht; alle
-anderen sehen nur ihren Wert.
+`concat` („Spalten verbinden") stand bis zum 30.09.2026 ebenfalls hier. Er ist
+wieder im Editorkatalog, weil ihn eine Tabelle mit Artikel und Titel in zwei
+Spalten braucht:
+
+```jsonc
+{ "op": "concat", "columns": ["Titel"], "sep": " " }   // an der Spalte "Artikel": "Die" -> "Die Kinder des Olymp"
+```
+
+Der eigene Wert kommt zuerst, dahinter die genannten Spalten; leere Teile
+entfallen samt Trennzeichen. `concat` ist die einzige Operation, die die ganze
+Quellzeile braucht; alle anderen sehen nur ihren Wert.
 
 Zwei aeltere Namen werden zur Laufzeit uebersetzt: `ucfirst` wird zu
 `titlecase`, `valuemap` zu `map`.

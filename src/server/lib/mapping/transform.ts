@@ -283,6 +283,18 @@ export const TRANSFORM_CATALOG: Record<string, TransformOpMeta> = {
     ]
   },
 
+  /*
+   * Seit dem 30.09.2026 wieder im Katalog. Er galt als Altlast ohne Nachfolger,
+   * aber genau ihn braucht eine Tabelle, die Artikel und Titel in zwei Spalten
+   * fuehrt (Sabrina Klewitz, Test 3: „Kinder des Olymp" | „Die"). An die
+   * Artikelspalte das Ziel Haupttitel und „Spalten verbinden" mit der
+   * Titelspalte; bei leerem Artikel bleibt der Titel allein.
+   */
+  concat: {
+    op: 'concat', label: 'Spalten verbinden', group: 'Struktur', in: 'any', out: 'text',
+    params: [P('columns', 'Weitere Spalten', 'columns'), P('sep', 'Trennzeichen', 'text', { optional: true })]
+  },
+
   /* --- Nur noch fuer alte Profile --- */
   substring: {
     op: 'substring', label: 'Ausschnitt', group: 'Text', in: 'any', out: 'same', legacy: true,
@@ -298,10 +310,6 @@ export const TRANSFORM_CATALOG: Record<string, TransformOpMeta> = {
     legacy: true, replacedBy: 'regex',
     params: []
   },
-  concat: {
-    op: 'concat', label: 'Spalten verbinden', group: 'Struktur', in: 'any', out: 'text', legacy: true,
-    params: [P('columns', 'Weitere Spalten', 'columns'), P('sep', 'Trennzeichen', 'text', { optional: true })]
-  }
 }
 
 /** Operationen fuer die Auswahl im Editor — ohne die Altlasten. */

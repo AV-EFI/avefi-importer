@@ -302,11 +302,11 @@ function reset(column: string) {
  * Baum. Ohne das Nachfuehren faellt der Fokus auf <body>, und der Weg zurueck
  * in die eben geoeffnete Zeile beginnt wieder am Seitenanfang.
  */
-function addTarget(column: string, key = '') {
+function addTarget(column: string, key = '', post: TransformStep[] = []) {
   const s = spec(column)
   s.ignore = false
   if (!Array.isArray(s.targets)) s.targets = []
-  s.targets.push({ target: key, post: [] })
+  s.targets.push({ target: key, post: JSON.parse(JSON.stringify(post)) as TransformStep[] })
   opened.value[column] = true
   const index = columns.value.indexOf(column)
   const branch = (s.targets.length) - 1
@@ -900,9 +900,11 @@ const canonicalJson = computed(() => {
                       -->
                       <button v-for="s in (payload.suggestions[column] ?? [])" :key="s.target" type="button"
                               class="chip chip-sugg"
-                              :title="t('mapping.table.suggestionHint', { score: s.score, path: targetPath(s.target) })"
+                              :title="s.reason === 'bracketTitle'
+                                ? t('mapping.table.suggestionBracket', { path: targetPath(s.target) })
+                                : t('mapping.table.suggestionHint', { score: s.score, path: targetPath(s.target) })"
                               :aria-label="t('mapping.table.suggestionFor', { target: targetPath(s.target), column })"
-                              @click="addTarget(column, s.target)">
+                              @click="addTarget(column, s.target, s.post)">
                         <span aria-hidden="true">✨</span> {{ targetLabel(s.target) }}
                       </button>
                       <button v-for="h in (payload.hints[column] ?? [])" :key="`h${h.target}`" type="button"

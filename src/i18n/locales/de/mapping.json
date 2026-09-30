@@ -61,7 +61,8 @@
       "hintFor": "Aus anderen Profilen bekanntes Ziel {target} für Spalte „{column}“ übernehmen",
       "chooseTargetFor": "Ziel für Spalte „{column}“ wählen",
       "skip": "Zuordnungstabelle überspringen (keine Zeile) | Zuordnungstabelle überspringen (eine Zeile) | Zuordnungstabelle überspringen ({n} Zeilen)",
-      "sideLabel": "Ergebnis und Einstellungen"
+      "sideLabel": "Ergebnis und Einstellungen",
+      "suggestionBracket": "Alle Werte dieser Spalte stehen in eckigen Klammern. Vorgeschlagen: {path}, die Klammern werden dabei abgeschnitten (Schritt „regex“, sichtbar und änderbar)."
     },
     "branch": {
       "preLabel": "Konverter für alle Ziele dieser Spalte",
@@ -91,7 +92,11 @@
       "closePicker": "Auswahl schließen",
       "moveUp": "Konverter {n} nach vorn",
       "moveDown": "Konverter {n} nach hinten",
-      "addStepLabel": "Konverter hinzufügen"
+      "addStepLabel": "Konverter hinzufügen",
+      "remove": "Entfernen",
+      "removed": "Konverter „{name}“ entfernt.",
+      "undo": "Rückgängig",
+      "undoLabel": "Konverter „{name}“ wiederherstellen"
     },
     "target": {
       "search": "Feld suchen — Name, Bezeichnung oder Schemapfad",
@@ -119,7 +124,8 @@
       "dismissedHeading": "Ein Vorschlag wurde abgelehnt: | {n} Vorschläge wurden abgelehnt:",
       "undismiss": "wieder anzeigen",
       "fixBracketSplit": "Spalte aufteilen",
-      "fixBracketAll": "Als Archivtitel übernehmen"
+      "fixBracketAll": "Als Archivtitel übernehmen",
+      "fixBracketStrip": "Klammern abschneiden"
     },
     "columns": {
       "heading": "Kopfzeile und Profil weichen ab.",
@@ -962,7 +968,8 @@
       "transform_unknownOpPlain": "Unbekannte Operation „{op}“",
       "value_truncated": "„{field}“ nimmt nur einen Wert auf; weitere Werte dieser Zelle bleiben unberücksichtigt.",
       "work_no_title": "Keine Spalte führt auf „Werk › Titel › Haupttitel“. Ersatzweise wird der Titel der Manifestation oder des Exemplars übernommen.",
-      "worktype_nowhere": "Keine Spalte führt auf „Werk › Werkart“. Das AVefi-Schema verlangt die Werkart am Werk, deshalb trägt die Konvertierung „Monographic“ ein — für jeden Datensatz dieses Bestands, ungeprüft. Wo das nicht stimmt, gehört eine Spalte auf „Werk › Werkart“ oder ein Festwert mit der richtigen Werkart in die Zuordnung."
+      "worktype_nowhere": "Keine Spalte führt auf „Werk › Werkart“. Das AVefi-Schema verlangt die Werkart am Werk, deshalb trägt die Konvertierung „Monographic“ ein — für jeden Datensatz dieses Bestands, ungeprüft. Wo das nicht stimmt, gehört eine Spalte auf „Werk › Werkart“ oder ein Festwert mit der richtigen Werkart in die Zuordnung.",
+      "data_bracketTitleStrip": "{n} von {von} betrachteten Werten stehen in eckigen Klammern. Am Archivtitel sind die Klammern die Kennzeichnung der Quelldatei, nicht Teil des Namens. „Klammern abschneiden“ nimmt sie heraus; Werte ohne Klammern bleiben, wie sie sind."
     },
     "versionView": {
       "crumb": "Version {n}",

@@ -146,3 +146,24 @@ describe('Aufteilungs-Vorschlag', () => {
     expect(checks.map((c) => c.code)).toContain('data.separator')
   })
 })
+
+describe('Trennzeichen an Kennungen (Sabrina Klewitz, Test 3)', () => {
+  function vorschlaege(ziel: string, werte: string[]) {
+    const m = emptyMapping(['Kennung'])
+    m.columns['Kennung'] = { pre: [], targets: [{ target: ziel, post: [] }] }
+    return dataChecks(m, pickExamples(['Kennung'], werte.map((Kennung) => ({ Kennung })))).map((c) => c.code)
+  }
+
+  it('zerlegt keine Signatur mit Schraegstrich', () => {
+    expect(vorschlaege('item.identifier.local', ['FMP 188/35', 'FMP 189/35', 'FMP 190/35'])).not.toContain('data.separator')
+  })
+
+  it('zerlegt keine AVefi-PID', () => {
+    const pids = ['21.11155/0A1B2C3D-0000-0000-0000-000000000001', '21.11155/0A1B2C3D-0000-0000-0000-000000000002']
+    expect(vorschlaege('work.identifier.avefi', pids)).not.toContain('data.separator')
+  })
+
+  it('schlaegt an anderen mehrwertigen Zielen weiter vor', () => {
+    expect(vorschlaege('manifestation.note', ['a / b', 'c / d'])).toContain('data.separator')
+  })
+})
