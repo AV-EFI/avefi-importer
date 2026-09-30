@@ -245,8 +245,16 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         -->
         <li v-for="block in groups" :key="block.level" role="group"
             :aria-label="`${levelLabel(block.level)} (${block.items.length})`">
-          <p class="ac-group">{{ levelLabel(block.level) }} <span class="dim">({{ block.items.length }})</span></p>
-          <ul class="ac-sub">
+          <!--
+            Die sichtbare Ueberschrift ist fuer Vorlesewerkzeuge verborgen: Den
+            Namen der Gruppe traegt aria-label. Die innere Liste ist role="none".
+            Als gewoehnliche <ul> hatte sie die implizite Rolle „list", und die
+            Optionen standen dann in einer Liste statt in ihrer Gruppe — axe
+            meldete am 30.09.2026 aria-required-parent fuer jede Option und
+            aria-required-children fuer die Auswahlliste.
+          -->
+          <p class="ac-group" aria-hidden="true">{{ levelLabel(block.level) }} <span class="dim">({{ block.items.length }})</span></p>
+          <ul class="ac-sub" role="none">
             <li v-for="entry in block.items" :id="optionId(entry.index)" :key="entry.target.key" role="option"
                 :aria-selected="entry.target.key === modelValue ? 'true' : 'false'"
                 :class="['ac-item', entry.index === activeIndex ? 'on' : '']"

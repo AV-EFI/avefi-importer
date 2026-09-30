@@ -116,6 +116,27 @@ Commit `3007aa5`.
 Editor-Endpunkt ohne `useApi()`, weil der Server ihn mit festem `/api/`
 schickte. Der Endpunkt ist jetzt relativ zur API-Basis. Commit `3007aa5`.
 
+### a11y-Lauf vom 30.09. (aus eigenem Antrieb)
+
+Nach den Änderungen am Editor im hellen Schema neu gelaufen, 58 Zustände,
+bestanden. Auf dem Weg dahin drei Befunde:
+
+* **Die Auswahlliste der Ziele** (`TargetSelect.vue`) meldete
+  `aria-required-parent` für jede Option. Die innere `<ul>` jeder Ebene hatte
+  die implizite Rolle „list“, damit standen die Optionen in einer Liste statt in
+  ihrer Gruppe. Jetzt `role="none"`. Aufgefallen ist es erst jetzt, weil der
+  Lauf die Zuordnungsseite des neuesten Imports öffnet, und der hatte diesmal
+  noch keine Zuordnung.
+* **Ein falscher Kontrastbefund** (1,36:1) an einem Knopf, dessen oberen Rand
+  das geöffnete Zeilenmenü verdeckte. Die Prüfung sah nur auf die Mittellinie.
+  Sie prüft jetzt auch oben und unten und misst teilweise verdeckte Stellen
+  nicht mehr.
+* **Selbst verursacht:** Zwei neue Diagnosehinweise enthielten „& < >“.
+  `unplugin-vue-i18n` hält das für HTML und bricht ab. Im Entwicklungsbetrieb
+  lag deshalb von etwa 14 bis 16:45 Uhr die Fehlerseite von Vite über der
+  Demo. Behoben in `99641d5`. `tests/frontend/uebersetzungen.test.ts`
+  übersetzt seitdem jede Nachricht so, wie der Bau es tut.
+
 ### Offen geblieben
 
 * **Welche Datei ist der vereinbarte Testdatensatz?** Mit der Originaldatei

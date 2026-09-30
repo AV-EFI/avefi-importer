@@ -207,7 +207,12 @@ async function offeneKontraste(seite, ergebnis, stand) {
          * zaehlt Text, den man sehen kann; was hinter einer Auswahlliste oder
          * einem Dialog liegt, ist in diesem Zustand keiner. */
         const r = n.getBoundingClientRect()
-        const proben = [[0.5, 0.5], [0.25, 0.5], [0.75, 0.5]]
+        /* Auch oben und unten: Am 30.09.2026 lag das Menue einer Tabellenzeile
+         * mit seinen letzten Pixeln ueber dem oberen Rand eines Knopfes zwei
+         * Zeilen tiefer. Die drei Proben auf der Mittellinie sahen den Knopf,
+         * die Messung nahm den Menuerand als Grund und meldete 1,36:1 fuer einen
+         * Knopf, der unverdeckt 5,8:1 hat. */
+        const proben = [[0.5, 0.5], [0.25, 0.5], [0.75, 0.5], [0.5, 0.12], [0.5, 0.88]]
         let eigen = 0
         let fremd = 0
         for (const [px, py] of proben) {
@@ -238,7 +243,9 @@ async function offeneKontraste(seite, ergebnis, stand) {
         return {
           kennung: `${n.tagName}.${n.className}|${(n.innerText ?? '').trim().slice(0, 20)}`,
           verborgen: n.closest('[aria-hidden="true"]') !== null,
-          verdeckt: fremd > 0 && eigen === 0,
+          // Schon teilweise zugedeckt heisst: Die Aufnahme zeigt nicht nur das
+          // Element. Solche Stellen werden als verdeckt gezaehlt, nicht gemessen.
+          verdeckt: fremd > 0,
           cssGrund,
           hatBild,
           text: (n.innerText ?? '').trim()
