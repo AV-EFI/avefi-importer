@@ -316,3 +316,16 @@ describe('Erstvorschlag bei eingeklammerten Titeln (#5)', () => {
     expect(klammerVorschlaege(vorschlag, verteilt(['[x]']))['Titel']![0]?.target).toBe('work.title.primary')
   })
 })
+
+describe('Umwidmung einer durchgehend geklammerten Spalte', () => {
+  it('schneidet ab, ohne ungeklammerte Titel einer spaeteren Datei zu leeren', () => {
+    // Profil 8 am 23.09.: Nachtest mit einer Kopie der Paderborner Datei, alle
+    // Titel geklammert, Vorschlag angenommen — mit `capture: 1`. Dieselbe
+    // Kopfzeile fuehrt die Originaldatei wieder zu diesem Profil, und dort hat
+    // kein Titel Klammern: Jeder Haupttitel wurde leer.
+    const [c] = pruefe(ALLE)
+    const schritt = c?.fixPlan?.[0]?.post?.[0]
+    expect(schritt).toEqual(KLAMMERN_ABSCHNEIDEN)
+    expect(runChain([schritt!], 'Der blaue Engel', {}).value).toBe('Der blaue Engel')
+  })
+})

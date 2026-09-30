@@ -563,7 +563,12 @@ export function bracketTitleChecks(
       const MUSTER = '^\\[[^\\[\\]]*\\]$'
       const MIT_GRUPPE = '^\\[([^\\[\\]]*)\\]$'
       const fixPlan: MappingFixPart[] = alle
-        ? [{ target: ersatz, replaces: key, post: [{ op: 'regex', pattern: MIT_GRUPPE, capture: 1 }] }]
+        // Ersetzen statt Herausloesen (bis 30.09.2026: `capture: 1`). Ein Profil
+        // haengt an der Kopfzeile, nicht an der Datei: Kommt spaeter eine Datei
+        // mit derselben Kopfzeile, aber Titeln ohne Klammern, machte `capture`
+        // jeden Titel leer. Genau so hat Profil 8 am 23.09. beim Nachtest mit
+        // einer Kopie der Paderborner Datei alle Haupttitel verloren.
+        ? [{ target: ersatz, replaces: key, post: [{ ...KLAMMERN_ABSCHNEIDEN }] }]
         : [
             { target: key, post: [{ op: 'only', pattern: MUSTER, negate: true }] },
             { target: ersatz, post: [{ op: 'only', pattern: MIT_GRUPPE, capture: 1 }] }
