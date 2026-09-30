@@ -180,7 +180,10 @@ async function routeWorkbook(sql: Sql, record: ImportRow, path: string): Promise
     await setDetectedFormat(sql, record.id, String(record.base_format) === 'ods' ? 'OpenDocument (nicht lesbar)' : 'Excel 97-2003 (nicht lesbar)')
     await setReport(sql, record.id, {
       stage: 'detect',
-      issues: [{ severity: 'error', message, code: 'workbook_format_unsupported' }],
+      issues: [{
+        severity: 'error', message, code: 'workbook_format_unsupported',
+        params: { kind: String(record.base_format) === 'ods' ? 'ods' : 'xls' }
+      }],
       summary: { ...EMPTY_SUMMARY }
     } satisfies ExtendedImportReport)
     await setStatus(sql, record.id, 'error')
@@ -198,6 +201,7 @@ async function routeWorkbook(sql: Sql, record: ImportRow, path: string): Promise
         {
           severity: 'error',
           message: `Die Arbeitsmappe konnte nicht gelesen werden: ${e instanceof Error ? e.message : String(e)}`,
+          detail: e instanceof Error ? e.message : String(e),
           code: 'workbook_unreadable'
         }
       ],

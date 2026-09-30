@@ -39,8 +39,15 @@ export function buildFromInternal(record: InternalRecord, baseId: string, record
   const row = record.source.row
   const nodes: AvefiNode[] = []
 
-  const note = (severity: ValidationIssue['severity'], sourceField: string, message: string, value?: string): void => {
-    issues.push({ severity, message, sourceField, value, row, record: recordNumber, code: 'unmapped_field' })
+  // `kind` waehlt den Satz in der Oberflaeche; der deutsche Satz ist der Rueckfall.
+  const note = (
+    severity: ValidationIssue['severity'], sourceField: string, message: string, value?: string,
+    params: Record<string, string> = {}
+  ): void => {
+    issues.push({
+      severity, message, sourceField, value, row, record: recordNumber, code: 'unmapped_field',
+      params: { kind: sourceField, ...params }
+    })
   }
 
   const w = record.work
@@ -102,7 +109,7 @@ export function buildFromInternal(record: InternalRecord, baseId: string, record
   }
   for (const c of w.contributors) {
     if (c.name.trim() === '') continue
-    note('info', 'contributor', `Die Beteiligung „${c.role}“ wurde nicht uebernommen: Die Rolle muss auf ein AVefi-Vokabular abgebildet werden.`, c.name)
+    note('info', 'contributor', `Die Beteiligung „${c.role}“ wurde nicht uebernommen: Die Rolle muss auf ein AVefi-Vokabular abgebildet werden.`, c.name, { role: c.role })
   }
 
   nodes.push(work)

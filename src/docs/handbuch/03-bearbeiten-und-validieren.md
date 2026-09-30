@@ -207,6 +207,35 @@ Häufig fehlt nur ein Konverter in der Zuordnung:
 | Sprachcode | `language` |
 | Ländercode | `country` |
 
+### efi-conv kann den Datensatz nicht laden
+
+**Herkunft: AVefi-Schema.** efi-conv liest eine Lieferung, bevor es irgendetwas
+prüft, als Datenmodell ein. Passt ein Datensatz nicht in dieses Modell, bricht
+`efi-conv check` an ihm ab, und die ganze Datei gilt als abgelehnt. Der Importer
+lädt deshalb jeden Datensatz genauso und meldet, woran es scheitert: eine fehlende
+Pflichtangabe, ein Wert außerhalb der erlaubten Liste, ein Feld, das es an dieser
+Stelle nicht gibt (etwa eine Anmerkung am Werk).
+
+Unter „Wortlaut des Prüfwerkzeugs“ steht, was efi-conv selbst gemeldet hat,
+unübersetzt. Das Schemafeld in der Meldung nennt die Stelle. Meist hilft dasselbe
+wie oben: ein Konverter, ein anderes Ziel, oder die Spalte nicht übernehmen.
+
+### efi-conv check lehnt den Datensatz ab
+
+**Herkunft: AVefi-Schema.** Über das Datenmodell hinaus wendet `efi-conv check`
+einige Regeln an, und der Importer wendet dieselben an:
+
+| Regel | Was zu tun ist |
+|---|---|
+| Ein Datum hat keine gültige Form | Konverter `date` in die Kette, er bringt Angaben wie „1962“ oder „März 1962“ in die Form JJJJ, JJJJ-MM, JJJJ-MM-TT |
+| Ein Zeitraum endet vor seinem Beginn | Die Quelldaten prüfen, meist sind Anfang und Ende vertauscht |
+| Ein Titel oder eine Anmerkung ist zu lang | Die Quelle kürzen oder die Spalte einem anderen Ziel zuordnen |
+| Ein Name ist leer | Leere Zellen bei Personen, Orten, Genres oder Schlagwörtern prüfen |
+| Der Typ des Haupttitels passt nicht zur Ebene | Am Werk Haupttitel oder Archivtitel wählen, an Manifestation und Exemplar Hauptsachtitel oder Archivtitel |
+| Ein aufgegebenes Exemplar hat keine PID | Aufgegebene Exemplare (Zugangsstatus „Removed“) werden nur geliefert, wenn sie schon eine AVefi-PID haben; sonst die Zeile weglassen |
+
+Der genaue Wortlaut von efi-conv steht auch hier unter „Wortlaut des Prüfwerkzeugs“.
+
 ### Kein Haupttitel
 
 **Herkunft: Vollständigkeit.** Der Datensatz trägt keinen Haupttitel.

@@ -30,7 +30,7 @@ const router = useRouter()
 const { t, te } = useI18n()
 const zeit = useDateTime()
 const keepFocus = useKeepFocus()
-const { hinweis } = useMeldungstext()
+const { hinweis, befund } = useMeldungstext()
 
 const importId = computed(() => String(route.params.id ?? ''))
 const recordId = computed(() => String(route.params.recordId ?? ''))
@@ -467,7 +467,7 @@ function backToList() {
             — {{ t('records.editor.check.saveAnyway') }}
             <ul class="ed-errs">
               <li v-for="(issue, i) in issues" :key="i">
-                <span v-if="issue.targetField" class="mono small">{{ issue.targetField }}: </span>{{ issue.message }}
+                <span v-if="issue.targetField" class="mono small">{{ issue.targetField }}: </span>{{ befund(issue) }}
                 <span v-if="issue.value" class="dim small"> („{{ issue.value }}“)</span>
               </li>
             </ul>

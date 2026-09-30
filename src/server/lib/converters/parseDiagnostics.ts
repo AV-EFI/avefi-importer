@@ -30,6 +30,16 @@ export interface DiagnosticSnippet {
 
 export interface DiagnosticEntry {
   severity: Severity
+  /**
+   * Stabiler Bezeichner fuer den Satz in der Sprache der Oberflaeche
+   * (`imports.diagText.<code>` und `imports.diagHint.<code>`). `message` und
+   * `hint` sind der deutsche Rueckfall. Bis zum 30.09.2026 gab es ihn nicht,
+   * und die Diagnose stand in der englischen Oberflaeche deutsch da (#10).
+   */
+  code: string
+  params?: Record<string, string | number>
+  /** Wortlaut des Pruefwerkzeugs (Parser), unuebersetzt. */
+  detail?: string
   message: string
   line: number | null
   column: number | null
@@ -67,14 +77,21 @@ export async function analyzeParse(path: string, baseFormat: BaseFormat | null):
 
 function entry(
   severity: Severity,
+  code: string,
   message: string,
   hint: string,
-  opts: { line?: number | null; column?: number | null; offset?: number | null; raw?: string } = {}
+  opts: {
+    line?: number | null; column?: number | null; offset?: number | null; raw?: string
+    params?: Record<string, string | number>; detail?: string
+  } = {}
 ): DiagnosticEntry {
   const line = opts.line ?? null
   const column = opts.column ?? null
   return {
     severity,
+    code,
+    ...(opts.params !== undefined ? { params: opts.params } : {}),
+    ...(opts.detail !== undefined && opts.detail !== '' ? { detail: opts.detail } : {}),
     message,
     line,
     column,
@@ -101,7 +118,7 @@ function unreadable(format: string): ParseDiagnostics {
   return {
     ok: false,
     format,
-    errors: [entry('error', 'Die Datei konnte nicht gelesen werden.', 'Pruefen, ob der Upload vollstaendig war.')]
+    errors: [entry('error', 'parse_unreadable', 'Die Datei konnte nicht gelesen werden.', 'Pruefen, ob der Upload vollstaendig war.')]
   }
 }
 
@@ -131,8 +148,10 @@ async function analyzeJson(path: string): Promise<ParseDiagnostics> {
         errors: [
           entry(
             'error',
+            'parse_too_large',
             `Die Datei ist zu gross fuer eine zeilengenaue Analyse. ${e instanceof Error ? e.message : ''}`.trim(),
-            'Die Datei mit einem lokalen JSON-Pruefwerkzeug untersuchen.'
+            'Die Datei mit einem lokalen JSON-Pruefwerkzeug untersuchen.',
+            { detail: e instanceof Error ? e.message : '' }
           )
         ]
       }
@@ -145,7 +164,8 @@ async function analyzeJson(path: string): Promise<ParseDiagnostics> {
     ok: false,
     format: 'JSON',
     errors: [
-      entry('error', loc.message, jsonHint(loc.message), {
+      entry('error', `parse_json_${jsonArt(loc.message)}`, loc.message, jsonHint(loc.message), {
+        detail: loc.message,
         line: loc.line,
         column: loc.column,
         offset: loc.offset,
@@ -172,13 +192,34 @@ async function analyzeXml(path: string, baseFormat: BaseFormat): Promise<ParseDi
     ok: false,
     format: label,
     errors: [
-      entry('error', `${err.msg} (${err.code})`, xmlHint(err.code), {
+      entry('error', `parse_xml_${xmlArt(err.code)}`, `${err.msg} (${err.code})`, xmlHint(err.code), {
+        detail: `${err.msg} (${err.code})`,
         line: err.line,
         column: err.col,
         raw
       })
     ]
   }
+}
+
+/** Welcher Hinweis passt — dieselbe Einteilung wie xmlHint, als Code. */
+function xmlArt(code: string): string {
+  const c = code.toLowerCase()
+  if (c.includes('unclosed') || c.includes('closing')) return 'nesting'
+  if (c.includes('invalidchar') || c.includes('char')) return 'char'
+  if (c.includes('attr')) return 'attr'
+  return 'other'
+}
+
+/** Welcher Hinweis passt — dieselbe Einteilung wie jsonHint, als Code. */
+function jsonArt(message: string): string {
+  if (message.includes('Komma')) return 'comma'
+  if (message.includes('Zeichenkette')) return 'string'
+  if (message.includes('Anfuehrungszeichen')) return 'quotes'
+  if (message.includes('„:“')) return 'colon'
+  if (message.includes('Escape')) return 'escape'
+  if (message.includes('true, false')) return 'literal'
+  return 'other'
 }
 
 function xmlHint(code: string): string {
@@ -211,8 +252,10 @@ async function analyzeCsv(path: string, baseFormat: BaseFormat): Promise<ParseDi
     errors.push(
       entry(
         'info',
+        'parse_encoding',
         `Die Datei ist nicht UTF-8 kodiert; sie wurde als ${encodingLabel(encoding)} gelesen.`,
-        'Sonderzeichen im Ergebnis stichprobenartig pruefen. Dauerhaft ist ein Export in UTF-8 der sicherere Weg.'
+        'Sonderzeichen im Ergebnis stichprobenartig pruefen. Dauerhaft ist ein Export in UTF-8 der sicherere Weg.',
+        { params: { encoding: encodingLabel(encoding) } }
       )
     )
   }
@@ -232,9 +275,10 @@ async function analyzeCsv(path: string, baseFormat: BaseFormat): Promise<ParseDi
           errors.push(
             entry(
               'warning',
+              'parse_ragged',
               `Zeile hat ${cells.length} Felder, erwartet wurden ${header.length} (laut Kopfzeile).`,
               `Vermutlich ein nicht maskiertes Trennzeichen oder Anfuehrungszeichen. Felder mit ${delimiterName} in "…" setzen.`,
-              { line }
+              { line, params: { found: cells.length, expected: header.length, delimiter } }
             )
           )
         }
@@ -245,8 +289,8 @@ async function analyzeCsv(path: string, baseFormat: BaseFormat): Promise<ParseDi
       ok: false,
       format: label,
       errors: [
-        entry('error', `Die Datei konnte nicht zerlegt werden: ${e instanceof Error ? e.message : String(e)}`,
-          'Trennzeichen und Anfuehrungszeichen pruefen.', { line })
+        entry('error', 'parse_split_failed', `Die Datei konnte nicht zerlegt werden: ${e instanceof Error ? e.message : String(e)}`,
+          'Trennzeichen und Anfuehrungszeichen pruefen.', { line, detail: e instanceof Error ? e.message : String(e) })
       ]
     }
   }
@@ -256,18 +300,18 @@ async function analyzeCsv(path: string, baseFormat: BaseFormat): Promise<ParseDi
       ok: false,
       format: label,
       errors: [
-        entry('error', 'Keine Kopfzeile gefunden — die Datei ist leer.', 'Die erste Zeile muss die Spaltennamen enthalten.', { line: 1 })
+        entry('error', 'parse_no_header', 'Keine Kopfzeile gefunden — die Datei ist leer.', 'Die erste Zeile muss die Spaltennamen enthalten.', { line: 1 })
       ]
     }
   }
   if (dataRows === 0) {
     errors.push(
-      entry('error', 'Die Datei enthaelt nur eine Kopfzeile, aber keine Datenzeilen.', 'Mindestens eine Datenzeile ergaenzen.', { line: 1 })
+      entry('error', 'parse_header_only', 'Die Datei enthaelt nur eine Kopfzeile, aber keine Datenzeilen.', 'Mindestens eine Datenzeile ergaenzen.', { line: 1 })
     )
   }
   if (ragged > 20) {
     errors.push(
-      entry('info', `Insgesamt ${ragged} Zeilen weichen in der Feldzahl von der Kopfzeile ab.`, 'Die Datei mit gleichbleibender Feldzahl neu exportieren.')
+      entry('info', 'parse_ragged_total', `Insgesamt ${ragged} Zeilen weichen in der Feldzahl von der Kopfzeile ab.`, 'Die Datei mit gleichbleibender Feldzahl neu exportieren.', { params: { n: ragged } })
     )
   }
 
@@ -276,10 +320,15 @@ async function analyzeCsv(path: string, baseFormat: BaseFormat): Promise<ParseDi
 
 /** Uebersetzt die Diagnose in Berichtsmeldungen. */
 export function diagnosticsToIssues(d: ParseDiagnostics): ValidationIssue[] {
+  // Bis zum 30.09.2026 hiess der Code `parse_${format}` — mit dem Format samt
+  // Kodierung, also etwa „parse_csv (utf-8)". Das war kein Code, sondern ein
+  // Etikett, und keine Uebersetzung konnte ihn finden.
   return d.errors.map((e) => ({
     severity: e.severity,
     message: e.hint === '' ? e.message : `${e.message} ${e.hint}`,
     row: e.line ?? undefined,
-    code: `parse_${d.format.toLowerCase()}`
+    code: e.code,
+    ...(e.params !== undefined ? { params: e.params } : {}),
+    ...(e.detail !== undefined ? { detail: e.detail } : {})
   }))
 }

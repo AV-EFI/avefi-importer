@@ -43,7 +43,10 @@ const emit = defineEmits<{
 }>()
 
 const { t, te } = useI18n()
-const { meldung } = useMeldungstext()
+// pruefung: bis zum 30.09.2026 stand hier `check.message`, deutsch auch in
+// der englischen Oberflaeche — die Zweigansicht hatte Stefan in #10 nicht
+// genannt, sie hatte denselben Fehler.
+const { meldung, pruefung } = useMeldungstext()
 const root = ref<HTMLElement | null>(null)
 
 /**
@@ -305,7 +308,7 @@ function authorityOpen(i: number): number {
               <i aria-hidden="true">{{ check.severity === 'error' ? '⛔' : '⚠' }}</i>
               <span class="sr-only">{{ check.severity === 'error'
                 ? t('mapping.check.srBlocking') : t('mapping.check.srHint') }}</span>
-              <span class="chk-msg">{{ check.message }}</span>
+              <span class="chk-msg">{{ pruefung(check) }}</span>
               <span v-if="check.targetField" class="dim small chk-path">{{ schemaPathOf(check.targetField) }}</span>
               <button v-if="check.fix" type="button" class="btn btn-outline btn-sm"
                       @click="emit('fix', check)">{{ t('mapping.check.applyFixShort') }}</button>

@@ -266,6 +266,7 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
     issues.add({
       severity: 'error',
       code: 'read_failed',
+      detail: e instanceof Error ? e.message : String(e),
       message: `Die Datei konnte nicht vollstaendig gelesen werden: ${e instanceof Error ? e.message : String(e)}`
     })
   }

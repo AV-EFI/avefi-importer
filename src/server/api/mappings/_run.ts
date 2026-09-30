@@ -9,7 +9,7 @@
  * Auch diese Datei traegt einen Vorgabe-Handler, weil Nitro aus jeder Datei in
  * server/api/ eine Route macht.
  */
-import type { AvefiRecord, MappingJson, ProfileSample } from '#shared/types/domain'
+import type { AvefiRecord, MappingJson, ProfileSample, ValidationIssue } from '#shared/types/domain'
 import {
   authorityInventory, buildPreview, buildProfileSample, collectAuthorityLookups, columnStates,
   computeComplete, getTarget, hasBlocker, hasStartBlocker, normalizeMapping, openColumns, previewRows, staticCheck,
@@ -119,7 +119,7 @@ export async function previewFor(source: TableSource, raw: unknown): Promise<Pre
 export async function schemaCheck(source: TableSource, raw: unknown): Promise<{
   checked: number
   valid: number
-  issues: Array<{ severity: string; message: string; code?: string; record?: number }>
+  issues: ValidationIssue[]
   unavailable: string | null
 }> {
   const schema = await schemaModel()

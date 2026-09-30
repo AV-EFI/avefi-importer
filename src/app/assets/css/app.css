@@ -485,6 +485,10 @@ textarea.ui-input{resize:vertical;line-height:1.5}
    da. */
 .issue-advice strong{font-weight:600;margin-right:4px}
 .issue-advice a{margin-left:4px;white-space:nowrap}
+/* Wortlaut des Pruefwerkzeugs, unuebersetzt und eingeklappt (#10) */
+.issue-detail{display:block;margin-top:2px}
+.issue-detail summary{cursor:pointer;width:fit-content}
+.issue-detail .mono{display:block;margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
 
 @media (max-width:820px){
   .editor{grid-template-columns:1fr}

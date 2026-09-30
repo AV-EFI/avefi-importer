@@ -119,6 +119,7 @@ export class ProfileTableConverter implements Converter {
             {
               severity: 'error',
               message: `Zeile konnte nicht nach AVefi umgesetzt werden: ${e instanceof Error ? e.message : String(e)}`,
+              detail: e instanceof Error ? e.message : String(e),
               row: rowNumber,
               code: 'mapping_failed'
             }
@@ -166,6 +167,8 @@ export class ProfileTableConverter implements Converter {
             value: c.verworfen.slice(0, 120),
             params: {
               feld: feldName(c.feld),
+              // Der Schemaname, damit die Oberflaeche den Feldnamen uebersetzen kann
+              feldKey: c.feld,
               behalten: c.behalten,
               verworfen: c.verworfen,
               zeile: target.rows[0] ?? 0,
@@ -211,12 +214,12 @@ export class ProfileTableConverter implements Converter {
     /* Genitiv und Plural stehen ausgeschrieben da. Zusammengesetzt ergab
      * "Manifestationkennung" und "Zwei Manifestatione" — der Fugenlaut und die
      * Mehrzahl folgen im Deutschen keiner Regel, die sich anhaengen laesst. */
-    const ebenen: Array<[string, string, readonly Record<string, unknown>[]]> = [
-      ['Manifestationskennung', 'Manifestationen', canonical.manifestations],
-      ['Exemplarkennung', 'Exemplare', canonical.items]
+    const ebenen: Array<[string, string, readonly Record<string, unknown>[], 'manifestation' | 'item']> = [
+      ['Manifestationskennung', 'Manifestationen', canonical.manifestations, 'manifestation'],
+      ['Exemplarkennung', 'Exemplare', canonical.items, 'item']
     ]
 
-    for (const [kennung, mehrzahl, nodes] of ebenen) {
+    for (const [kennung, mehrzahl, nodes, ebene] of ebenen) {
       for (const node of nodes) {
         const ids = Array.isArray(node['has_identifier']) ? node['has_identifier'] : []
         for (const raw of ids) {
@@ -236,7 +239,7 @@ export class ProfileTableConverter implements Converter {
             code: 'identifier.duplicate',
             row: rowNumber,
             value: id.slice(0, 120),
-            params: { kennung, id, zeile: first, mehrzahl },
+            params: { kennung, id, zeile: first, mehrzahl, kind: ebene },
             message: `Die ${kennung} „${id}" steht schon in Zeile ${first}. Zwei ${mehrzahl} mit `
               + 'derselben Kennung bestehen die Schemapruefung nicht. Entweder meinen die Zeilen '
               + 'dasselbe Objekt — dann gehoert die Werkbildung darauf eingestellt — oder die Spalte '

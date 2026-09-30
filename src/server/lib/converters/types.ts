@@ -159,6 +159,7 @@ export class IssueCollector {
       out.push({
         severity: 'info',
         code: 'issues_truncated',
+        params: { n: this.dropped },
         message: `Weitere ${this.dropped} Fehler bzw. Warnung(en) wurden nicht einzeln aufgefuehrt.`
       })
     }
@@ -167,6 +168,9 @@ export class IssueCollector {
       out.push({
         severity: 'info',
         code: 'unmapped_field',
+        // Zahl und Beispiele als Bausteine, damit die Oberflaeche den Zusatz
+        // "Betrifft n Datensaetze" in ihrer Sprache anhaengen kann.
+        params: { ...(issue.params ?? {}), count, beispiele: samples.join(', ') },
         ...(issue.sourceField !== undefined ? { sourceField: issue.sourceField } : {}),
         message: `${issue.message} Betrifft ${count} Datensatz/-saetze.${examples}`
       })

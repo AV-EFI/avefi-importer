@@ -50,6 +50,9 @@ const props = withDefaults(
   { pageSize: 100, rowRecords: () => ({}), importId: '', tabular: false, fieldHelp: () => ({}) }
 )
 const { t, te } = useI18n()
+// Der Satz kommt aus Code und Bausteinen, in der Sprache der Oberflaeche.
+// Bis zum 30.09.2026 stand hier `issue.message`, der deutsche Serversatz (#10).
+const { befund } = useMeldungstext()
 
 type Filter = 'all' | Severity
 const filter = ref<Filter>('all')
@@ -82,6 +85,14 @@ const HANDBUCH: Record<string, string> = {
   no_items_associated: '03-bearbeiten-und-validieren#kein-exemplar-zur-manifestation',
   authority_ambiguous: '03-bearbeiten-und-validieren#normdatentreffer-ist-mehrdeutig',
   schema: '03-bearbeiten-und-validieren#verstoss-gegen-das-avefi-schema',
+  model_invalid: '03-bearbeiten-und-validieren#efi-conv-kann-den-datensatz-nicht-laden',
+  rule_period: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
+  rule_date: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
+  rule_field_limit: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
+  rule_empty_name: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
+  rule_title_type: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
+  rule_removed_without_pid: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
+  rule_invalid_value: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
   missing_identifier: '03-bearbeiten-und-validieren#kennung-fehlt',
   validation_unavailable: '03-bearbeiten-und-validieren#die-schemapruefung-war-nicht-moeglich'
 }
@@ -242,7 +253,7 @@ function setFilter(value: Filter) {
               <span class="sr-only">{{ t(`imports.issue.severity.${issue.severity}`) }}</span>
             </span>
             <span style="min-width:0">
-              <span class="fn">{{ issue.message }}</span>
+              <span class="fn">{{ befund(issue) }}</span>
               <!--
                 Woher die Meldung kommt. Ohne diese Angabe sieht eine Regel
                 dieser Anwendung aus wie eine des AVefi-Schemas — der fehlende
@@ -270,6 +281,15 @@ function setFilter(value: Filter) {
               <span v-if="issue.value" class="dim small mono" style="display:block;margin-top:2px">
                 {{ t('imports.issue.value', { value: issue.value }) }}
               </span>
+              <!--
+                Was efi-conv selbst gesagt hat, unuebersetzt. Der Satz oben ist
+                unserer; wer mit dem Abnahmewerkzeug vergleicht, braucht dessen
+                Wortlaut.
+              -->
+              <details v-if="issue.detail" class="issue-detail small" style="margin-top:2px">
+                <summary class="dim">{{ t('imports.issue.detail') }}</summary>
+                <span class="mono" :title="t('imports.issue.detailHint')">{{ issue.detail }}</span>
+              </details>
               <span v-if="issue.fix" class="dim small" style="display:block;margin-top:2px">
                 {{ t('imports.issue.fix', { op: String(issue.fix.op) }) }}
               </span>

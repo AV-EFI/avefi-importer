@@ -57,7 +57,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, te } = useI18n()
-const { meldung } = useMeldungstext()
+const { meldung, befund } = useMeldungstext()
 const zuordnungen = mappingsService()
 const keepFocus = useKeepFocus()
 
@@ -733,7 +733,7 @@ const canonicalJson = computed(() => {
     <div v-if="payload.issues.length" class="ui-alert" style="margin-bottom:14px">
       <strong>{{ t('mapping.issues.heading') }}</strong>
       <ul class="tight">
-        <li v-for="(issue, i) in payload.issues" :key="i">{{ issue.message }}</li>
+        <li v-for="(issue, i) in payload.issues" :key="i">{{ befund(issue) }}</li>
       </ul>
     </div>
 
@@ -1004,22 +1004,23 @@ const canonicalJson = computed(() => {
               <div v-else class="ui-alert" role="status" style="margin-top:8px">
                 <strong>{{ t('mapping.schema.issues', { n: schemaResult.issues.length }) }}</strong>
                 <ul class="tight">
-                  <li v-for="(issue, i) in schemaResult.issues" :key="i">{{ issue.message }}</li>
+                  <li v-for="(issue, i) in schemaResult.issues" :key="i">
+                    {{ befund(issue) }}
+                    <details v-if="issue.detail" class="issue-detail small">
+                      <summary class="dim">{{ t('imports.issue.detail') }}</summary>
+                      <span class="mono">{{ issue.detail }}</span>
+                    </details>
+                  </li>
                 </ul>
               </div>
             </template>
           </div>
 
-          <div class="live-region" role="status" aria-live="polite">
-            <div v-if="preview && preview.schema.length" class="ui-alert" style="margin-top:10px">
-              <strong>{{ t('mapping.schema.previewIssues') }}</strong>
-              <ul class="tight">
-                <li v-for="(issue, i) in preview.schema" :key="i">
-                  {{ issue.message }} <span class="dim">({{ issue.rows }}×)</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <!--
+            Bis zum 30.09.2026 stand hier eine Liste `preview.schema`. Sie wurde
+            nie befuellt: Die Vorschau bekommt keinen `validateRecord`, geprueft
+            wird ueber „Gegen das Schema pruefen" oben (#10).
+          -->
         </section>
 
         <section class="ui-card">

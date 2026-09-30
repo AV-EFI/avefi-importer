@@ -155,7 +155,7 @@ export interface SaveResponse {
 export interface SchemaCheckResponse {
   checked: number
   valid: number
-  issues: Array<{ severity: string; message: string; code?: string; record?: number }>
+  issues: ValidationIssue[]
   unavailable: string | null
 }
 

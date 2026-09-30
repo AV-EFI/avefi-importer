@@ -100,6 +100,8 @@ export async function checkRecords(
         severity: 'warning',
         source: 'schema',
         code: 'validation_unavailable',
+        params: { kind: 'schema' },
+        detail: String(merged.unavailable),
         message: `Die Pruefung gegen das AVefi-Schema war nicht moeglich: ${merged.unavailable}. Die Datei wurde erzeugt, aber nicht geprueft.`
       })
       // Was vor dem Abbruch geprueft wurde, bleibt gezaehlt; der Rest ist
@@ -182,6 +184,8 @@ export async function checkCrossref(
         severity: 'warning',
         source: 'crossref',
         code: 'validation_unavailable',
+        params: { kind: 'crossref' },
+        detail: grund,
         message: `Die satzuebergreifende Pruefung war nicht moeglich: ${grund}. Kennungen und Verweise wurden nicht geprueft.`
       }],
       unavailable: grund

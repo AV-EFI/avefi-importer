@@ -104,6 +104,11 @@ export interface ExtendedReport extends ImportReport {
 
 export interface DiagnosticEntry {
   severity: Severity
+  /** Fehlt in Berichten vor dem 30.09.2026; dann bleibt der deutsche Satz. */
+  code?: string
+  params?: Record<string, string | number>
+  /** Wortlaut des Parsers, unuebersetzt */
+  detail?: string
   message: string
   line: number | null
   column: number | null

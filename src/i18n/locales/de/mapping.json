@@ -358,7 +358,6 @@
       "running": "Prüft …",
       "ok": "{n} Knoten geprüft, keine Beanstandung.",
       "issues": "{n} Beanstandungen der Schemaprüfung",
-      "previewIssues": "Beanstandungen aus der Vorschau",
       "unavailable": "Die Schemaprüfung ist gerade nicht erreichbar: {detail}"
     },
     "defaults": {

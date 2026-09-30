@@ -30,25 +30,13 @@ function targetLabel(key: string): string {
 }
 
 /**
- * Eigener Satz zum Code, sonst der Text des Servers.
- *
- * Der Mappingkern spricht Deutsch; fuer die englische Oberflaeche braucht es
- * eigene Saetze. Wo der Serversatz Einzelheiten nennt, die hier fehlen (etwa
- * die Nummer des Kettenschritts), bleibt er absichtlich stehen.
+ * Eigener Satz zum Code, sonst der Text des Servers. Gebaut wird er in
+ * useMeldungstext, dieselbe Stelle wie fuer die Zweigansicht und den
+ * Pruefbericht.
  */
+const { pruefung } = useMeldungstext()
 function message(check: MappingCheck): string {
-  const code = String(check.code ?? '').replace(/[.-]/g, '_')
-  const key = `mapping.checkMsg.${code}`
-  if (!te(key)) return check.message
-  return t(key, {
-    field: check.targetField !== undefined ? targetLabel(check.targetField) : '',
-    column: check.sourceField ?? '',
-    value: check.value ?? '',
-    n: check.count ?? 0,
-    // Bausteine, die der Mappingkern mitschickt — ohne sie muesste der
-    // deutsche Serversatz stehen bleiben.
-    ...(check.params ?? {})
-  })
+  return pruefung(check, targetLabel)
 }
 
 /**

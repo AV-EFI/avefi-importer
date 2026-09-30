@@ -358,7 +358,6 @@
       "running": "Checking …",
       "ok": "{n} nodes checked, nothing to report.",
       "issues": "{n} findings from the schema check",
-      "previewIssues": "Findings from the preview",
       "unavailable": "The schema check is currently unreachable: {detail}"
     },
     "defaults": {
