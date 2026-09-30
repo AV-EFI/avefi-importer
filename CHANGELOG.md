@@ -30,6 +30,105 @@ GitHub weiter.
 
 ---
 
+## 2026-09-30 — Stefan Stretz, Jasper Stratil, Sabrina Klewitz, und was die Prüfung wirklich prüft
+
+Live auf `https://avefiimporter.goo1.de`.
+
+### Der Prüfbericht spricht die Sprache der Oberfläche (#10)
+
+**Gemeldet von Stefan Stretz (29.09.).** Vier Punkte: Der Wächtertest erfasste
+nur Codes mit Punkt; `IssueList.vue` zeigte `issue.message`, also den deutschen
+Serversatz; `DiagnosticsList.vue` ebenso, und die Parser-Meldungen hatten gar
+keinen Code; im Zuordnungseditor drei weitere Stellen. Alle vier stimmten. Die
+Zweigansicht (`check.message`) und der Datensatzeditor hatten denselben Fehler,
+ohne dass er gemeldet war.
+
+Jetzt baut `useMeldungstext` jeden Satz aus Code und Bausteinen, mit der
+Variante nach der Art der Verletzung und dem deutschen Satz als Rückfall. Die
+Codes ohne Punkt haben Sätze in beiden Sprachen, die Diagnose hat Codes mit Satz
+und Hinweis. Was ein fremdes Werkzeug gesagt hat (Pydantic, jsonschema,
+efi-conv, Parser), steht eingeklappt als „Wortlaut des Prüfwerkzeugs“ daneben.
+Der neue Wächter `berichtscodes.test.ts` liest die Codes aus dem Quelltext und
+aus `service.py`. Berichte von vor diesem Stand tragen keine Bausteine; dort
+bleibt es beim deutschen Satz, statt Lücken zu zeigen. Commit `e157c7e`.
+
+B.8 der Leistungsbeschreibung.
+
+### Die Zusatzregeln von efi-conv liefen nie (aus eigenem Antrieb)
+
+`service.py` rief `has_invalid_date`, `has_invalid_value` und
+`exceeds_field_limit` mit einem `dict` auf. Die Regeln erwarten ein Modell und
+warfen bei jedem Satz, und `except Exception: pass` verschluckte das. Ein
+umgekehrter Zeitraum wie `1990/1980` galt deshalb als gültig, während
+`efi-conv check` ihn ablehnt.
+
+Beim Reparieren zeigte sich, dass auch die Schemaprüfung nichts prüft: Die
+Wurzel des AVefi-JSON-Schemas legt für einen einzelnen Satz nichts fest. So ist
+es auch in efi-conv; dort prüft in Wahrheit das Laden als Pydantic-Modell.
+`/check` macht es jetzt genauso: Jeder Satz wird geladen, Ladefehler sind
+Fehler (`model_invalid`), danach laufen die Regeln (`rule_*`). Gemeldet an
+Elias in AV-EFI/efi-conv#39. Commit `d697ae3`.
+
+Nebenbei gefunden: Befunde am ersten Knoten einer Zeile, meist am Werk, nannten
+die Zeile davor. Die Zuordnung Prüfsatz → Zeile schlug zuerst 0-basiert nach
+und traf bei der 1-basierten Tabelle den vorigen Satz.
+
+Der Sidecar läuft jetzt mit efi-conv nach dem Merge von PR #34 (`5de9501`).
+
+### Archivtitel von Hand gewählt, Klammern blieben stehen (#5)
+
+**Gemeldet von Jasper Stratil (24.09.), nach dem Schließen.** Wer „Archivtitel“
+von Hand wählte, bekam kein Angebot, die Klammern abzuschneiden, und der
+Erstvorschlag unter einer eingeklammerten Spalte war „Haupttitel“. Jetzt bietet
+der Editor am Archivtitel „Klammern abschneiden“ an, und bei durchgehend
+eingeklammerten Spalten nennt schon der Erstvorschlag den Archivtitel.
+Ausgeführt wird beides erst auf Klick. Commit `3007aa5`.
+
+Dabei fiel auf, dass der Umwidmungsvorschlag mit `capture` herauslöste. Ein
+Profil hängt an der Kopfzeile, nicht an der Datei: Am 23.09. wurde der
+Vorschlag mit einer Kopie der Paderborner Datei in **Profil 8** angenommen,
+dem Abnahmeprofil der Nutzertests. Auf die Originaldatei angewandt, wurde
+damit jeder Haupttitel leer. Der Schritt ersetzt jetzt, statt herauszulösen
+(`3a10897`). Profil 8 ist auf den Inhalt von Version 70 zurückgesetzt (neue
+Version 72); Version 71 bleibt im Verlauf.
+
+### Test 3 im Pad (Sabrina Klewitz, Filmmuseum Potsdam)
+
+**Gemeldet über Jonas Pitz (28.09.).**
+
+* **„/“ in der Signatur wurde als Trennzeichen vorgeschlagen.** An Kennungen
+  schlägt der Editor kein Aufteilen mehr vor. Bei AVefi-PIDs (`21.11155/…`) hätte
+  es sonst jede Zeile getroffen.
+* **Das ✕ am Konverter.** Es entfernte den Konverter, sah aber aus wie
+  „Schließen“. Jetzt steht „Entfernen“ da, und danach bis zur nächsten Änderung
+  „Rückgängig“.
+* **Titel und Artikel in zwei Spalten.** „Spalten verbinden“ steht wieder im
+  Konverterkatalog; Rezept im Handbuch. Die Ordnungsform (`has_ordering_name`)
+  ist als nachgelagert in #25 festgehalten.
+* **Die datenhaltende Institution ließ sich nicht zuordnen.** Sie wird im
+  CSV-Weg überhaupt nicht ins JSON geschrieben. Frage an Elias in #24.
+
+Commit `3007aa5`.
+
+### Rest aus #9
+
+**Gemeldet von Stefan Stretz (29.09.).** `editorAktion` nutzte den
+Editor-Endpunkt ohne `useApi()`, weil der Server ihn mit festem `/api/`
+schickte. Der Endpunkt ist jetzt relativ zur API-Basis. Commit `3007aa5`.
+
+### Offen geblieben
+
+* **Welche Datei ist der vereinbarte Testdatensatz?** Mit der Originaldatei
+  `UPB_Archivliste_Lehrfilme_Auswahl_AVefi_2026-08-04.csv` (77 Zeilen) lehnt
+  `efi-conv check` ab: Die Signatur 3000040K kommt doppelt vor (Zeilen 61/62,
+  65/66). Die bereinigte Kopie (75 Zeilen) besteht, und zwei Läufe mit Profil 8
+  ergeben dasselbe JSON. Das ist eine Frage an die TIB, kein Fehler der
+  Anwendung. Einzelheiten in `src/docs/abnahme.md`.
+* #11: der menschliche Nachtest mit Tastatur und Screenreader (Elias).
+* #24: `described_by`, wartet auf Elias.
+
+---
+
 ## 2026-09-23 — Stefan Stretz, Jasper Stratil und ein a11y-Lauf, der etwas fand
 
 Live auf `https://avefiimporter.goo1.de`.
