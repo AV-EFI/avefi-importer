@@ -139,6 +139,27 @@ Der Dienst hat zwei Endpunkte:
   Der Endpunkt ist fuer den Abnahmenachweis da: Er belegt, dass die
   Kommandozeile zum selben Ergebnis kommt.
 
+**Was die Pruefung tatsaechlich traegt** (Stand 30.09.2026). Die Wurzel des
+AVefi-JSON-Schemas ist `{type: object, $defs: …}` und legt fuer einen einzelnen
+Satz nichts fest; `iter_errors` findet dort nichts — hier wie in `efi-conv
+check`. Geprueft wird in efi-conv in Wahrheit beim Laden: `avefi.load` liest die
+Datei als Pydantic-Modell und bricht an einem ungueltigen Satz ab, danach laeuft
+`has_invalid_value` (Datum, Zeitraum, Feldlaengen, leere Namen, Titeltyp,
+aufgegebenes Exemplar ohne PID). `/check` spiegelt genau das: Jeder Satz wird
+geladen, jeder Ladefehler ist ein Fehler `model_invalid`, und an ladbaren
+Saetzen laufen die Regeln (`rule_*`). Den Wortlaut von Pydantic bzw. efi-conv
+traegt jede Meldung als `detail`, der Satz in der Oberflaeche kommt aus `code`
+und `params`.
+
+Bis zu diesem Stand liefen die Regeln nie: Sie bekamen ein `dict` statt eines
+Modells, warfen bei jedem Satz, und das wurde stillschweigend uebergangen.
+
+Tests des Dienstes laufen im Container, ohne etwas nachzuinstallieren:
+
+```bash
+docker exec avefi_efi_conv python -m unittest -v test_service
+```
+
 ## Installation und Start
 
 ```bash

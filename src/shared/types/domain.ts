@@ -164,6 +164,12 @@ export interface ValidationIssue {
    */
   params?: Record<string, string | number>
   /**
+   * Wortlaut des Pruefwerkzeugs (Pydantic, jsonschema, efi-conv), unuebersetzt.
+   * Die Oberflaeche baut den Satz aus `code` und `params` in ihrer Sprache und
+   * zeigt diesen Text daneben, damit erkennbar bleibt, was efi-conv gesagt hat.
+   */
+  detail?: string
+  /**
    * Anzahl, auf die sich der Befund bezieht, etwa die Zahl der Normdaten-
    * Treffer. Sie steht getrennt, damit die Oberflaeche den Satz selbst bauen
    * kann; sonst muesste sie den deutschen Serversatz stehen lassen.

@@ -246,3 +246,11 @@ export async function schemaInfo(timeoutMs = 10_000): Promise<{ version: string 
     clearTimeout(timer)
   }
 }
+
+/** Ein Ladefehler des Pruefdienstes, den die eigene Pflichtfeldmeldung schon abdeckt. */
+export function doppeltePflichtmeldung(issue: ValidationIssue, pflichtGemeldet: ReadonlySet<number>): boolean {
+  if (issue.code !== 'model_invalid' || issue.record === undefined) return false
+  if (!pflichtGemeldet.has(issue.record)) return false
+  const p = issue.params ?? {}
+  return p['kind'] === 'missing' && (p['field'] === 'type' || p['field'] === 'has_primary_title')
+}

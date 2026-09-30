@@ -23,6 +23,6 @@ RUN python -c "from efi_conv.core import check; check.get_schema_validator()" \
  && ls -l /root/.cache/efi_conv/
 
 WORKDIR /app
-COPY service.py /app/service.py
+COPY service.py test_service.py /app/
 EXPOSE 8000
 CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -28,7 +28,7 @@ import { profileIdFromKey } from '../../lib/converters/profileTable'
 import { buildFromInternal } from '../../lib/converters/avefi'
 import { analyzeParse, diagnosticsToIssues } from '../../lib/converters/parseDiagnostics'
 import { IssueCollector, type AvefiNode } from '../../lib/converters/types'
-import { checkCrossref, checkRecords, querSicht } from '../validate'
+import { checkCrossref, checkRecords, doppeltePflichtmeldung, querSicht } from '../validate'
 import { BERICHTSTEXT, completenessIssues, pflichtfeldZuHinweis } from '../../lib/mapping/index'
 
 /** So viele Datensaetze gehen in einem Rutsch in die Datenbank. */
@@ -119,6 +119,14 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
 
   /** Beanstandete Pruefsaetze, ueber alle Buendel und den Querlauf hinweg. */
   const fehlerhaft = new Set<number>()
+  /*
+   * Werke, zu denen die eigene Pflichtfeldpruefung schon etwas gesagt hat.
+   * Seit der Pruefdienst die Saetze laedt wie efi-conv (30.09.2026), meldet er
+   * ein fehlendes `type` oder `has_primary_title` am Werk ein zweites Mal, als
+   * `model_invalid`. Die eigene Meldung sagt dasselbe genauer, also bleibt nur
+   * sie stehen.
+   */
+  const pflichtGemeldet = new Set<number>()
 
   const flushRecords = async (): Promise<void> => {
     if (pendingRecords.length === 0) return
@@ -137,6 +145,10 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
     if (result.schema?.version) schemaVersion = result.schema.version
     for (const issue of result.issues) {
       const gehoben = issue.record === undefined ? issue : { ...issue, record: issue.record + offset }
+      if (doppeltePflichtmeldung(gehoben, pflichtGemeldet)) {
+        fehlerhaft.add(gehoben.record as number)
+        continue
+      }
       issues.add(gehoben)
       // Gezaehlt wird ueber Mengen statt ueber Summen: Derselbe Satz kann in
       // diesem Buendel und spaeter im Querlauf beanstandet werden, und zweimal
@@ -237,7 +249,10 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
             ...(source.row !== undefined ? { row: source.row } : {}),
             ...(werkKnoten !== undefined ? { record: werkKnoten } : {})
           })
-          if (werkKnoten !== undefined) fehlerhaft.add(werkKnoten)
+          if (werkKnoten !== undefined) {
+            fehlerhaft.add(werkKnoten)
+            pflichtGemeldet.add(werkKnoten)
+          }
           zeileFehlerhaft = true
         }
       }
@@ -370,3 +385,4 @@ export async function run(sql: Sql, payload: Record<string, unknown>): Promise<v
 function baseId(importId: string, index: number): string {
   return `${importId.slice(0, 8)}_r${index}`
 }
+
