@@ -101,10 +101,12 @@ mehreren Formaten sind (so schreibt es das Ziel) oder mehrere Exemplare.
   devalue 5.9.4, js-yaml 4.3.2, brace-expansion 1.1.21 / 2.1.7 / 5.0.12; nur
   innerhalb der bestehenden Versionsbereiche. Am Abend kamen zehn neue Hinweise
   dazu; nachgezogen sind shell-quote 1.12.0, source-map-js 1.2.2,
-  postcss-selector-parser 7.1.6 und Vue 3.5.43. Offen bleiben simple-git
-  (über `@nuxt/devtools`, verlangt `^3`), braces und node-forge (über die
-  Nuxt-CLI und das i18n-Plugin, kein Fix veröffentlicht). Alle drei hängen an
-  Entwicklungs- und Bauwerkzeugen, nicht am Code der Anwendung.
+  postcss-selector-parser 7.1.6 und Vue 3.5.43. simple-git verlangt
+  `@nuxt/devtools` in `^3`; es ist per `overrides` auf 4.0.2 gesetzt (samt
+  `@simple-git/argv-parser` 2.0.1). Unbedenklich, weil die Devtools in
+  `nuxt.config.ts` abgeschaltet sind. Offen bleiben braces und node-forge (über
+  das i18n-Plugin und die Nuxt-CLI): Beide stehen auf der neuesten
+  veröffentlichten Version, einen Fix gibt es noch nicht.
 * **Testdatensatz geklärt:** Matti Stöhr hat am 01.10. bestätigt, dass die
   bereinigte Paderborner Kopie maßgeblich ist. `src/docs/abnahme.md` ist
   angepasst.
