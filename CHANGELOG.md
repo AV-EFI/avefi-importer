@@ -99,7 +99,12 @@ mehreren Formaten sind (so schreibt es das Ziel) oder mehrere Exemplare.
   `zielbeschriftungen.test.ts` jedes Ziel des Katalogs in beiden Sprachen.
 * **Abhängigkeiten:** 19 Dependabot-Hinweise, alle transitiv. undici 8.11.2,
   devalue 5.9.4, js-yaml 4.3.2, brace-expansion 1.1.21 / 2.1.7 / 5.0.12; nur
-  innerhalb der bestehenden Versionsbereiche.
+  innerhalb der bestehenden Versionsbereiche. Am Abend kamen zehn neue Hinweise
+  dazu; nachgezogen sind shell-quote 1.12.0, source-map-js 1.2.2,
+  postcss-selector-parser 7.1.6 und Vue 3.5.43. Offen bleiben simple-git
+  (über `@nuxt/devtools`, verlangt `^3`), braces und node-forge (über die
+  Nuxt-CLI und das i18n-Plugin, kein Fix veröffentlicht). Alle drei hängen an
+  Entwicklungs- und Bauwerkzeugen, nicht am Code der Anwendung.
 * **Testdatensatz geklärt:** Matti Stöhr hat am 01.10. bestätigt, dass die
   bereinigte Paderborner Kopie maßgeblich ist. `src/docs/abnahme.md` ist
   angepasst.
