@@ -16,10 +16,12 @@ melden.
 * **Leistungspaket B**: Alle Frontend-/UX-Punkte sind aus unserer Sicht
   umgesetzt; #10 wartet auf Stefans Nachprüfung, #11 auf den menschlichen
   Nachtest. Die technische Abnahme (Elias) steht aus.
-* **Eine Frage an die TIB entscheidet die technische Abnahme mit:** Welche
-  Datei ist der vereinbarte Testdatensatz? Mit der Originaldatei lehnt
-  `efi-conv check` ab, mit der bereinigten Kopie besteht sie. Siehe
+* **Testdatensatz geklärt (Matti Stöhr, 01.10.):** Vereinbart ist die
+  Paderborner Datei; die doppelte Signatur ist bekannt, und maßgeblich ist die
+  bereinigte Kopie, mit der `efi-conv check` besteht. Siehe
   [Nutzertest und Testdatensatz](#nutzertest-und-testdatensatz).
+* **Testrunde vom 01.10. und 12.10. (Luca Wollny, Jasper Stratil)** umgesetzt
+  am 12.10.: #26 bis #29, wartet auf den Nachtest.
 
 ## Liefergegenstände
 
@@ -139,10 +141,10 @@ Die beiden Läufe liefen ohne Normdatenabfrage, damit das Ergebnis nicht von
 einem externen Dienst abhängt. Mit Normdaten kommen die GND-Kennungen aus dem
 Zwischenspeicher dazu.
 
-**Frage an die TIB:** Welche der beiden Dateien ist der vereinbarte
-Testdatensatz? Mit der bereinigten Kopie sind Schritt 3 und 5 erfüllt. Mit dem
-Original bräuchte es eine Entscheidung zu den doppelten Signaturen, entweder in
-der Datei oder in der Zuordnung.
+**Geklärt am 01.10. (Matti Stöhr):** Maßgeblich ist die bereinigte Kopie. Mit
+ihr sind Schritt 3 und 5 erfüllt. Die Originaldatei bleibt ein Beispiel dafür,
+was ein Haus vor dem Import bereinigen muss: Doppelte Signaturen lassen sich
+weder in der Datei noch in der Zuordnung stillschweigend auflösen.
 
 ### Profil 8 war vom 23.09. bis 30.09. beschädigt
 
@@ -167,9 +169,9 @@ ohne das Abnahmeprofil zu ändern, legt vorher ein eigenes Profil an oder
 
 | Wer | Was |
 |---|---|
-| Elias | technische Abnahme LP B (Schritte 1–5); menschlicher Nachtest Barrierefreiheit (#11); #20 (Werkart als Warnung); #24 (`described_by`); AV-EFI/efi-conv#39 |
+| Elias | technische Abnahme LP B (Schritte 1–5); menschlicher Nachtest Barrierefreiheit (#11); #20 (Werkart als Warnung); #24 (`described_by`); #28 (ein Exemplar mit mehreren Formaten oder mehrere Exemplare?); AV-EFI/efi-conv#39 |
 | Stefan | Nachprüfung #10 |
-| TIB | welche Datei der vereinbarte Testdatensatz ist |
+| Luca, Jasper | Nachtest #26 (Werteliste hinter „Aufteilen"), #27 (Klammerzusätze), #28 (Format über alle Trägerklassen), #29 (Speichern bei fehlender Pflichtangabe) |
 | Testende | zwei Importe stehen noch in der Formatprüfung, also ohne Zuordnung: `UPB_Test_Archivtitel_NeuesProfil2…` vom 24.09. und `MDW_Export_Avefi_Test_1.xlsx` vom 28.09. (beide über das gemeinsame Admin-Konto). Falls dort jemand hängen geblieben ist, bitte melden |
 | nachgelagert | #22 (erstes Passwort wechseln), #25 (Ordnungsform des Titels) |
 | wir | nichts Blockierendes |

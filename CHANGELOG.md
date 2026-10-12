@@ -30,6 +30,88 @@ GitHub weiter.
 
 ---
 
+## 2026-10-12 — Luca Wollny und Jasper Stratil: Werteliste, Klammern, Formate
+
+Live auf `https://avefiimporter.goo1.de`. Testrunde von Luca Wollny (Mail vom
+01.10., Kommentare in #5 und #20) und Meldung von Jasper Stratil (Mail vom
+12.10.). Umgesetzt in `3feece2`, Abhängigkeiten in `e4eef0c`.
+
+### Die Werteliste bot Rohwerte an, die an ihrem Schritt nie ankommen (#26)
+
+**Gemeldet von Luca Wollny (01.10.).** Stand vor „Werteliste zuordnen" ein
+anderer Schritt, etwa „Aufteilen", zeigte die Tabelle trotzdem die Rohwerte der
+Spalte. Wer „VHS + DVD" zuordnete, traf zur Laufzeit nie, weil dort „VHS" und
+„DVD" einzeln ankamen; der Wert fiel in die Notiz und verschwand aus der
+Vorschau.
+
+Ursache: Dieselbe Frage — welche Werte kommen an diesem Schritt an? — hatte zwei
+Antworten. Die Normdatenliste rechnete seit dem 26.08. die Kette bis vor den
+Schritt, die Werteliste nahm die Stichprobe der Spalte. Jetzt beantwortet eine
+Funktion (`stepInputs` in `runner.ts`) die Frage für beide, und ein Test hält
+beide Listen auf derselben Kette gegeneinander. Zuordnungen auf Rohzeilen
+erscheinen als verwaist; gelöscht wird nichts automatisch.
+
+Dazu aus derselben Mail: Die Tabelle stand in einer schmalen Rasterspalte neben
+den übrigen Parametern und lief in die Nachbarspalte. Sie nimmt jetzt die ganze
+Breite; lange Werte werden gekürzt (die Ellipse griff auf einem Inline-Element
+nie). Verwaiste Zeilen sind über die Fläche markiert statt über Deckkraft, die
+den Kontrast unter 4,5:1 drückte. Abnahmekriterium: Leistungsbeschreibung B.3,
+„Kontrollierte Vokabulare".
+
+### „Unerwarteter Fehler" beim Konvertieren ohne Pflichtangabe (#29)
+
+**Gemeldet von Luca Wollny (01.10., in #20).** Der Server antwortete mit
+`start_blocked`, dafür gab es keinen Text. Und er brach ab, bevor er speicherte,
+obwohl Zwischenstände genau in diesem Fall gespeichert werden sollen. Jetzt wird
+gespeichert und nicht gestartet; die Meldung nennt Version und Grund. Schon vor
+dem Klick steht unter dem Knopf, was fehlt. Der Knopf bleibt bedienbar.
+
+Der Wächter `meldungscodes.test.ts` prüfte nur Prüfcodes, nicht die Codes, mit
+denen die API Fehler meldet. Neu: `fehlercodes.test.ts` verlangt für jedes
+`fail(status, 'code')` einen Text in beiden Sprachen. Er fand zwei Lücken:
+`start_blocked` und `label_too_long`.
+
+### Klammerzusätze ohne regulären Ausdruck (#27)
+
+**Wunsch von Luca Wollny (01.10.).** Neuer Konverter „Klammerzusätze entfernen"
+(`strip_brackets`), runde, eckige oder beide. Verschachtelte Klammern
+verschwinden ganz; der Ausdruck aus der Mail ließ sie halb stehen. Ein vollständig
+eingeklammerter Wert bleibt unverändert, damit der Konverter die
+Archivtitel-Regel aus #5 nicht unterläuft. Nicht vertraglich geschuldet,
+Kulanz.
+
+### Format über alle Trägerklassen (#28)
+
+**Gemeldet von Jasper Stratil (12.10.).** In `MDW_Export_Avefi_Test_1.xlsx`
+stehen Video, DVD und Datei gemischt in einer Spalte; zuordnen ließ sich nur je
+Klasse. Neues Ziel „Format (alle Trägerklassen)": Die Werteliste zeigt alle
+sechs Klassen gruppiert, im Profil steht `Klasse:Wert`. `DV` steht im Schema bei
+Video und bei Datei und wird ohne Klasse beanstandet, nicht geraten. Die sechs
+Einzelziele bleiben. Rezept für die MDW-Spalte im Handbuch, Kapitel 7.
+
+Offen ist die fachliche Frage an Elias, ob mehrere Träger ein Exemplar mit
+mehreren Formaten sind (so schreibt es das Ziel) oder mehrere Exemplare.
+
+### Aus eigenem Antrieb
+
+* **Die sechs Format-Ziele hatten nie eine Übersetzung.** Die englische
+  Oberfläche zeigte sie deutsch. Gefunden beim Bau von #28; neu prüft
+  `zielbeschriftungen.test.ts` jedes Ziel des Katalogs in beiden Sprachen.
+* **Abhängigkeiten:** 19 Dependabot-Hinweise, alle transitiv. undici 8.11.2,
+  devalue 5.9.4, js-yaml 4.3.2, brace-expansion 1.1.21 / 2.1.7 / 5.0.12; nur
+  innerhalb der bestehenden Versionsbereiche.
+* **Testdatensatz geklärt:** Matti Stöhr hat am 01.10. bestätigt, dass die
+  bereinigte Paderborner Kopie maßgeblich ist. `src/docs/abnahme.md` ist
+  angepasst.
+
+### Offen geblieben
+
+* Nachtest #26 bis #29 (Luca Wollny, Jasper Stratil).
+* #28: ein Exemplar oder mehrere (Elias Oltmanns).
+* Weiterhin: technische Abnahme LP B, #10, #11, #20 (Werkart), #24.
+
+---
+
 ## 2026-09-30 — Stefan Stretz, Jasper Stratil, Sabrina Klewitz, und was die Prüfung wirklich prüft
 
 Live auf `https://avefiimporter.goo1.de`.
