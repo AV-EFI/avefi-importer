@@ -347,6 +347,8 @@ export type TargetLevel = 'work' | 'manifestation' | 'item'
 
 export type TargetType =
   | 'text' | 'date' | 'duration' | 'number' | 'lang'
+  // Gemeinsames Format-Ziel ueber alle sechs Traegerklassen (#28).
+  | 'format'
   | `enum:${string}` | `id:${string}`
 
 export interface TargetEntry {

@@ -12,6 +12,7 @@
  * Zahl der offenen Werte immer daneben.
  */
 import type { TransformStep } from './types'
+import { FORMAT_KLASSEN, teileFormatwert } from '#shared/formatklassen'
 
 const props = defineProps<{
   step: TransformStep
@@ -29,6 +30,24 @@ const { t } = useI18n()
 // Technische Schemawerte gehoeren nicht ungefiltert in die Oberflaeche. Der
 // Wert bleibt sichtbar, aber hinter der lesbaren Beschriftung.
 const { labelWithCode } = useVocabLabel()
+
+/**
+ * Die Auswahl, gruppiert, wenn die Werte ihre Traegerklasse tragen
+ * ("Video:VHS", gemeinsames Format-Ziel, #28). Siebenundfuenfzig Werte in
+ * einer flachen Liste waeren kaum zu ueberblicken, und "DV" stuende zweimal
+ * ohne erkennbaren Unterschied da.
+ */
+const gruppen = computed<Array<{ label: string; values: string[] }>>(() => {
+  const qualifiziert = props.enumValues.length > 0
+    && props.enumValues.every((v) => teileFormatwert(v).klasse !== null)
+  if (!qualifiziert) return [{ label: '', values: props.enumValues }]
+  return FORMAT_KLASSEN
+    .map(([klasse, teil]) => ({
+      label: t(`mapping.targets.item.format.${teil}`),
+      values: props.enumValues.filter((v) => teileFormatwert(v).klasse === klasse)
+    }))
+    .filter((g) => g.values.length > 0)
+})
 
 const added = ref<string[]>([])
 const manual = ref('')
@@ -136,9 +155,18 @@ function prefill() {
                     @change="set(row.value, ($event.target as HTMLSelectElement).value)">
               <option value="">{{ t('mapping.vocab.unmapped') }}</option>
               <option v-if="row.invalid" :value="row.target">{{ row.target }} ({{ t('mapping.vocab.notInSchema') }})</option>
-              <option v-for="v in enumValues" :key="v" :value="v">
-                {{ labelWithCode(enumName ?? '', v) }}
-              </option>
+              <template v-for="g in gruppen" :key="g.label">
+                <optgroup v-if="g.label !== ''" :label="g.label">
+                  <option v-for="v in g.values" :key="v" :value="v">
+                    {{ labelWithCode(enumName ?? '', v) }}
+                  </option>
+                </optgroup>
+                <template v-else>
+                  <option v-for="v in g.values" :key="v" :value="v">
+                    {{ labelWithCode(enumName ?? '', v) }}
+                  </option>
+                </template>
+              </template>
             </select>
           </td>
         </tr>
@@ -163,6 +191,8 @@ function prefill() {
 </template>
 
 <style scoped>
-/* Verwaist: in der Zuordnung, aber nicht in dieser Datei. */
-.is-orphan td { opacity: .72; }
+/* Verwaist: in der Zuordnung, aber nicht in dieser Datei. Gezeigt ueber die
+   Flaeche und den Zusatz „verwaist", nicht ueber Deckkraft: opacity senkte den
+   Kontrast der ganzen Zeile unter 4,5:1 — derselbe Befund wie bei .row-ignored. */
+.is-orphan td { background: var(--row-ignored); }
 </style>

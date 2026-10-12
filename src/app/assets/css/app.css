@@ -696,7 +696,10 @@ button.ui-menu-item{width:100%;text-align:left;border:0;background:none;cursor:p
 .ui-step-name{font-weight:700;font-size:13px}
 .ui-step-head .iconbtn-del{margin-left:auto}
 .ui-step-params{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:8px}
-.ui-step-param{display:flex;flex-direction:column;gap:3px}
+.ui-step-param{display:flex;flex-direction:column;gap:3px;min-width:0}
+/* Werteliste: ueber die ganze Breite statt in einer 160-px-Rasterspalte, in
+   der die Tabelle in die Nachbarspalten hineinlief (#26, Luca Wollny). */
+.ui-step-param-wide{grid-column:1 / -1}
 .ui-step-plabel{font-size:11.5px;color:var(--muted);font-weight:600}
 .ui-step-cols{display:flex;flex-direction:column;gap:2px;max-height:130px;overflow:auto}
 .vocabhint{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px}
@@ -751,7 +754,9 @@ ul.tight li{margin-bottom:3px;font-size:13px}
    Rollbalken; zu lange Werte werden gekürzt und stehen vollständig im Tooltip. */
 .maptable{table-layout:fixed}
 .maptable td,.maptable th{overflow:hidden}
-.maptable td .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* display:block, sonst greift text-overflow nicht: Auf einem Inline-Element
+   bleibt die Ellipse wirkungslos und der Text laeuft unter die Nachbarzelle. */
+.maptable td .fn{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .exline{display:flex;align-items:baseline;gap:6px;min-height:20px;line-height:20px;font-size:12.5px}
 .exline + .exline{margin-top:3px}

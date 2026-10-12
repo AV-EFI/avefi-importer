@@ -42,6 +42,8 @@ export const MELDUNGEN: Record<string, string> = {
   'record.titleBorrowed': 'Das Werk hatte keinen eigenen Titel; uebernommen wurde "{titel}" von der Ebene {ebene} als Archivtitel',
   'target.primaryTitleTaken': 'Der Primaertitel ist bereits mit "{behalten}" belegt; "{verworfen}" wurde nicht uebernommen',
   'target.valueNotAllowed': '"{wert}" ist kein zulaessiger Wert fuer "{ziel}"',
+  'target.formatAmbiguous': '"{wert}" steht in mehreren Traegerklassen ({klassen}). In der Werteliste die Klasse waehlen, '
+    + 'etwa "Video:{wert}"',
   'target.identifierPattern': '"{wert}" passt nicht zum Kennungsmuster von "{ziel}"',
   'target.badDuration': '"{wert}" ist keine schemakonforme Laufzeit (erwartet PT01H30M00S)',
   'target.badDate': '"{wert}" ist kein zulaessiges Datum (erwartet JJJJ, JJJJ-MM oder JJJJ-MM-TT)',

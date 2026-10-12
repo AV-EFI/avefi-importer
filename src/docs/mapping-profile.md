@@ -236,6 +236,25 @@ umgekehrten Waechter — sonst zoege der jede leere Zelle in seinen Zweig.
 { "op": "only", "pattern": "^\\[.*\\]$", "negate": true }   // "[Titel]" -> leer, sonst unveraendert
 ```
 
+| `op` | herein → heraus | Parameter |
+|---|---|---|
+| `strip_brackets` | any → gleich | `kind`: `round` (Vorgabe), `square`, `both` |
+
+Entfernt Klammerzusaetze samt Inhalt und dem Leerraum davor, von innen nach
+aussen, bis nichts mehr passt; danach wird mehrfacher Leerraum zusammengezogen.
+Seit dem 12.10.2026 (#27). Ein Wert, der **vollstaendig** in einem
+Klammerpaar steht, bleibt unveraendert, ebenso einer, der danach leer waere —
+vollstaendige Klammerung ist eine Kennzeichnung (Archivtitel), kein Zusatz.
+
+```jsonc
+{ "op": "strip_brackets" }                    // "Der blaue Engel (1930)" -> "Der blaue Engel"
+{ "op": "strip_brackets", "kind": "both" }    // "Titel [Fragment] (1930)" -> "Titel"
+{ "op": "strip_brackets", "kind": "square" }  // "[Betriebsausflug 1962]" -> unveraendert
+```
+
+Aeltere Fassungen des Importers kennen die Operation nicht und melden sie als
+unbekannten Konverter; das Profilformat bleibt bei Version 1.
+
 ### Eine Spalte, zwei Bedeutungen
 
 Der Anlass war eine Titelspalte, in der eingeklammerte Werte Archivtitel sind
@@ -463,8 +482,11 @@ Filmlisten vorkommt; alles weitere kommt aus der vollstaendigen Tabelle.
 |---|---|---|
 | `map` | any → gleich | `map` (Pflicht), `ci` (optional), `fallback` |
 
-Bildet Quellwerte auf Vokabularwerte ab. `ci` macht Gross- und Kleinschreibung
-egal. `fallback` bestimmt, was mit einem unbekannten Wert geschieht:
+Bildet Quellwerte auf Vokabularwerte ab. Schluessel sind die Werte, die **an
+diesem Schritt ankommen** — hinter `split` also die Teile, nicht die ganze
+Zelle. Der Editor bietet genau diese an (#26). `ci` macht Gross- und
+Kleinschreibung egal. `fallback` bestimmt, was mit einem unbekannten Wert
+geschieht:
 
 * `keep_note` (Vorgabe): der Wert wird als Notiz gerettet statt weggeworfen,
 * `drop`: verwerfen,
@@ -669,7 +691,26 @@ Die Schluessel folgen dem Muster `<ebene>.<gruppe>.<name>`:
 |---|---|
 | `work.` | `work.title.primary`, `work.title.supplied`, `work.title.alternative`, `work.type`, `work.form`, `work.genre`, `work.production.date`, `work.production.place`, `work.activity.director`, `work.subject.topic`, `work.identifier.local`, `work.same_as.gnd` |
 | `manifestation.` | `manifestation.title.primary`, `manifestation.publication.date`, `manifestation.note`, `manifestation.webresource`, `manifestation.identifier.local` |
-| `item.` | `item.identifier.local`, `item.element_type`, `item.colour_type`, `item.sound_type`, `item.frame_rate`, `item.access_status`, `item.duration`, `item.extent.metre`, `item.language.spoken`, `item.language.subtitles`, `item.note` |
+| `item.` | `item.identifier.local`, `item.element_type`, `item.colour_type`, `item.sound_type`, `item.frame_rate`, `item.access_status`, `item.duration`, `item.extent.metre`, `item.format.film` … `item.format.encoding`, `item.format.any`, `item.language.spoken`, `item.language.subtitles`, `item.note` |
+
+### Format: eine Klasse oder alle
+
+`Item.has_format` ist im Schema eine Liste aus sechs Klassen mit je eigener
+Werteliste. `item.format.<klasse>` (`film`, `video`, `audio`, `optical`,
+`digitalfile`, `encoding`) schreibt in genau eine Klasse.
+`item.format.any` (seit dem 12.10.2026, #28) nimmt alle: Der Zielwert traegt
+seine Klasse als Praefix, `Klasse:Wert`.
+
+```jsonc
+{ "op": "map", "map": { "VHS": "Video:VHS", "DVD": "Optical:DVD", "DV": "DigitalFile:DV" } }
+// -> has_format: [ { "category": "avefi:Video", "type": "VHS" }, … ]
+```
+
+Ein Wert ohne Praefix wird angenommen, wenn er nur in einer der sechs Listen
+steht. Die einzige Ueberschneidung im Schema ist `DV` (Video und
+DigitalFile); ohne Praefix wird es beanstandet (`target.formatAmbiguous`) und
+nicht geschrieben. Gelesen und geprueft wird das in
+`shared/formatklassen.ts`, gemeinsam fuer Server und Oberflaeche.
 
 ### Titel
 

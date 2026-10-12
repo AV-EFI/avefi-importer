@@ -7,7 +7,7 @@
  * loswerden, und mehrere offene Menues ueberlagerten sich. Zusaetzlich
  * schliessen Escape und ein Klick daneben.
  */
-import type { TransformOpMeta, TransformStep } from './types'
+import type { StepValues, TransformOpMeta, TransformStep } from './types'
 import MappingStep from './Step.vue'
 
 const props = defineProps<{
@@ -18,9 +18,20 @@ const props = defineProps<{
   enumValues: string[]
   /** Name des Vokabulars, damit Schemawerte lesbar beschriftet werden koennen. */
   enumName?: string
+  /** Rohwerte der Spalte — Rueckfall, solange stepValues nichts liefert. */
   sourceValues: Array<{ value: string; count: number }>
+  /** Werte, die an einem Schritt dieser Kette ankommen (#26). */
+  stepValues?: StepValues
   idBase: string
 }>()
+
+/**
+ * Was an Schritt i ankommt. Die Rohwerte stimmen nur fuer den ersten Schritt
+ * der gemeinsamen Kette; hinter "Aufteilen" kommen andere Werte an.
+ */
+function valuesAt(i: number): Array<{ value: string; count: number }> {
+  return props.stepValues?.(i) ?? props.sourceValues
+}
 
 const emit = defineEmits<{ change: [] }>()
 const { t, te } = useI18n()
@@ -172,7 +183,7 @@ onBeforeUnmount(() => {
     <div v-for="(step, i) in chain" :key="`${idBase}-${i}`" style="position:relative">
       <MappingStep :step="step" :meta="metaOf(String(step.op))" :columns="columns" :enum-values="enumValues"
                    :enum-name="enumName ?? ''"
-                   :source-values="sourceValues" :id-base="`${idBase}-s${i}`" :position="i + 1"
+                   :source-values="valuesAt(i)" :id-base="`${idBase}-s${i}`" :position="i + 1"
                    @change="geaendert" @remove="remove(i)" />
       <div v-if="chain.length > 1" style="display:flex;gap:4px;margin:-4px 0 7px">
         <button type="button" class="linkbtn" :disabled="i === 0"

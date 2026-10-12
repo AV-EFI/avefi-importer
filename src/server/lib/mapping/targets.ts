@@ -18,6 +18,7 @@ import { meldung } from './meldungen.js'
 import type { MappingMessage } from '#shared/types/domain'
 import type { SchemaModel } from './schema-model.js'
 import { getSchemaModel } from './schema-model.js'
+import { alleFormatwerte, klaereFormat } from '#shared/formatklassen'
 
 /* --------------------------------------------------------- Bauanleitungen */
 
@@ -39,7 +40,9 @@ export type TargetWriter =
   // (Film, Video, Audio, Optical, DigitalFile, DigitalFileEncoding), jede mit
   // einer eigenen Werteliste. Die Traegerklasse steht deshalb am Ziel und wird
   // nicht aus dem Wert erraten: "DV" kommt sowohl in FormatVideoTypeEnum als
-  // auch in FormatDigitalFileTypeEnum vor.
+  // auch in FormatDigitalFileTypeEnum vor. Ausnahme ist das gemeinsame Ziel
+  // item.format.any (#28): className '' — dort traegt der Wert die Klasse
+  // ("Video:DV"), siehe shared/formatklassen.ts.
   | { kind: 'format'; className: string }
 
 /** Katalogeintrag: der oeffentliche Teil aus domain.ts plus die Bauanleitung. */
@@ -328,6 +331,11 @@ function buildCatalog(): Map<string, TargetDefinition> {
       { kind: 'format', className },
       'Traeger oder Datei, auf der das Exemplar vorliegt.'))
   }
+  // Fuer Spalten, in denen die Klassen gemischt stehen: "VHS + DVD + digitale
+  // Datei". Die Einzelziele bleiben, bestehende Profile laufen weiter (#28).
+  list.push(entry('item.format.any', 'Format (alle Traegerklassen)', 'item', 'Format', 'format', true,
+    { kind: 'format', className: '' },
+    'Traeger oder Datei, auch gemischt: Film, Video, Ton, optischer Datentraeger, Datei, Kodierung.'))
 
   list.push(entry('item.language.spoken', 'Sprache (gesprochen)', 'item', 'Sprache', 'lang', true,
     { kind: 'language', usage: 'SpokenLanguage' }))
@@ -375,6 +383,9 @@ export function targetsForFrontend(schema: SchemaModel = getSchemaModel()): Targ
     if (def.type.startsWith('enum:')) {
       const values = schema.enum(def.type.slice(5))
       if (values.length > 0) out.enumValues = values
+    } else if (def.type === 'format') {
+      const values = alleFormatwerte((name) => schema.enum(name))
+      if (values.length > 0) out.enumValues = values
     } else if (def.type === 'lang') {
       const values = schema.enum('LanguageCodeEnum')
       if (values.length > 0) out.enumValues = values
@@ -417,6 +428,14 @@ export function validateTargetValue(
       return [meldung('target.valueNotAllowed', { wert: v, ziel: target.label })]
     }
     return []
+  }
+
+  if (type === 'format') {
+    const k = klaereFormat(v, (name) => schema.enum(name))
+    if (k.ok) return []
+    return k.grund === 'mehrdeutig'
+      ? [meldung('target.formatAmbiguous', { wert: v, klassen: k.klassen.join(', ') })]
+      : [meldung('target.valueNotAllowed', { wert: v, ziel: target.label })]
   }
 
   if (type.startsWith('id:')) {

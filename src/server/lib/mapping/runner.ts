@@ -22,6 +22,7 @@ import type {
   AvefiValue, ColumnMapping, MappingJson, MappingMessage, TransformStep, ValidationIssue
 } from '#shared/types/domain'
 import { meldung, meldungstext } from './meldungen.js'
+import { alleFormatwerte } from '#shared/formatklassen'
 import type { SourceRow } from './header.js'
 import type { SchemaModel } from './schema-model.js'
 import type { AuthorityHit, CountryHit, EnrichHit, TransformContext, TransformValue } from './transform.js'
@@ -260,10 +261,12 @@ export function staticCheck(mapping: MappingJson, schema: SchemaModel = getSchem
             + 'nur an Personen, Schlagwoertern, Orten, Genres und Kennungs-Zielen hinterlegen.'
         })
       }
-      if (target.type.startsWith('enum:')) {
+      if (target.type.startsWith('enum:') || target.type === 'format') {
         const vm = firstStep(chain, 'map')
         if (vm === undefined) {
-          const values = schema.enum(target.type.slice(5))
+          const values = target.type === 'format'
+            ? alleFormatwerte((name) => schema.enum(name))
+            : schema.enum(target.type.slice(5))
           out.push({
             severity: 'warning', code: 'enum.no-valuemap', sourceField: col, targetField: key,
             message: `"${target.label}" hat eine feste Werteliste — ohne Zuordnung werden abweichende `
@@ -493,6 +496,140 @@ export interface AuthorityInventoryEntry {
  * eine Entscheidung braucht, aber erst in Zeile 40 steht, war schlicht nicht
  * erreichbar.
  */
+/* ------------------------------------------------ Werte an einem Schritt */
+
+/** Ein Schritt einer Kette, samt der Werte, die bei ihm ankommen. */
+export interface StepInput {
+  column: string
+  /** Index des Zweigs, -1 fuer die gemeinsame Kette vor der Verzweigung. */
+  branch: number
+  /** Stelle des Schritts in SEINER Kette: in pre fuer -1, sonst in post. */
+  at: number
+  target: string
+  step: TransformStep
+  /** Wert -> Haeufigkeit, in der Reihenfolge des ersten Auftretens. */
+  counts: Map<string, number>
+}
+
+/**
+ * Welche Werte kommen an diesem Schritt an?
+ *
+ * Die eine Stelle, die das beantwortet — fuer die Normdatenliste wie fuer die
+ * Werteliste. Bis zum 12.10.2026 rechnete nur die Normdatenliste die Kette bis
+ * vor den Schritt; die Werteliste zeigte die Rohwerte der Spalte. Stand vor ihr
+ * "Aufteilen", bot sie "VHS + DVD" zur Zuordnung an, waehrend zur Laufzeit
+ * "VHS" und "DVD" einzeln ankamen. Die Zuordnung traf nie, der Wert fiel in die
+ * Notiz (Luca Wollny, 01.10.2026, #26). Dieselbe Frage mit zwei Antworten — und
+ * die Normdatenliste hatte die richtige schon seit dem 26.08.
+ *
+ * Ein Schritt der gemeinsamen Kette steht nur einmal in der Liste, nicht je
+ * Zweig. Hat eine Spalte keinen Zweig, wird die gemeinsame Kette trotzdem
+ * gerechnet.
+ *
+ * `keep` laesst einen Wert auch ueber `limit` hinaus in die Liste — fuer
+ * Normdaten, deren Bestaetigung sonst unsichtbar wuerde.
+ */
+export function stepInputs(
+  mapping: MappingJson,
+  rows: readonly SourceRow[],
+  wanted: (op: string) => boolean,
+  options: {
+    services?: ChainLookupServices
+    limit?: number
+    keep?: (column: string, value: string) => boolean
+  } = {}
+): StepInput[] {
+  const out: StepInput[] = []
+  const limit = options.limit ?? 500
+
+  for (const [col, spec] of columnsOf(mapping)) {
+    if (spec.ignore === true) continue
+    const pre = chainOf(spec)
+    const bindings = spec.targets ?? []
+    const zweige: Array<{ post: TransformStep[]; target: string; bi: number }> = bindings.length > 0
+      ? bindings.map((b, bi) => ({ post: Array.isArray(b.post) ? b.post : [], target: String(b.target ?? ''), bi }))
+      : [{ post: [], target: '', bi: -1 }]
+    const preDone = new Set<number>()
+
+    for (const zweig of zweige) {
+      const chain = [...pre, ...zweig.post]
+      chain.forEach((step, at) => {
+        if (typeof step !== 'object' || step === null) return
+        if (!wanted(canonicalOp(String(step.op)))) return
+        const inPre = at < pre.length
+        if (inPre) {
+          if (preDone.has(at)) return
+          preDone.add(at)
+        }
+
+        const upto = chain.slice(0, at)
+        const counts = new Map<string, number>()
+        for (const row of rows) {
+          const res = runChain(upto, String(row[col] ?? ''), { row, ...(options.services ?? {}) })
+          const values = Array.isArray(res.value) ? res.value : [res.value]
+          for (const v of values) {
+            const t = String(v ?? '').trim()
+            if (t === '') continue
+            const known = counts.get(t)
+            if (known !== undefined) counts.set(t, known + 1)
+            else if (counts.size < limit || options.keep?.(col, t) === true) counts.set(t, 1)
+          }
+        }
+
+        out.push({
+          column: col,
+          branch: inPre ? -1 : zweig.bi,
+          at: inPre ? at : at - pre.length,
+          // Bei der gemeinsamen Kette das Ziel des ersten Zweigs, wie bisher
+          // in der Normdatenliste.
+          target: zweig.target,
+          step,
+          counts
+        })
+      })
+    }
+  }
+
+  return out
+}
+
+/** Haeufigste zuerst, bei Gleichstand alphabetisch. */
+function sortedCounts(counts: Map<string, number>): Array<{ value: string; count: number }> {
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de'))
+    .map(([value, count]) => ({ value, count }))
+}
+
+/* ------------------------------------------------ Wertelisten-Wertevorrat */
+
+export interface VocabInventoryEntry {
+  column: string
+  /** Index des Zweigs, -1 fuer die gemeinsame Kette. */
+  branch: number
+  /** Stelle des Wertelisten-Schritts in seiner Kette. */
+  at: number
+  values: Array<{ value: string; count: number }>
+}
+
+/**
+ * Je Wertelisten-Schritt die Werte, die dort ankommen — das, was die Tabelle
+ * zur Zuordnung anbieten muss. Gerechnet mit denselben Zeilen und demselben
+ * Kettencode wie die Normdatenliste, ohne Netz.
+ */
+export function vocabInventory(
+  mapping: MappingJson,
+  rows: readonly SourceRow[],
+  services: ChainLookupServices = {},
+  limit = 500
+): VocabInventoryEntry[] {
+  return stepInputs(mapping, rows, (op) => op === 'map', { services, limit }).map((s) => ({
+    column: s.column,
+    branch: s.branch,
+    at: s.at,
+    values: sortedCounts(s.counts)
+  }))
+}
+
 export function authorityInventory(
   mapping: MappingJson,
   rows: readonly SourceRow[],
@@ -500,56 +637,39 @@ export function authorityInventory(
   limitPerBranch = 500
 ): AuthorityInventoryEntry[] {
   const out: AuthorityInventoryEntry[] = []
+  const confirmedOf = new Map<string, Record<string, Confirmed[]>>()
+  for (const [col, spec] of columnsOf(mapping)) confirmedOf.set(col, normalizeConfirmed(spec))
 
-  for (const [col, spec] of columnsOf(mapping)) {
-    if (spec.ignore === true) continue
-    const confirmed = normalizeConfirmed(spec)
-    const pre = chainOf(spec)
+  const inputs = stepInputs(mapping, rows, (op) => op === 'authority', {
+    services,
+    limit: limitPerBranch,
+    keep: (col, value) => confirmedOf.get(col)?.[compareForm(value)] !== undefined
+  })
 
-    ;(spec.targets ?? []).forEach((binding, bi) => {
-      const chain = [...pre, ...(Array.isArray(binding.post) ? binding.post : [])]
-      chain.forEach((step, at) => {
-        if (typeof step !== 'object' || step === null) return
-        if (canonicalOp(String(step.op)) !== 'authority') return
-        const p = step as Record<string, unknown>
-        const source = String(p['source'] ?? 'gnd')
-        const kind = String(p['kind'] ?? 'person')
-        const branch = at < pre.length ? -1 : bi
+  for (const input of inputs) {
+    const col = input.column
+    const branch = input.branch
+    const confirmed = confirmedOf.get(col) ?? {}
+    const p = input.step as Record<string, unknown>
+    const source = String(p['source'] ?? 'gnd')
+    const kind = String(p['kind'] ?? 'person')
+    const counts = input.counts
 
-        // Ein Schritt in der gemeinsamen Kette gilt fuer alle Zweige — er darf
-        // nicht je Zweig noch einmal in der Liste stehen.
-        if (branch === -1 && out.some((e) => e.column === col && e.branch === -1 && e.source === source)) return
+    // Zwei Normdatenschritte derselben Quelle in der gemeinsamen Kette: Die
+    // Liste fuehrt die Quelle nur einmal.
+    if (branch === -1 && out.some((e) => e.column === col && e.branch === -1 && e.source === source)) continue
+    if (counts.size === 0) continue
 
-        const upto = chain.slice(0, at)
-        const counts = new Map<string, number>()
-        for (const row of rows) {
-          const res = runChain(upto, String(row[col] ?? ''), { row, ...services })
-          const values = Array.isArray(res.value) ? res.value : [res.value]
-          for (const v of values) {
-            const t = String(v).trim()
-            if (t === '') continue
-            const key = compareForm(t)
-            const known = counts.get(t)
-            if (known !== undefined) counts.set(t, known + 1)
-            else if (counts.size < limitPerBranch || confirmed[key] !== undefined) counts.set(t, 1)
-          }
-        }
-        if (counts.size === 0) return
-
-        const wanted = resourceTypeForSource(source)
-        const values: AuthorityInventoryValue[] = [...counts.entries()]
-          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de'))
-          .map(([value, count]) => {
-            const hit = (confirmed[compareForm(value)] ?? []).find((c) => c.type === wanted)
-            if (hit === undefined) return { value, count, state: 'offen' as const }
-            return hit.id === ''
-              ? { value, count, state: 'verworfen' as const }
-              : { value, count, state: 'bestaetigt' as const, id: hit.id, ...(hit.label !== undefined ? { label: hit.label } : {}) }
-          })
-
-        out.push({ column: col, branch, target: String(binding.target ?? ''), source, kind, values })
-      })
+    const wanted = resourceTypeForSource(source)
+    const values: AuthorityInventoryValue[] = sortedCounts(counts).map(({ value, count }) => {
+      const hit = (confirmed[compareForm(value)] ?? []).find((c) => c.type === wanted)
+      if (hit === undefined) return { value, count, state: 'offen' as const }
+      return hit.id === ''
+        ? { value, count, state: 'verworfen' as const }
+        : { value, count, state: 'bestaetigt' as const, id: hit.id, ...(hit.label !== undefined ? { label: hit.label } : {}) }
     })
+
+    out.push({ column: col, branch, target: input.target, source, kind, values })
   }
 
   return out

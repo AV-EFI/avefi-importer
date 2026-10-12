@@ -14,11 +14,11 @@ function t(key: string) {
 }
 
 describe('Bestand', () => {
-  it('kennt 91 Ziele auf drei Ebenen', () => {
-    expect(allTargets().length).toBe(91)
+  it('kennt 92 Ziele auf drei Ebenen', () => {
+    expect(allTargets().length).toBe(92)
     expect(allTargets().filter((x) => x.level === 'work').length).toBe(40)
     expect(allTargets().filter((x) => x.level === 'manifestation').length).toBe(16)
-    expect(allTargets().filter((x) => x.level === 'item').length).toBe(35)
+    expect(allTargets().filter((x) => x.level === 'item').length).toBe(36)
   })
 
   it('bietet je Ebene zwoelf Titelziele an', () => {
@@ -39,9 +39,10 @@ describe('Bestand', () => {
     }
   })
 
-  it('bietet has_format je Traegerklasse an', () => {
+  it('bietet has_format je Traegerklasse an und einmal ueber alle (#28)', () => {
     const formats = allTargets().filter((x) => x.key.startsWith('item.format.'))
-    expect(formats.length).toBe(6)
+    expect(formats.length).toBe(7)
+    expect(t('item.format.any').type).toBe('format')
     // Die Werteliste haengt an der Klasse, nicht am Wert: "DV" steht in
     // FormatVideoTypeEnum und in FormatDigitalFileTypeEnum.
     expect(t('item.format.film').type).toBe('enum:FormatFilmTypeEnum')

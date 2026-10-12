@@ -21,7 +21,7 @@ import { failureText, mappingFailure, type MappingFailure } from './errors'
 import type {
   AuthorityCandidate, AuthorityGroup, AuthorityRequest, AuthorityValue, AuthorityValuesResponse,
   CandidateResponse, EditorPayload, EditorTarget, ForeignProfile, MappingCheck, PreviewExample,
-  PreviewPayload, SaveResponse, SchemaCheckResponse
+  PreviewPayload, SaveResponse, SchemaCheckResponse, VocabGroup
 } from './types'
 import MappingBranch from './Branch.vue'
 import MappingChecks from './Checks.vue'
@@ -57,7 +57,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, te } = useI18n()
-const { meldung, befund } = useMeldungstext()
+const { meldung, befund, pruefung } = useMeldungstext()
 const zuordnungen = mappingsService()
 const keepFocus = useKeepFocus()
 
@@ -98,6 +98,8 @@ const busy = ref(false)
 const saving = ref(false)
 const failure = ref<MappingFailure | null>(null)
 const message = ref('')
+/** Gespeichert, aber nicht gestartet: keine Erfolgsfarbe. */
+const messageWarn = ref(false)
 const blockedChecks = ref<MappingCheck[]>([])
 const schemaResult = ref<SchemaCheckResponse | null>(null)
 const schemaBusy = ref(false)
@@ -499,28 +501,46 @@ const authorityError = ref('')
  */
 const authorityValues = ref<AuthorityGroup[]>([])
 
-function hasAuthorityStep(): boolean {
+/**
+ * Die Werte, die an jedem Wertelisten-Schritt ankommen (#26).
+ *
+ * null heisst: noch nicht gerechnet. Dann zeigt die Werteliste die Rohwerte
+ * der Spalte, wie vor dem 12.10.2026 immer. Ein leeres Feld heisst dagegen:
+ * gerechnet, und es kommt nichts an.
+ */
+const vocabValues = ref<VocabGroup[] | null>(null)
+
+function hasStep(ops: readonly string[]): boolean {
   for (const spec of Object.values(mapping.value.columns ?? {})) {
     if (typeof spec !== 'object' || spec === null) continue
     const chains = [spec.pre ?? [], ...(spec.targets ?? []).map((b) => b.post ?? [])]
-    if (chains.some((c) => c.some((s) => String((s as { op?: unknown }).op ?? '') === 'authority'))) return true
+    if (chains.some((c) => c.some((s) => ops.includes(String((s as { op?: unknown }).op ?? ''))))) return true
   }
   return false
 }
 
 async function loadAuthorityValues() {
-  if (!hasAuthorityStep()) {
+  if (!hasStep(['authority', 'map'])) {
     authorityValues.value = []
+    vocabValues.value = []
     return
   }
   try {
     const res = await post<AuthorityValuesResponse>('authority-values', { mapping: mapping.value })
     authorityValues.value = res.groups
+    vocabValues.value = res.vocab ?? null
   } catch {
     // Der Wertevorrat ist Komfort, kein Kern: Faellt er aus, bleibt der Editor
     // mit den Beispielwerten bedienbar.
     authorityValues.value = []
+    vocabValues.value = null
   }
+}
+
+/** Werte an Schritt `at` der Kette von Zweig `branch` (-1: gemeinsame Kette). */
+function vocabValuesFor(column: string, branch: number, at: number): Array<{ value: string; count: number }> | null {
+  const hit = vocabValues.value?.find((g) => g.column === column && g.branch === branch && g.at === at)
+  return hit?.values ?? null
 }
 
 /** Werte fuer einen Zweig — die gemeinsame Kette (-1) gilt fuer jeden Zweig. */
@@ -605,6 +625,7 @@ async function save(start: boolean) {
 async function saveInner(start: boolean) {
   incompleteWarning.value = ''
   message.value = ''
+  messageWarn.value = false
   blockedChecks.value = []
   if (start && !complete.value) {
     incompleteWarning.value = t(
@@ -634,6 +655,19 @@ async function saveInner(start: boolean) {
       emit('started', res.profile)
       return
     }
+    if (res.startBlocked === true) {
+      // Gespeichert, aber nicht gestartet (#29). Die Gruende stehen in der
+      // Antwort und erscheinen zusaetzlich am Zweig, wo sie entstehen.
+      const gruende = res.checks.filter((c) => c.severity === 'error')
+      blockedChecks.value = res.checks
+      messageWarn.value = true
+      message.value = t('mapping.save.notStarted', {
+        name: res.profile.name,
+        version: res.profile.version,
+        gruende: gruende.map((c) => pruefung(c)).join(' ')
+      })
+      return
+    }
     message.value = t('mapping.save.done', { name: res.profile.name, version: res.profile.version })
     void runSchemaCheck()
   } catch (e) {
@@ -645,6 +679,13 @@ async function saveInner(start: boolean) {
     saving.value = false
   }
 }
+
+/** Was vor dem Konvertieren fehlt — sichtbar, bevor jemand klickt. */
+const startHint = computed(() => {
+  if (!props.payload.canStart || preview.value?.startBlocked !== true) return ''
+  const n = (preview.value?.checks ?? []).filter((c) => c.severity === 'error').length
+  return t('mapping.head.startBlockedHint', { n }, Math.max(n, 1))
+})
 
 const allChecks = computed<MappingCheck[]>(() =>
   blockedChecks.value.length > 0 ? blockedChecks.value : (preview.value?.checks ?? [])
@@ -695,10 +736,15 @@ const canonicalJson = computed(() => {
         <button type="button" :class="payload.canStart ? 'btn btn-outline' : 'btn btn-primary'"
                 :disabled="saving" @click="save(false)">{{ t('mapping.head.save') }}</button>
         <button v-if="payload.canStart" type="button" class="btn btn-primary"
-                :disabled="saving || (preview?.blocking ?? false)" @click="save(true)">
+                :disabled="saving || (preview?.blocking ?? false)"
+                :aria-describedby="startHint ? 'start-hint' : undefined" @click="save(true)">
           {{ t('mapping.head.saveAndConvert') }}
         </button>
       </div>
+      <!-- Der Knopf bleibt bedienbar: Ein gesperrter Knopf ist nicht
+           fokussierbar, und niemand erfaehrt, warum er grau ist. Er speichert
+           und sagt dann, was vor dem Konvertieren fehlt (#29). -->
+      <p v-if="startHint" id="start-hint" class="note small" style="margin:6px 0 0">{{ startHint }}</p>
     </div>
 
     <p class="sr-only" role="status" aria-live="polite">
@@ -720,7 +766,9 @@ const canonicalJson = computed(() => {
       der Hinweis auf offene Spalten unterbrechen.
     -->
     <div class="live-region" role="status" aria-live="polite">
-      <div v-if="message" class="ui-alert ui-alert-ok" style="margin-bottom:14px">{{ message }}</div>
+      <div v-if="message" :class="messageWarn ? 'ui-alert' : 'ui-alert ui-alert-ok'" style="margin-bottom:14px">
+        {{ message }}
+      </div>
       <div v-if="adoptNote" class="ui-alert ui-alert-ok" style="margin-bottom:14px">{{ adoptNote }}</div>
     </div>
     <div class="live-region" role="alert" aria-live="assertive">
@@ -966,6 +1014,7 @@ const canonicalJson = computed(() => {
                                    :values="sourceValues(column)" :fill-label="fillLabel(column)"
                                    :index="columns.indexOf(column)"
                                    :authority-values="authorityValuesFor"
+                                   :step-values="vocabValuesFor"
                                    :mapping-id="payload.profile?.id ?? null"
                                    :checks="checksOfColumn(column)"
                                    @change="refresh" @authority="openAuthority" @fix="applyFix"

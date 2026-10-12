@@ -13,7 +13,8 @@ import type { AvefiRecord, MappingJson, ProfileSample, ValidationIssue } from '#
 import {
   authorityInventory, buildPreview, buildProfileSample, collectAuthorityLookups, columnStates,
   computeComplete, getTarget, hasBlocker, hasStartBlocker, normalizeMapping, openColumns, previewRows, staticCheck,
-  type AuthorityInventoryEntry, type MappingCheck, type MappingServices, type PreviewInput,
+  vocabInventory,
+  type AuthorityInventoryEntry, type MappingCheck, type MappingServices, type PreviewInput, type VocabInventoryEntry,
   type PreviewResult, type SchemaModel, type SourceRow
 } from '../../lib/mapping/index'
 import {
@@ -54,6 +55,8 @@ export interface PreviewPayload extends PreviewResult {
   complete: boolean
   open: string[]
   blocking: boolean
+  /** Speichern geht, Konvertieren noch nicht (#29). */
+  startBlocked: boolean
 }
 
 /**
@@ -102,7 +105,9 @@ export async function previewFor(source: TableSource, raw: unknown): Promise<Pre
     states: columnStates(mapping),
     complete: computeComplete(mapping),
     open: openColumns(mapping),
-    blocking: hasBlocker(checks)
+    blocking: hasBlocker(checks),
+    // Speichern geht, Konvertieren noch nicht — der Editor sagt es am Knopf.
+    startBlocked: hasStartBlocker(checks)
   }
 }
 
@@ -220,6 +225,12 @@ export function inventoryRows(source: TableSource): SourceRow[] {
 
 export interface AuthorityValuesPayload {
   groups: AuthorityInventoryEntry[]
+  /**
+   * Je Wertelisten-Schritt die Werte, die dort ankommen (#26). Laeuft ueber
+   * denselben Aufruf, weil die Frage dieselbe ist: Welche Werte kommen an
+   * diesem Schritt an?
+   */
+  vocab: VocabInventoryEntry[]
   /** Wie viele Werte noch auf eine Entscheidung warten. */
   open: number
 }
@@ -236,9 +247,12 @@ export interface AuthorityValuesPayload {
 export async function authorityValuesFor(source: TableSource, raw: unknown): Promise<AuthorityValuesPayload> {
   const version = await avefiSchemaVersion()
   const { mapping } = normalizeMapping(raw, { columns: source.columns, avefiSchemaVersion: version })
-  const groups = authorityInventory(mapping, inventoryRows(source), authorityServices())
+  const rows = inventoryRows(source)
+  const services = authorityServices()
+  const groups = authorityInventory(mapping, rows, services)
+  const vocab = vocabInventory(mapping, rows, services)
   const open = groups.reduce((n, g) => n + g.values.filter((v) => v.state === 'offen').length, 0)
-  return { groups, open }
+  return { groups, open, vocab }
 }
 
 /* ----------------------------------------------------- Normdaten-Kandidaten */

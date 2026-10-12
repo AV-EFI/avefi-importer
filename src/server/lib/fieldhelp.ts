@@ -19,6 +19,7 @@
 import type { FieldHelp, ValidationIssue } from '#shared/types/domain'
 import type { SchemaModel } from './mapping/index'
 import { getTarget } from './mapping/index'
+import { alleFormatwerte } from '#shared/formatklassen'
 
 /**
  * Loest die in den Befunden vorkommenden Zielfelder auf.
@@ -46,7 +47,9 @@ export function fieldHelpFor(
     // auch blanke Slotnamen wie has_identifier. Zu denen gibt es hier nichts
     // aufzuloesen — ihr Hinweis haengt am Code und steht schon daneben.
     if (ziel === undefined) continue
-    const werte = ziel.type.startsWith('enum:') ? schema.enum(ziel.type.slice(5)) : []
+    const werte = ziel.type.startsWith('enum:')
+      ? schema.enum(ziel.type.slice(5))
+      : ziel.type === 'format' ? alleFormatwerte((name) => schema.enum(name)) : []
     raus[key] = {
       label: ziel.label,
       description: ziel.description ?? null,

@@ -36,11 +36,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // Und nicht mit einer Zuordnung, die garantiert Saetze ohne Titel erzeugt.
-  // Speichern bleibt erlaubt, siehe ERST_BEIM_KONVERTIEREN in runner.ts.
-  if (start && prepared.startBlocked) {
-    throw fail(409, 'start_blocked', { checks: prepared.checks },
-      'Mit dieser Zuordnung laesst sich nicht konvertieren.')
-  }
+  // Gespeichert wird trotzdem (ERST_BEIM_KONVERTIEREN in runner.ts): Bis zum
+  // 12.10.2026 brach diese Stelle VOR dem Speichern mit 409 `start_blocked`
+  // ab, und der Editor zeigte "Unerwarteter Fehler." (#29). Jetzt wird
+  // gespeichert, nicht gestartet, und die Antwort sagt, warum.
+  const startBlocked = start && prepared.startBlocked
 
   let profile = await findOwnProfile(sql, user.institution_id, source.headerHash)
   if (profile === null) {
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
   await setMappingProfile(sql, row.id, profile.id, profile.version)
 
   let started = false
-  if (start) {
+  if (start && !startBlocked) {
     await setStatus(sql, row.id, 'converting')
     await enqueue(sql, 'worker/convert', { import_id: row.id, converter_key: profileKey(profile.id) }, row.id)
     await sql`UPDATE format_reviews SET status = 'resolved' WHERE import_id = ${row.id} AND status = 'open'`
@@ -76,6 +76,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     started,
+    startBlocked,
     profile: { id: profile.id, name: profile.name, version: profile.version, complete: profile.complete },
     checks: prepared.checks,
     complete: prepared.complete,

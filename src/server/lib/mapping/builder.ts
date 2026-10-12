@@ -19,6 +19,7 @@ import type { TargetDefinition, TargetWriter } from './targets.js'
 import { getSchemaModel } from './schema-model.js'
 import { validateTargetValue, writerAcceptsAuthority } from './targets.js'
 import { meldung } from './meldungen.js'
+import { klaereFormat } from '#shared/formatklassen'
 
 /*
  * Knoten und Wertobjekte kommen aus shared/types/domain.ts. Bis zum
@@ -273,9 +274,20 @@ export class AvefiBuilder {
         // Mehrwertig, aber je Traegerklasse und Wert nur einmal: eine Spalte,
         // die "35mmFilm" in mehreren Zeilen desselben Exemplars nennt, soll
         // nicht mehrere gleiche Eintraege erzeugen.
+        // Gemeinsames Ziel (#28): Die Klasse steht im Wert ("Video:VHS") oder
+        // ergibt sich eindeutig aus ihm. validateTargetValue hat vorher
+        // geprueft; was hier nicht aufgeht, wird nicht geschrieben.
+        let klasse = w.className
+        let typ = v
+        if (klasse === '') {
+          const k = klaereFormat(v, (name) => this.schema.enum(name))
+          if (!k.ok) return
+          klasse = k.klasse
+          typ = k.wert
+        }
         const list = nodeList(node, 'has_format')
-        const already = list.some((f) => f['category'] === `avefi:${w.className}` && f['type'] === v)
-        if (!already) list.push({ category: `avefi:${w.className}`, type: v })
+        const already = list.some((f) => f['category'] === `avefi:${klasse}` && f['type'] === typ)
+        if (!already) list.push({ category: `avefi:${klasse}`, type: typ })
         return
       }
 

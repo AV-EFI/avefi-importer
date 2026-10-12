@@ -129,11 +129,15 @@ export {
   readTarget,
   runRow,
   staticCheck,
+  stepInputs,
+  vocabInventory,
   workKey
 } from './runner.js'
 export type {
   AuthorityInventoryEntry,
   AuthorityInventoryValue,
+  StepInput,
+  VocabInventoryEntry,
   AuthorityRequest,
   CellOutput,
   CellResult,

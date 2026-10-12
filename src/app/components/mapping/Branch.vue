@@ -29,6 +29,11 @@ const props = defineProps<{
   index: number
   /** Der volle Wertevorrat je Zweig und Quelle — nicht nur die drei Beispiele. */
   authorityValues: (column: string, branch: number, source: string) => AuthorityValue[]
+  /**
+   * Die Werte, die an einem Schritt ankommen — fuer die Werteliste (#26).
+   * null, solange nichts gerechnet ist; dann gelten die Rohwerte.
+   */
+  stepValues?: (column: string, branch: number, at: number) => Array<{ value: string; count: number }> | null
   /** Profil-ID, falls vorhanden: dann gibt es die eigene Normdatenseite. */
   mappingId: number | null
   /** Beanstandungen dieser Spalte — angezeigt dort, wo sie entstehen. */
@@ -250,6 +255,7 @@ function authorityOpen(i: number): number {
     <div class="branch-global">
       <MappingChain :chain="preChain()" :columns="columns" :transforms="transforms"
                     :label="t('mapping.branch.preLabel')" :enum-values="[]" :enum-name="''" :source-values="values"
+                    :step-values="(at: number) => stepValues?.(column, -1, at) ?? null"
                     :id-base="`${idBase}-pre`" @change="emit('change')" />
     </div>
 
@@ -269,7 +275,9 @@ function authorityOpen(i: number): number {
           <MappingChain :chain="postChain(i)" :columns="columns" :transforms="transforms"
                         :label="t('mapping.branch.postLabel')" :enum-values="enumValuesFor(binding.target)"
                         :enum-name="enumNameFor(binding.target)"
-                        :source-values="values" :id-base="`${idBase}-b${i}`" @change="emit('change')" />
+                        :source-values="values"
+                        :step-values="(at: number) => stepValues?.(column, i, at) ?? null"
+                        :id-base="`${idBase}-b${i}`" @change="emit('change')" />
 
           <MappingTargetSelect :model-value="binding.target" :targets="targets"
                                :label="t('mapping.branch.targetLabel', { n: i + 1 })"

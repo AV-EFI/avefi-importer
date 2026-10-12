@@ -20,7 +20,8 @@
       "merge": "Beispiel und Ergebnis zusammen",
       "split": "Beispiel und Ergebnis getrennt",
       "save": "Speichern",
-      "saveAndConvert": "Speichern und konvertieren"
+      "saveAndConvert": "Speichern und konvertieren",
+      "startBlockedHint": "Vor dem Konvertieren fehlt noch eine Pflichtangabe. Sie steht oben in der Prüfung. Speichern geht schon. | Vor dem Konvertieren fehlen noch {n} Pflichtangaben. Sie stehen oben in der Prüfung. Speichern geht schon."
     },
     "state": {
       "calculating": "Vorschau wird gerechnet …",
@@ -392,7 +393,8 @@
     },
     "save": {
       "done": "Profil „{name}“ gespeichert (Version {version}).",
-      "incomplete": "Es ist noch eine Spalte unbeantwortet: {columns}. Ordne sie zu oder markiere sie als „ignorieren“. | Es sind noch {n} Spalten unbeantwortet: {columns}. Ordne sie zu oder markiere sie als „ignorieren“."
+      "incomplete": "Es ist noch eine Spalte unbeantwortet: {columns}. Ordne sie zu oder markiere sie als „ignorieren“. | Es sind noch {n} Spalten unbeantwortet: {columns}. Ordne sie zu oder markiere sie als „ignorieren“.",
+      "notStarted": "Profil „{name}“ gespeichert (Version {version}). Konvertiert wird noch nicht. Zuerst muss das behoben sein: {gruende}"
     },
     "list": {
       "title": "Zuordnungsprofile",
@@ -515,7 +517,8 @@
       "hash_mismatch": "Die Kopfzeile dieser Datei passt nicht zum Profil. {summary} Fehlend: {missing} · Zusätzlich: {extra}",
       "profile_create_failed": "Das Profil konnte nicht angelegt werden.",
       "profile_bad_version": "Keine gültige Versionsnummer.",
-      "profile_version_not_found": "Version {version} gibt es zu diesem Profil nicht."
+      "profile_version_not_found": "Version {version} gibt es zu diesem Profil nicht.",
+      "start_blocked": "Mit dieser Zuordnung lässt sich noch nicht konvertieren. Was fehlt, steht oben in der Prüfung."
     },
     "targets": {
       "work": {
@@ -637,6 +640,15 @@
         },
         "manufacture": {
           "date": "Herstellungsdatum der Kopie"
+        },
+        "format": {
+          "film": "Film (16mm, 35mm …)",
+          "video": "Videoband (BetacamSP, VHS …)",
+          "audio": "Tonträger (Magnetton, Audiokassette …)",
+          "optical": "Optischer Datenträger (DVD, Blu-ray …)",
+          "digitalfile": "Datei (MXF, MP4, DPX …)",
+          "encoding": "Kodierung der Datei (MPEG4, Quicktime …)",
+          "any": "Format (alle Trägerklassen)"
         }
       }
     },
@@ -762,7 +774,8 @@
       "concat": "Spalten verbinden",
       "valuemap": "Werteliste zuordnen",
       "ucfirst": "Anfangsbuchstaben groß",
-      "only": "Nur wenn"
+      "only": "Nur wenn",
+      "strip_brackets": "Klammerzusätze entfernen"
     },
     "param": {
       "trim": {
@@ -844,6 +857,9 @@
         "negate": "Umkehren: nur wenn das Muster NICHT passt",
         "capture": "Nur diese Gruppe übernehmen",
         "flags": "Zusatzangaben (i)"
+      },
+      "strip_brackets": {
+        "kind": "Klammerart"
       }
     },
     "choice": {
@@ -888,6 +904,13 @@
           "corporate": "Körperschaft",
           "place": "Ort",
           "subject": "Schlagwort"
+        }
+      },
+      "strip_brackets": {
+        "kind": {
+          "round": "runde ( )",
+          "square": "eckige [ ]",
+          "both": "runde und eckige"
         }
       }
     },
@@ -969,7 +992,8 @@
       "value_truncated": "„{field}“ nimmt nur einen Wert auf; weitere Werte dieser Zelle bleiben unberücksichtigt.",
       "work_no_title": "Keine Spalte führt auf „Werk › Titel › Haupttitel“. Ersatzweise wird der Titel der Manifestation oder des Exemplars übernommen.",
       "worktype_nowhere": "Keine Spalte führt auf „Werk › Werkart“. Das AVefi-Schema verlangt die Werkart am Werk, deshalb trägt die Konvertierung „Monographic“ ein — für jeden Datensatz dieses Bestands, ungeprüft. Wo das nicht stimmt, gehört eine Spalte auf „Werk › Werkart“ oder ein Festwert mit der richtigen Werkart in die Zuordnung.",
-      "data_bracketTitleStrip": "{n} von {von} betrachteten Werten stehen in eckigen Klammern. Am Archivtitel sind die Klammern die Kennzeichnung der Quelldatei, nicht Teil des Namens. „Klammern abschneiden“ nimmt sie heraus; Werte ohne Klammern bleiben, wie sie sind."
+      "data_bracketTitleStrip": "{n} von {von} betrachteten Werten stehen in eckigen Klammern. Am Archivtitel sind die Klammern die Kennzeichnung der Quelldatei, nicht Teil des Namens. „Klammern abschneiden“ nimmt sie heraus; Werte ohne Klammern bleiben, wie sie sind.",
+      "target_formatAmbiguous": "„{wert}“ steht in mehreren Trägerklassen ({klassen}). In der Werteliste die Klasse wählen, etwa „Video:{wert}“."
     },
     "versionView": {
       "crumb": "Version {n}",

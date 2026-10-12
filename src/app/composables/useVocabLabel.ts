@@ -5,11 +5,19 @@
  * Binnenmajuskeln. Der technische Wert wird nicht ersetzt, sondern ergaenzt;
  * wer nach "PreferredTitle" sucht, soll ihn weiterhin finden.
  */
+import { formatEnum, teileFormatwert } from '#shared/formatklassen'
+
 export function useVocabLabel() {
   const { t, te } = useI18n()
 
   function label(enumName: string, value: string): string {
     if (value === '') return ''
+    // Werte des gemeinsamen Format-Ziels tragen ihre Klasse: "Video:VHS"
+    // wird mit der Werteliste der Klasse beschriftet (#28).
+    if (enumName === '') {
+      const { klasse, wert } = teileFormatwert(value)
+      if (klasse !== null) return label(formatEnum(klasse), wert)
+    }
     const key = `mapping.vocab.values.${enumName}.${value}`
     if (enumName !== '' && te(key)) return t(key)
     return splitCamel(value)

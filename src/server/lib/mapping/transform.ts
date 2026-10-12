@@ -194,6 +194,12 @@ export const TRANSFORM_CATALOG: Record<string, TransformOpMeta> = {
       P('flags', 'Zusatzangaben (i)', 'text', { optional: true })
     ]
   },
+  strip_brackets: {
+    op: 'strip_brackets', label: 'Klammerzusaetze entfernen', group: 'Text', in: 'any', out: 'same',
+    params: [P('kind', 'Klammerart', 'choice', {
+      choices: { round: 'runde ( )', square: 'eckige [ ]', both: 'runde und eckige' }
+    })]
+  },
   prefix: {
     op: 'prefix', label: 'Davorsetzen', group: 'Text', in: 'any', out: 'same',
     params: [P('value', 'Text', 'text')]
@@ -406,7 +412,7 @@ const RESOURCE_BY_SOURCE: Record<string, string> = {
  * stille Fehlbedienung ist eine Normdatenabfrage auf dem Rohwert.
  */
 export const OP_PHASE: Readonly<Record<string, number>> = {
-  trim: 1, lowercase: 1, uppercase: 1, titlecase: 1, replace: 1, regex: 1, only: 1,
+  trim: 1, lowercase: 1, uppercase: 1, titlecase: 1, replace: 1, regex: 1, only: 1, strip_brackets: 1,
   substring: 1, number: 1, boolean: 1, year: 1, date: 1, duration: 1,
   split: 2,
   country: 3, language: 3, map: 3, authority: 3,
@@ -480,7 +486,7 @@ export function pickConfirmed(
 /** Operationen, die eine Liste elementweise bearbeiten. */
 const ELEMENTWISE = new Set([
   'trim', 'lowercase', 'uppercase', 'titlecase', 'replace', 'regex', 'prefix', 'suffix',
-  'only',
+  'only', 'strip_brackets',
   'substring', 'template', 'number', 'year', 'date', 'duration', 'map', 'authority',
   'country', 'language', 'boolean'
 ])
@@ -662,6 +668,9 @@ function apply(
       }
       return s
     }
+
+    case 'strip_brackets':
+      return stripBrackets(str(value), paramStr(p, 'kind', 'round'))
 
     case 'prefix': {
       const s = str(value)
@@ -982,6 +991,69 @@ export function secondsToIso(sec: number): string {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   return `PT${String(h).padStart(2, '0')}H${String(m).padStart(2, '0')}M${String(s % 60).padStart(2, '0')}S`
+}
+
+/* ------------------------------------------------- Klammerzusaetze entfernen */
+
+const KLAMMERPAARE: Readonly<Record<string, ReadonlyArray<readonly [string, string]>>> = {
+  round: [['(', ')']],
+  square: [['[', ']']],
+  both: [['(', ')'], ['[', ']']]
+}
+
+/**
+ * Steht der ganze Wert in EINEM Klammerpaar? "(a)" ja, "((a))" ja,
+ * "(a) und (b)" nein — dort schliesst die erste Klammer vor dem Ende.
+ */
+function ganzGeklammert(s: string, paare: ReadonlyArray<readonly [string, string]>): boolean {
+  for (const [auf, zu] of paare) {
+    if (!s.startsWith(auf) || !s.endsWith(zu)) continue
+    let tiefe = 0
+    let ganz = true
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === auf) tiefe++
+      else if (s[i] === zu) tiefe--
+      if (tiefe === 0 && i < s.length - 1) {
+        ganz = false
+        break
+      }
+    }
+    if (ganz && tiefe === 0) return true
+  }
+  return false
+}
+
+/**
+ * Entfernt Klammerzusaetze samt Inhalt: "Der blaue Engel (1930)" wird zu
+ * "Der blaue Engel" (#27, Luca Wollny am 01.10.2026).
+ *
+ * Bis dahin ging das nur ueber einen regulaeren Ausdruck wie `\s*\([^)]*\)`,
+ * den kaum jemand kennt und der verschachtelte Klammern halb stehen laesst.
+ * Hier wird von innen nach aussen abgetragen, bis nichts mehr passt.
+ *
+ * Ein Wert, der VOLLSTAENDIG in Klammern steht, bleibt unveraendert. Sonst
+ * wuerde aus "[Betriebsausflug 1962]" ein leerer Titel — und ganz
+ * eingeklammert ist nach #5 eine Kennzeichnung (Archivtitel), kein Zusatz.
+ * Aus demselben Grund bleibt ein Wert stehen, der nur aus Klammern besteht.
+ */
+export function stripBrackets(v: string, kind: string): string {
+  const paare = KLAMMERPAARE[kind] ?? KLAMMERPAARE['round']!
+  const s = v.trim()
+  if (s === '' || ganzGeklammert(s, paare)) return v
+
+  const muster = paare.map(([auf, zu]) => {
+    const a = `\\${auf}`
+    const z = `\\${zu}`
+    return new RegExp(`\\s*${a}[^${a}${z}]*${z}`, 'gu')
+  })
+  let out = s
+  for (;;) {
+    const vorher = out
+    for (const m of muster) out = out.replace(m, '')
+    if (out === vorher) break
+  }
+  out = out.replace(/\s{2,}/gu, ' ').trim()
+  return out === '' ? v : out
 }
 
 function valuemap(v: string, p: TransformStep, notes: string[], errors: MappingMessage[]): string {

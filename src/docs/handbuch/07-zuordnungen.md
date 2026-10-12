@@ -164,7 +164,7 @@ Zuordnung (je Zweig).
 
 | Gruppe | Operationen |
 |---|---|
-| Text | Leerraum entfernen, Klein-/Großschreibung, Ersetzen, Ausschnitt, Standardwert, Muster |
+| Text | Leerraum entfernen, Klein-/Großschreibung, Ersetzen, Klammerzusätze entfernen, Ausschnitt, Standardwert, Muster |
 | Struktur | Aufteilen, Zusammenfügen, Element auswählen, Spalten verbinden |
 | Typen | Zahl, Jahreszahl, Datum nach ISO, Laufzeit nach ISO 8601 |
 | Vokabular | Werteliste zuordnen, Normdaten nachschlagen (GND/Wikidata/VIAF) |
@@ -173,11 +173,23 @@ Zuordnung (je Zweig).
 Der Konverter „Laufzeit nach ISO 8601" erzeugt genau dieses Format, egal ob die Quelle
 „90", „1:30:00" oder „PT1H30M" liefert.
 
+**Klammerzusätze** wie „Der blaue Engel (1930)" oder „digitale Datei (mpeg)" entfernt
+der Konverter *„Klammerzusätze entfernen"*, ohne regulären Ausdruck. Wählbar sind runde,
+eckige oder beide Klammerarten; verschachtelte Klammern verschwinden ganz. Ein Wert, der
+**vollständig** in Klammern steht, bleibt unverändert — „[Betriebsausflug 1962]" ist eine
+Kennzeichnung (siehe *Titel in eckigen Klammern*), kein Zusatz, und würde sonst leer.
+
 **Wertelisten** braucht jedes Ziel mit fester Auswahl (Farbe, Ton, Elementart …). Der
 Knopf *„Werteliste aus der Datei vorbefüllen"* trägt die tatsächlich vorkommenden Werte
 ein; einzutragen bleibt der jeweilige AVefi-Wert. Für nicht zugeordnete Werte gilt
 standardmäßig *„als Notiz behalten"* — in einem Archivkontext ist Datenverlust das
 schlimmere Übel als eine unsaubere Notiz.
+
+Die Tabelle der Werteliste zeigt die Werte, die **an ihrem Schritt ankommen**, nicht die
+Rohwerte der Spalte. Steht davor etwa *„Aufteilen"* an „+", bietet sie aus
+„VHS + DVD" die beiden Werte „VHS" und „DVD" einzeln an — genau so, wie die Konvertierung
+sie später zuordnet. Zuordnungen, die noch auf ganze Rohzeilen zeigen, erscheinen als
+*verwaist* und lassen sich mit einem Klick entfernen.
 
 **Normdaten** sind standardmäßig aus. Eingeschaltet fragen sie externe Dienste ab und
 verlangsamen den Import spürbar; Ergebnisse werden dauerhaft zwischengespeichert, und
@@ -289,6 +301,31 @@ angekreuzten Spalten dahinter.
 
 Eine Ordnungsform mit nachgestelltem Artikel („Kinder des Olymp, Die", im Schema
 `has_ordering_name`) erzeugt der CSV-Weg derzeit nicht.
+
+### Formate aus mehreren Trägerklassen
+
+Das AVefi-Schema unterscheidet sechs Trägerklassen mit je eigener Werteliste: Film,
+Videoband, Tonträger, optischer Datenträger, Datei und Kodierung. Für eine Spalte, die
+nur eine Klasse enthält, gibt es je ein eigenes Ziel. Stehen die Klassen gemischt in einer
+Spalte — „VHS + DVD + digitale Datei (mpeg + vob)" —, gehört sie auf
+**„Exemplar › Format (alle Trägerklassen)"**.
+
+Die Werteliste dieses Ziels zeigt alle Werte nach Klasse gruppiert. Im Profil steht der
+Zielwert mit seiner Klasse, etwa `Video:VHS` oder `Optical:DVD`. Steht in der Spalte
+schon ein Schemawert wie „VHS", braucht es keine Zuordnung — er gehört nur zu einer
+Klasse. Einzige Ausnahme ist **„DV"**, das es als Videoband und als Datei gibt; ohne
+Angabe der Klasse wird es beanstandet und nicht geschrieben.
+
+Für das Beispiel oben:
+
+1. **Klammerzusätze entfernen** (rund) — zuerst, sonst teilt der nächste Schritt auch
+   „(mpeg + vob)" auf.
+2. **Aufteilen** an „+".
+3. Ziel **„Format (alle Trägerklassen)"**, darin **Werteliste zuordnen**: „VHS" →
+   Videoband VHS, „DVD" → DVD, „digitale Datei" → die passende Dateiart, etwa VOB.
+
+Alle Werte landen als Formate desselben Exemplars. Ob ein Bestand mit mehreren Trägern
+fachlich eher mehrere Exemplare sind, ist im Verbund noch offen (#28).
 
 ### Festwerte
 

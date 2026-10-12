@@ -82,7 +82,11 @@ const KEYWORDS: Record<string, readonly string[]> = {
   'item.duration': ['laufzeit', 'dauer', 'laenge', 'spieldauer', 'duration', 'minuten', 'spielzeit'],
   'item.extent.metre': ['meter', 'laengem', 'filmlaenge', 'konfektionierung'],
   'item.extent.feet': ['fuss', 'feet', 'ft'],
-  'item.format.film': ['format', 'filmformat', 'bildformat', 'formatfilm', 'gauge'],
+  // "Format" allein nennt keine Traegerklasse; in Bestandsdaten stehen unter
+  // diesem Kopf Film, Video und Datei gemischt (#28). Das gemeinsame Ziel nimmt
+  // jede Klasse, das Filmziel nur Filmformate.
+  'item.format.any': ['format', 'formate', 'traegerformat', 'medium', 'medien'],
+  'item.format.film': ['filmformat', 'bildformat', 'formatfilm', 'gauge'],
   'item.format.video': ['videoformat', 'video', 'band', 'videoband', 'kassette'],
   'item.format.audio': ['tontraeger', 'audioformat', 'magnetton'],
   'item.format.optical': ['datentraeger', 'disc', 'scheibe'],

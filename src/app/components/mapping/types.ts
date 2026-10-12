@@ -143,10 +143,14 @@ export interface PreviewPayload {
   complete: boolean
   open: string[]
   blocking: boolean
+  /** Speichern geht, Konvertieren noch nicht (Pflichtangabe fehlt, #29). */
+  startBlocked?: boolean
 }
 
 export interface SaveResponse {
   started: boolean
+  /** Konvertieren war gewuenscht, gespeichert wurde, gestartet nicht. */
+  startBlocked?: boolean
   profile: ProfileRef
   checks: MappingCheck[]
   complete: boolean
@@ -206,8 +210,22 @@ export interface AuthorityGroup {
   values: AuthorityValue[]
 }
 
+/** Werte, die an einem Wertelisten-Schritt ankommen (#26). */
+export interface VocabGroup {
+  column: string
+  /** Index des Zweigs, -1 fuer die gemeinsame Kette vor der Verzweigung. */
+  branch: number
+  /** Stelle des Schritts in seiner Kette. */
+  at: number
+  values: Array<{ value: string; count: number }>
+}
+
+/** Liefert die Werte an Schritt `at` — oder null, solange nichts gerechnet ist. */
+export type StepValues = (at: number) => Array<{ value: string; count: number }> | null
+
 export interface AuthorityValuesResponse {
   profile?: { id: number; name: string }
   groups: AuthorityGroup[]
   open: number
+  vocab?: VocabGroup[]
 }

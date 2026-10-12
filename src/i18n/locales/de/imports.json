@@ -362,7 +362,8 @@
       "unauthorized": "Die Sitzung ist abgelaufen. Bitte erneut anmelden.",
       "network": "Keine Verbindung zum Server. Bitte die Netzwerkverbindung prüfen und erneut versuchen.",
       "unexpected": "Die Aktion ist unerwartet fehlgeschlagen. Bitte erneut versuchen.",
-      "no_avefi": "Zu diesem Import gibt es noch keine AVefi-Datei. Sie entsteht bei der Konvertierung."
+      "no_avefi": "Zu diesem Import gibt es noch keine AVefi-Datei. Sie entsteht bei der Konvertierung.",
+      "label_too_long": "Der Anzeigename darf höchstens {max} Zeichen lang sein."
     },
     "page": {
       "notFound": {

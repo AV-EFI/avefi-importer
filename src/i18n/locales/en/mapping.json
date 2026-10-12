@@ -20,7 +20,8 @@
       "merge": "Show example and result together",
       "split": "Show example and result separately",
       "save": "Save",
-      "saveAndConvert": "Save and convert"
+      "saveAndConvert": "Save and convert",
+      "startBlockedHint": "One required field is still missing before converting. It is listed in the check above. Saving already works. | {n} required fields are still missing before converting. They are listed in the check above. Saving already works."
     },
     "state": {
       "calculating": "Calculating preview …",
@@ -392,7 +393,8 @@
     },
     "save": {
       "done": "Profile “{name}” saved (version {version}).",
-      "incomplete": "One column is still unanswered: {columns}. Map it or mark it as ignored. | {n} columns are still unanswered: {columns}. Map them or mark them as ignored."
+      "incomplete": "One column is still unanswered: {columns}. Map it or mark it as ignored. | {n} columns are still unanswered: {columns}. Map them or mark them as ignored.",
+      "notStarted": "Profile “{name}” saved (version {version}). Nothing is converted yet. First this has to be fixed: {gruende}"
     },
     "list": {
       "title": "Mapping profiles",
@@ -515,7 +517,8 @@
       "hash_mismatch": "The header of this file does not match the profile. {summary} Missing: {missing} · Additional: {extra}",
       "profile_create_failed": "The profile could not be created.",
       "profile_bad_version": "Not a valid version number.",
-      "profile_version_not_found": "This profile has no version {version}."
+      "profile_version_not_found": "This profile has no version {version}.",
+      "start_blocked": "This mapping cannot be converted yet. What is missing is listed in the check above."
     },
     "targets": {
       "work": {
@@ -637,6 +640,15 @@
         },
         "manufacture": {
           "date": "Manufacture date of the copy"
+        },
+        "format": {
+          "film": "Film (16mm, 35mm …)",
+          "video": "Video tape (BetacamSP, VHS …)",
+          "audio": "Audio carrier (magnetic track, audio cassette …)",
+          "optical": "Optical disc (DVD, Blu-ray …)",
+          "digitalfile": "File (MXF, MP4, DPX …)",
+          "encoding": "File encoding (MPEG4, Quicktime …)",
+          "any": "Format (all carrier classes)"
         }
       }
     },
@@ -762,7 +774,8 @@
       "concat": "Concatenate columns",
       "valuemap": "Map controlled vocabulary",
       "ucfirst": "Title case",
-      "only": "Only if"
+      "only": "Only if",
+      "strip_brackets": "Remove bracketed additions"
     },
     "param": {
       "trim": {
@@ -844,6 +857,9 @@
         "negate": "Invert: only if the pattern does NOT match",
         "capture": "Keep only this group",
         "flags": "Options (i)"
+      },
+      "strip_brackets": {
+        "kind": "Bracket type"
       }
     },
     "choice": {
@@ -888,6 +904,13 @@
           "corporate": "Corporate body",
           "place": "Place",
           "subject": "Subject"
+        }
+      },
+      "strip_brackets": {
+        "kind": {
+          "round": "round ( )",
+          "square": "square [ ]",
+          "both": "round and square"
         }
       }
     },
@@ -969,7 +992,8 @@
       "value_truncated": "“{field}” takes only one value; further values in this cell are left out.",
       "work_no_title": "No column leads to “Work › Titles › Main title”. The title of the manifestation or item is used instead.",
       "worktype_nowhere": "No column leads to “Work › Work type”. The AVefi schema requires the work type at the work, so the conversion enters “Monographic” — for every record of this holding, unchecked. Where that is wrong, map a column to “Work › Work type” or add a fixed value with the correct type.",
-      "data_bracketTitleStrip": "{n} of {von} sampled values are enclosed in square brackets. On the archive title the brackets mark the source file and are not part of the name. “Cut off brackets” removes them; values without brackets stay as they are."
+      "data_bracketTitleStrip": "{n} of {von} sampled values are enclosed in square brackets. On the archive title the brackets mark the source file and are not part of the name. “Cut off brackets” removes them; values without brackets stay as they are.",
+      "target_formatAmbiguous": "“{wert}” belongs to several carrier classes ({klassen}). Choose the class in the value list, for example “Video:{wert}”."
     },
     "versionView": {
       "crumb": "Version {n}",

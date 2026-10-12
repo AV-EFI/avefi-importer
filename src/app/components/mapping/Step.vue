@@ -97,7 +97,10 @@ function paramId(param: TransformParamSpec): string {
     </div>
 
     <div v-if="params.length" class="ui-step-params">
-      <div v-for="param in params" :key="param.name" class="ui-step-param">
+      <!-- Die Werteliste ist eine Tabelle und braucht die ganze Breite; als eine
+           von drei Rasterspalten ueberlappte sie die Nachbarn (#26). -->
+      <div v-for="param in params" :key="param.name"
+           :class="['ui-step-param', param.type === 'map' && enumValues.length > 0 ? 'ui-step-param-wide' : '']">
         <template v-if="param.type === 'map' && enumValues.length > 0">
           <span class="ui-step-plabel">{{ paramLabel(param) }}</span>
           <MappingVocabulary :step="step" :enum-values="enumValues" :enum-name="enumName ?? ''"
