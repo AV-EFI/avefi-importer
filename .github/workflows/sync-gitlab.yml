@@ -1,0 +1,56 @@
+name: Sync to GitLab
+
+on:
+  workflow_run:
+    workflows:
+      - Test
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-gitlab
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Push tested source to GitLab
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Load GitLab sync key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SYNC_BOT_PRIVATE_KEY }}
+
+      - name: Configure GitLab host verification
+        env:
+          SYNC_BOT_KNOWNHOSTS: ${{ secrets.SYNC_BOT_KNOWNHOSTS }}
+        run: |
+          set -eu
+          test -n "$SYNC_BOT_KNOWNHOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SYNC_BOT_KNOWNHOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Push tested source to GitLab
+        env:
+          SYNC_BOT_TARGET_REPO: ${{ vars.SYNC_BOT_TARGET_REPO }}
+        run: |
+          set -eu
+          test -n "$SYNC_BOT_TARGET_REPO"
+          git remote add gitlab "$SYNC_BOT_TARGET_REPO"
+          # Never force-push: fail if GitLab has diverged so we cannot
+          # silently overwrite refs that are not on the GitHub side.
+          git push gitlab HEAD:refs/heads/main
+          git push gitlab --tags
