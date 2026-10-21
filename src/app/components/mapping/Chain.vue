@@ -9,6 +9,7 @@
  */
 import type { StepValues, TransformOpMeta, TransformStep } from './types'
 import MappingStep from './Step.vue'
+import { klappPlatz, type KlappLage } from '~/utils/klappplatz'
 
 const props = defineProps<{
   chain: TransformStep[]
@@ -39,6 +40,21 @@ const { t, te } = useI18n()
 const picking = ref(false)
 const root = ref<HTMLElement | null>(null)
 const addButton = ref<HTMLButtonElement | null>(null)
+const pickerEl = ref<HTMLElement | null>(null)
+
+/**
+ * Wohin die Auswahl aufklappt (#30). null, solange sie noch nicht gemessen
+ * ist: Dann steht sie unbegrenzt unter dem Knopf, und genau so wird ihre
+ * natuerliche Hoehe gemessen.
+ */
+const pickerLage = ref<KlappLage | null>(null)
+
+function platziereAuswahl() {
+  const knopf = addButton.value?.getBoundingClientRect()
+  const auswahl = pickerEl.value
+  if (knopf === undefined || auswahl === null) return
+  pickerLage.value = klappPlatz(knopf, auswahl.scrollHeight, window.innerHeight)
+}
 
 const metaOf = (op: string): TransformOpMeta | null => props.transforms.find((m) => m.op === op) ?? null
 
@@ -154,8 +170,14 @@ function close() {
  */
 function togglePicker() {
   picking.value = !picking.value
+  pickerLage.value = null
   if (!picking.value) return
-  void nextTick(() => root.value?.querySelector<HTMLElement>('.chain-pitem')?.focus())
+  void nextTick(() => {
+    platziereAuswahl()
+    // preventScroll: Der Fokus soll die Seite nicht verschieben, nachdem die
+    // Auswahl gerade passend zum sichtbaren Platz gelegt wurde.
+    root.value?.querySelector<HTMLElement>('.chain-pitem')?.focus({ preventScroll: true })
+  })
 }
 
 function onDocClick(e: MouseEvent) {
@@ -208,7 +230,9 @@ onBeforeUnmount(() => {
         <span aria-hidden="true">+</span> {{ t('mapping.chain.addStep') }}
       </button>
 
-      <div v-if="picking" class="chain-picker" role="dialog" :aria-label="t('mapping.chain.pickerTitle')">
+      <div v-if="picking" ref="pickerEl" class="chain-picker" :class="{ 'nach-oben': pickerLage?.oben }"
+           :style="pickerLage !== null ? { maxHeight: `${pickerLage.maxHoehe}px` } : undefined"
+           role="dialog" :aria-label="t('mapping.chain.pickerTitle')">
         <div style="grid-column:1/-1;display:flex;align-items:center;gap:8px">
           <strong class="chain-pgroup-h" style="margin:0;flex:1">{{ t('mapping.chain.pickerTitle') }}</strong>
           <button type="button" class="ui-modal-x" :aria-label="t('mapping.chain.closePicker')" @click="close">×</button>

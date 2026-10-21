@@ -9,7 +9,8 @@
  * Seitenaufbau noch Reiter; sie bekommt ein Exemplar und meldet, was der
  * Benutzer will.
  */
-import { emptyIdentifier, emptyLanguage, emptyValue, type UiIdentifier, type UiItem, type UiValue } from './model'
+import { emptyFormat, emptyIdentifier, emptyLanguage, emptyValue, type UiIdentifier, type UiItem, type UiValue } from './model'
+import { FORMAT_KLASSEN, formatEnum, teileFormatwert } from '#shared/formatklassen'
 
 const props = defineProps<{
   item: UiItem
@@ -30,6 +31,31 @@ const { t, te } = useI18n()
  */
 function scoped(text: string): string {
   return t('records.editor.aria.inScope', { scope: props.heading, text })
+}
+
+/**
+ * Format, nach Traegerklasse gruppiert — dieselbe Auswahl wie am Ziel
+ * „Format (alle Traegerklassen)" der Zuordnung (#28, Jasper Stratil). Der Wert
+ * traegt die Klasse („Video:VHS"), sonst waere „DV" doppelt.
+ */
+const formatGruppen = computed(() => FORMAT_KLASSEN
+  .map(([klasse, teil]) => ({
+    klasse,
+    label: t(`mapping.targets.item.format.${teil}`),
+    werte: props.enums(formatEnum(klasse))
+  }))
+  .filter((g) => g.werte.length > 0))
+
+const alleFormate = computed(() => new Set(formatGruppen.value.flatMap((g) => g.werte.map((w) => `${g.klasse}:${w}`))))
+
+/** Gelesener Wert, den die Auswahl nicht kennt — er bleibt sichtbar stehen. */
+function formatUnbekannt(wert: string): boolean {
+  return wert !== '' && !alleFormate.value.has(wert)
+}
+
+function formatBeschriftung(wert: string): string {
+  const { klasse, wert: typ } = teileFormatwert(wert)
+  return klasse === null ? wert : `${typ} · ${klasse}`
 }
 
 function removeAt<T>(list: T[], index: number) {
@@ -112,6 +138,37 @@ function addValue(list: UiValue[]) {
       </button>
     </div>
 
+    <div class="ed-sub">
+      <span class="ed-sublabel">{{ t('records.editor.item.formats') }}</span>
+      <div v-for="(f, j) in item.formats" :key="f.key" class="ed-title-row">
+        <span class="ed-format">
+          <select v-if="formatGruppen.length > 0" :id="`it-format-${f.key}`" v-model="f.value" class="ui-input"
+                  :aria-label="t('records.editor.item.format')"
+                  :aria-describedby="formatUnbekannt(f.value) ? `it-format-${f.key}-hint` : undefined">
+            <option value="">{{ t('records.table.none') }}</option>
+            <option v-if="formatUnbekannt(f.value)" :value="f.value">{{ f.value }}</option>
+            <optgroup v-for="g in formatGruppen" :key="g.klasse" :label="g.label">
+              <option v-for="w in g.werte" :key="w" :value="`${g.klasse}:${w}`">{{ w }}</option>
+            </optgroup>
+          </select>
+          <input v-else :id="`it-format-${f.key}`" v-model="f.value" class="ui-input" type="text"
+                 :aria-label="t('records.editor.item.format')" placeholder="Video:VHS">
+          <span v-if="formatUnbekannt(f.value) && formatGruppen.length > 0" :id="`it-format-${f.key}-hint`"
+                class="note warnhint">
+            {{ t('records.editor.item.formatUnknown', { value: formatBeschriftung(f.value) }) }}
+          </span>
+        </span>
+        <button type="button" class="iconbtn-del"
+                :aria-label="scoped(t('records.editor.item.removeFormat', { index: j + 1 }))"
+                @click="removeAt(item.formats, j)"><span aria-hidden="true">🗑</span></button>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm"
+              :aria-label="scoped(t('records.editor.item.addFormat'))"
+              @click="item.formats.push(emptyFormat())">
+        <span aria-hidden="true">+</span> {{ t('records.editor.item.addFormat') }}
+      </button>
+    </div>
+
     <div v-for="(id, j) in item.identifiers" :key="id.key" class="ed-title-row">
       <select v-model="id.resourceType" class="ui-input" :aria-label="t('records.editor.work.identifierType')">
         <option v-for="name in resourceTypes" :key="name" :value="name">
@@ -142,3 +199,8 @@ function addValue(list: UiValue[]) {
     </button>
   </div>
 </template>
+
+<style scoped>
+/* Wie in EnumSelect.vue: der Hinweis gehoert unter das Feld, nicht daneben. */
+.ed-format { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 }
+</style>

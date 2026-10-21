@@ -845,7 +845,9 @@ const canonicalJson = computed(() => {
           {{ t('mapping.table.skip', { n: shownColumns.length }, shownColumns.length) }}
         </a>
 
-        <div class="tablewrap">
+        <!-- mapping-table: Die Huelle schneidet nicht ab, sonst verschwinden
+             aufklappende Auswahlen an ihrer Unterkante (#30). -->
+        <div class="tablewrap mapping-table">
           <table class="maptable">
             <caption class="sr-only">{{ t('mapping.table.caption') }}</caption>
             <!--

@@ -135,12 +135,19 @@ function isUploading(item: ImportListItem): boolean {
       </div>
     </div>
 
-    <div v-else class="tablewrap">
+    <div v-else class="tablewrap imports-table">
       <table>
         <caption class="sr-only">{{ t('imports.table.caption') }}</caption>
+        <!--
+          Feste Tabellenbreite (.imports-table). Der Dateiname hat keine Breite und
+          nimmt den Rest: Prozentwerte plus 200 px duerfen nie ueber 100 % kommen,
+          sonst wird die Tabelle breiter als ihr Platz (#31, in Firefox bei jeder
+          Fensterbreite). 56 % + 200 px lassen dem Dateinamen ab 760 px Tabellenbreite
+          noch rund 130 px; darunter rollt die Huelle.
+        -->
         <colgroup>
-          <col style="width:26%"><col style="width:13%"><col style="width:11%">
-          <col style="width:16%"><col style="width:9%"><col style="width:13%">
+          <col><col style="width:11%"><col style="width:10%">
+          <col style="width:15%"><col style="width:8%"><col style="width:12%">
           <col style="width:200px">
         </colgroup>
         <thead>

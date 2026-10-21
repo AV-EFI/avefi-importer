@@ -582,6 +582,7 @@ select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible,
 .ac-menu{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 2px);background:var(--surface);
   border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);
   max-height:340px;overflow:auto}
+.ac-menu.nach-oben{top:auto;bottom:calc(100% + 2px)}
 .ac-item{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;width:100%;text-align:left;
   border:0;background:none;font:inherit;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border)}
 .ac-item:hover{background:var(--surface-2)}
@@ -685,7 +686,10 @@ button.ui-menu-item{width:100%;text-align:left;border:0;background:none;cursor:p
 .chain-add{margin-top:8px;position:relative}
 .chain-picker{position:absolute;z-index:40;top:calc(100% + 6px);left:0;background:var(--surface);
   border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:8px;
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;min-width:520px}
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;min-width:520px;
+  overflow-y:auto;overscroll-behavior:contain}
+/* Unten zu wenig Platz: nach oben aufklappen (app/utils/klappplatz.ts, #30). */
+.chain-picker.nach-oben{top:auto;bottom:calc(100% + 6px)}
 .chain-pgroup-h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
   font-weight:700;margin-bottom:4px}
 .chain-pitem{display:block;width:100%;text-align:left;border:0;background:none;padding:5px 7px;
@@ -847,20 +851,30 @@ ul.tight li{margin-bottom:3px;font-size:13px}
 /* ------- Feste Breiten, damit gar nicht erst gerollt wird -------
    Tabellen mit fester Breite laufen nie über ihren Container hinaus. Für sie darf
    der Rahmen deshalb sichtbar überstehen — sonst würde overflow:hidden aufklappende
-   Menüs wie die Konverter-Auswahl an der Tabellenkante abschneiden. */
-#importsTable,#mappingApp .tablewrap{overflow:visible}
+   Menüs wie die Konverter-Auswahl an der Tabellenkante abschneiden.
 
-#importsTable table{table-layout:fixed}
-#importsTable td,#importsTable th{overflow:hidden}
+   Bis zum 22.10.2026 hingen diese Regeln an #importsTable und #mappingApp. Beide
+   IDs gab es seit der Neufassung auf Nuxt (25.08.) nicht mehr; die Regeln griffen
+   nie. Folge: Die Konverterauswahl wurde an der Unterkante der Tabellenhülle
+   abgeschnitten (#30), und die Importtabelle richtete sich nach ihrem Inhalt und
+   lief in Firefox rechts über (#31). Jetzt Klassen am Element selbst, und
+   tests/frontend/css-selektoren.test.ts meldet jeden ID-Selektor ohne Element. */
+.tablewrap.mapping-table{overflow:visible}
+
+/* Die Importtabelle darf waagerecht rollen, aber erst unterhalb von 760 px —
+   darüber passt sie immer. Ihr Zeilenmenü haengt am <body> (RowMenu.vue) und
+   wird von der Hülle nicht beschnitten. */
+.imports-table table{table-layout:fixed;min-width:760px}
+.imports-table td,.imports-table th{overflow:hidden}
 /* Die Aktionsspalte darf nicht abgeschnitten werden: „Bearbeiten" plus „…" brauchen
    rund 151 px, dazu 24 px Zellenpolsterung — bei 154 px Spaltenbreite ragte der
    Menüknopf heraus und wurde vom overflow:hidden gekappt. Jetzt 200 px, und die
    Zelle schneidet grundsätzlich nicht ab. */
-#importsTable td:last-child,#importsTable th:last-child{overflow:visible}
-#importsTable .rowactions{white-space:nowrap;flex-wrap:nowrap}
-#importsTable .rowactions > *{flex:none}
-#importsTable .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#importsTable .fmt{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;
+.imports-table td:last-child,.imports-table th:last-child{overflow:visible}
+.imports-table .rowactions{white-space:nowrap;flex-wrap:nowrap}
+.imports-table .rowactions > *{flex:none}
+.imports-table .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imports-table .fmt{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;
   vertical-align:bottom}
 
 /* ------- Oberflaechenbeschreibungen -------

@@ -15,6 +15,7 @@ import { sourcesForKind } from '../../lib/authority/index'
 import { requireUser } from '../../utils/session'
 import { noStore } from '../imports/_lib'
 import { schemaLoadError, schemaModel } from './_schema'
+import { FORMAT_KLASSEN, formatEnum } from '#shared/formatklassen'
 
 /** Art eines erschliessenden Eintrags -> AVefi-Klasse. */
 const SUBJECT_KINDS = [
@@ -59,6 +60,9 @@ function enumNames(schema: SchemaModel, targetTypes: readonly string[]): string[
   for (const type of targetTypes) {
     if (type.startsWith('enum:')) names.add(type.slice(5))
     else if (type === 'lang') names.add('LanguageCodeEnum')
+    // Das gemeinsame Format-Ziel nennt keine einzelne Liste; der Editor braucht
+    // alle sechs (#28).
+    else if (type === 'format') for (const [klasse] of FORMAT_KLASSEN) names.add(formatEnum(klasse))
   }
   names.add('TitleTypeEnum')
   names.add('LanguageUsageEnum')

@@ -14,6 +14,7 @@
  * Escape schliesst. Das Feld ist eine Combobox nach WAI-ARIA.
  */
 import type { EditorTarget } from './types'
+import { klappPlatz, type KlappLage } from '~/utils/klappplatz'
 
 const props = defineProps<{
   modelValue: string
@@ -31,6 +32,31 @@ const query = ref('')
 const openList = ref(false)
 const activeIndex = ref(-1)
 const root = ref<HTMLElement | null>(null)
+const eingabe = ref<HTMLInputElement | null>(null)
+const liste = ref<HTMLElement | null>(null)
+
+/**
+ * Die Liste klappt nach oben, wenn unter dem Feld zu wenig Platz ist (#30).
+ * Gemessen wird bei jedem Oeffnen und nach jedem Tippen — die Trefferzahl und
+ * damit die Hoehe aendern sich mit der Suche. 340 px bleibt die Obergrenze.
+ */
+const listenLage = ref<KlappLage | null>(null)
+const LISTE_MAX = 340
+
+function platziereListe() {
+  const feld = eingabe.value?.getBoundingClientRect()
+  const ul = liste.value
+  if (!openList.value || feld === undefined || ul === null) return
+  listenLage.value = klappPlatz(feld, Math.min(ul.scrollHeight, LISTE_MAX), window.innerHeight, { abstand: 2 })
+}
+
+watch([openList, () => query.value], () => {
+  if (!openList.value) {
+    listenLage.value = null
+    return
+  }
+  void nextTick(platziereListe)
+})
 
 const byKey = computed(() => new Map(props.targets.map((x) => [x.key, x])))
 const selected = computed(() => byKey.value.get(props.modelValue) ?? null)
@@ -223,7 +249,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
     <label class="ui-step-plabel" :for="inputId">{{ label }}</label>
 
     <div class="ac-wrap">
-      <input :id="inputId" class="ui-input" type="text" role="combobox" autocomplete="off" spellcheck="false"
+      <input :id="inputId" ref="eingabe" class="ui-input" type="text" role="combobox" autocomplete="off" spellcheck="false"
              aria-autocomplete="list"
              :aria-expanded="openList ? 'true' : 'false'" :aria-controls="`${inputId}-list`"
              :aria-activedescendant="openList && activeIndex >= 0 ? optionId(activeIndex) : undefined"
@@ -234,7 +260,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
              @input="query = ($event.target as HTMLInputElement).value; openList = true"
              @keydown="onKeydown">
 
-      <ul v-show="openList" :id="`${inputId}-list`" class="ac-menu" role="listbox" :aria-label="label">
+      <ul v-show="openList" :id="`${inputId}-list`" ref="liste" class="ac-menu"
+          :class="{ 'nach-oben': listenLage?.oben }"
+          :style="listenLage !== null ? { maxHeight: `${Math.min(LISTE_MAX, listenLage.maxHoehe)}px` } : undefined"
+          role="listbox" :aria-label="label">
         <li v-if="matches.length === 0" class="ac-item" role="presentation">
           <span class="dim small">{{ t('mapping.target.noMatch') }}</span>
         </li>
