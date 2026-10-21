@@ -27,6 +27,9 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm rebuild esbuild
+      - name: Prepare Nuxt (generate .nuxt/tsconfig.json)
+        working-directory: src
+        run: npx nuxt prepare
       - name: Run tests
         working-directory: src
         run: npm test
