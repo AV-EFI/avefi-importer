@@ -1,0 +1,18 @@
+name: Setup Node.js and dependencies
+description: Checkout, install Node.js 24 and install npm dependencies
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: src/package-lock.json
+    - name: Install dependencies
+      working-directory: src
+      shell: bash
+      run: |
+        npm ci --ignore-scripts
+        npm rebuild esbuild

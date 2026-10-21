@@ -15,18 +15,7 @@ jobs:
     name: Importer test suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: src/package-lock.json
-      - name: Install dependencies
-        working-directory: src
-        run: |
-          npm ci --ignore-scripts
-          npm rebuild esbuild
+      - uses: ./.github/actions/setup
       - name: Prepare Nuxt (generate .nuxt/tsconfig.json)
         working-directory: src
         run: npx nuxt prepare
@@ -38,18 +27,7 @@ jobs:
     name: Production build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: src/package-lock.json
-      - name: Install dependencies
-        working-directory: src
-        run: |
-          npm ci --ignore-scripts
-          npm rebuild esbuild
+      - uses: ./.github/actions/setup
       - name: Run production build
         working-directory: src
         env:
