@@ -15,6 +15,7 @@ jobs:
     name: Importer test suite
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Prepare Nuxt (generate .nuxt/tsconfig.json)
         working-directory: src
@@ -27,6 +28,7 @@ jobs:
     name: Production build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Run production build
         working-directory: src

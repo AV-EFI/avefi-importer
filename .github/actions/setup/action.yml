@@ -1,10 +1,9 @@
 name: Setup Node.js and dependencies
-description: Checkout, install Node.js 24 and install npm dependencies
+description: Install Node.js 24 and install npm dependencies
 
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v7
     - uses: actions/setup-node@v7
       with:
         node-version: 24
