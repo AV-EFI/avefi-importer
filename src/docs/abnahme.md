@@ -4,7 +4,7 @@ Diese Seite sagt zu jedem Punkt der Abnahme-Checkliste, wo er liegt, wie er
 sich prüfen lässt und wer als Nächstes dran ist. Sie folgt der Gliederung der
 Checkliste im Pad vom 01.09.2026 und enthält selbst nichts Neues.
 
-**Stand: 30.09.2026**, `main` auf `3a10897` oder später, live auf
+**Stand: 22.10.2026**, `main` auf dem Stand dieses Tages oder später, live auf
 `https://avefiimporter.goo1.de`. Wer eine Angabe hier nicht bestätigt findet,
 hat einen Fehler in dieser Seite gefunden und nicht in der Anwendung. Bitte
 melden.
@@ -20,8 +20,15 @@ melden.
   Paderborner Datei; die doppelte Signatur ist bekannt, und maßgeblich ist die
   bereinigte Kopie, mit der `efi-conv check` besteht. Siehe
   [Nutzertest und Testdatensatz](#nutzertest-und-testdatensatz).
-* **Testrunde vom 01.10. und 12.10. (Luca Wollny, Jasper Stratil)** umgesetzt
-  am 12.10.: #26 bis #29, wartet auf den Nachtest.
+* **Testrunde vom 01.10. und 12.10. (Luca Wollny, Jasper Stratil):** #26, #27
+  und #29 nachgetestet und geschlossen; #24 entfällt (Elias, 21.10.: der Importer
+  braucht kein `described_by`).
+* **Meldungen vom 13.10. und 21.10.** am 22.10. umgesetzt: #30 (Konverterauswahl
+  am unteren Rand abgeschnitten), #31 (Importtabelle in Firefox zu breit) und
+  Format im Datensatzeditor (#28). Warten auf den Nachtest.
+* **Seit dem 16.10. testet und baut GitHub Actions jeden Push auf `main`**
+  (Elias), danach wird nach GitLab gespiegelt. Das belegt „automatisierte
+  Tests" und „reproduzierbar baubar" laufend, nicht nur zum Abnahmetermin.
 
 ## Liefergegenstände
 
@@ -169,9 +176,9 @@ ohne das Abnahmeprofil zu ändern, legt vorher ein eigenes Profil an oder
 
 | Wer | Was |
 |---|---|
-| Elias | technische Abnahme LP B (Schritte 1–5); menschlicher Nachtest Barrierefreiheit (#11); #20 (Werkart als Warnung); #24 (`described_by`); #28 (ein Exemplar mit mehreren Formaten oder mehrere Exemplare?); AV-EFI/efi-conv#39 |
+| Elias | technische Abnahme LP B (Schritte 1–5); menschlicher Nachtest Barrierefreiheit (#11); #20 (Werkart als Warnung); #28 (ein Exemplar mit mehreren Formaten oder mehrere Exemplare?); AV-EFI/efi-conv#39 |
 | Stefan | Nachprüfung #10 |
-| Luca, Jasper | Nachtest #26 (Werteliste hinter „Aufteilen"), #27 (Klammerzusätze), #28 (Format über alle Trägerklassen), #29 (Speichern bei fehlender Pflichtangabe) |
-| Testende | zwei Importe stehen noch in der Formatprüfung, also ohne Zuordnung: `UPB_Test_Archivtitel_NeuesProfil2…` vom 24.09. und `MDW_Export_Avefi_Test_1.xlsx` vom 28.09. (beide über das gemeinsame Admin-Konto). Falls dort jemand hängen geblieben ist, bitte melden |
-| nachgelagert | #22 (erstes Passwort wechseln), #25 (Ordnungsform des Titels) |
+| Luca, Jasper | Nachtest #28 (Format im Datensatzeditor), #30 (Konverterauswahl unten), #31 (Importtabelle in Firefox) |
+| Testende | ein Import aus der Testphase steht noch in der Formatprüfung, also ohne Zuordnung: `UPB_Test_Archivtitel_NeuesProfil2…` vom 24.09. (über das gemeinsame Admin-Konto; `MDW_Export_Avefi_Test_1.xlsx` ist inzwischen konvertiert). Falls dort jemand hängen geblieben ist, bitte melden |
+| nachgelagert | #22 (erstes Passwort wechseln), #25 (Ordnungsform des Titels), #32 (weitere Felder im Datensatzeditor) |
 | wir | nichts Blockierendes |
