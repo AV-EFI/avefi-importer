@@ -10,7 +10,7 @@
 
 FROM node:24-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache tini curl
+RUN apk update && apk add --no-cache tini curl && rm -rf /var/cache/apk/*
 ENV NODE_ENV=development
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts && npm rebuild esbuild
@@ -26,7 +26,7 @@ RUN npm run build
 
 FROM node:24-alpine AS production
 WORKDIR /app
-RUN apk add --no-cache tini
+RUN apk update && apk add --no-cache tini && rm -rf /var/cache/apk/*
 ENV NODE_ENV=production
 COPY --from=build /app/.output /app/.output
 # Die Oberflaechenbeschreibungen werden zur Laufzeit von der Platte gelesen
