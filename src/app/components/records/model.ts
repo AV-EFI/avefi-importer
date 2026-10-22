@@ -16,6 +16,7 @@
  *     Haupttitel; das war ein gemeldeter Fehler.
  */
 import type { AvefiNode, AvefiRecord, AuthorityHit, EditorConfig } from './types'
+import { klaereFormat, teileFormatwert } from '#shared/formatklassen'
 
 /* --------------------------------------------------------------- Hilfsmittel */
 
@@ -138,6 +139,17 @@ export interface UiLanguage {
   raw: Record<string, unknown>
 }
 
+/**
+ * Ein Eintrag in `has_format`, gefuehrt als „Klasse:Wert" wie im Ziel
+ * „Format (alle Traegerklassen)" der Zuordnung (#28). So bleibt `DV` als
+ * Videoband und als Datei unterscheidbar.
+ */
+export interface UiFormat {
+  key: number
+  value: string
+  raw: Record<string, unknown>
+}
+
 export interface UiWork {
   raw: Record<string, unknown>
   type: string
@@ -176,6 +188,7 @@ export interface UiItem {
   has_access_status: string
   duration: string
   languages: UiLanguage[]
+  formats: UiFormat[]
   identifiers: UiIdentifier[]
   notes: UiValue[]
 }
@@ -198,7 +211,7 @@ const MANIFESTATION_MANAGED = ['category', 'has_primary_title', 'has_identifier'
 const ITEM_MANAGED = [
   'category', 'has_primary_title', 'has_identifier', 'has_note', 'element_type',
   'has_colour_type', 'has_sound_type', 'has_frame_rate', 'has_access_status',
-  'has_duration', 'in_language'
+  'has_duration', 'in_language', 'has_format'
 ] as const
 
 export const DEFAULT_PRIMARY_TITLE_TYPE = 'PreferredTitle'
@@ -361,6 +374,7 @@ export function parseRecord(record: AvefiRecord, config: EditorConfig): UiRecord
         languages: list(it.in_language).map((l) => ({
           key: nextKey(), code: text(l.code), usage: text(l.usage), raw: l
         })),
+        formats: list(it.has_format).map((f) => ({ key: nextKey(), value: formatWert(f), raw: f })),
         identifiers: list(it.has_identifier).map((i) => parseIdentifier(i, config)),
         notes: strings(it.has_note).map((v) => ({ key: nextKey(), value: v }))
       }
@@ -536,6 +550,7 @@ export function serializeRecord(ui: UiRecord, config: EditorConfig): AvefiRecord
         put(lang, 'usage', l.usage)
         return lang
       }))
+    put(out, 'has_format', formatsOut(it.formats, config))
     put(out, 'has_identifier', identifiersOut(it.identifiers, config))
     put(out, 'has_note', valuesOut(it.notes))
     return out as AvefiNode
@@ -577,6 +592,54 @@ export function emptyLanguage(): UiLanguage {
   return { key: nextKey(), code: '', usage: '', raw: {} }
 }
 
+export function emptyFormat(): UiFormat {
+  return { key: nextKey(), value: '', raw: {} }
+}
+
+/* ------------------------------------------------------------------- Format */
+
+/** `{category: 'avefi:Video', type: 'VHS'}` → „Video:VHS". */
+export function formatWert(node: Record<string, unknown>): string {
+  const klasse = text(node.category).replace(/^avefi:/, '')
+  const typ = text(node.type)
+  if (typ === '') return ''
+  return klasse === '' ? typ : `${klasse}:${typ}`
+}
+
+/**
+ * Formate zurueck nach `has_format`.
+ *
+ * Ein Wert ohne Klasse wird ueber die Wertelisten aufgeloest, wenn er nur in
+ * einer steht. Laesst er sich nicht aufloesen (mehrdeutiges „DV", unbekannte
+ * Klasse), bleibt der gelesene Knoten unveraendert stehen, statt dass die Angabe
+ * beim Speichern verschwindet. Die Pruefung meldet ihn dann wie zuvor.
+ */
+export function formatsOut(formats: readonly UiFormat[], config: EditorConfig): Record<string, unknown>[] {
+  const liste = (name: string) => config.enums[name] ?? []
+  const out: Record<string, unknown>[] = []
+  for (const f of formats) {
+    const v = f.value.trim()
+    if (v === '') continue
+    let { klasse, wert } = teileFormatwert(v)
+    if (klasse === null) {
+      const k = klaereFormat(v, liste)
+      if (k.ok) {
+        klasse = k.klasse
+        wert = k.wert
+      }
+    }
+    if (klasse === null) {
+      if (Object.keys(f.raw).length > 0) out.push({ ...f.raw })
+      continue
+    }
+    const knoten = without(f.raw, ['category', 'type'])
+    knoten.category = `avefi:${klasse}`
+    knoten.type = wert
+    if (!out.some((o) => o.category === knoten.category && o.type === knoten.type)) out.push(knoten)
+  }
+  return out
+}
+
 export function emptyManifestation(title: string): UiManifestation {
   return {
     key: nextKey(),
@@ -594,7 +657,7 @@ export function emptyItem(title: string): UiItem {
     title: { key: nextKey(), has_name: title, type: DEFAULT_SUB_TITLE_TYPE, raw: {} },
     element_type: '', has_colour_type: '', has_sound_type: '',
     has_frame_rate: '', has_access_status: '', duration: '',
-    languages: [], identifiers: [], notes: []
+    languages: [], formats: [], identifiers: [], notes: []
   }
 }
 

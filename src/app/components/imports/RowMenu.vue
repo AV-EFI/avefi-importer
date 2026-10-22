@@ -11,6 +11,7 @@ import { importsService } from '~/services/imports'
  * Escape schliesst und gibt den Fokus an den Knopf zurueck.
  */
 import type { ImportListItem } from './types'
+import { klappPlatz } from '~/utils/klappplatz'
 
 const importe = importsService()
 
@@ -21,7 +22,7 @@ const { t } = useI18n()
 const open = ref(false)
 const button = ref<HTMLButtonElement | null>(null)
 const menu = ref<HTMLElement | null>(null)
-const pos = ref({ top: 0, left: 0 })
+const pos = ref({ top: 0, left: 0, maxHoehe: 0 })
 
 const issueCount = computed(() => props.item.issues.error + props.item.issues.warning)
 
@@ -48,13 +49,25 @@ const zuordnungBeschriftung = computed(() => props.item.status === 'awaiting_for
   ? 'imports.menu.map'
   : 'imports.menu.mapping')
 
+/**
+ * Lage des Menues am Knopf.
+ *
+ * Bis zum 22.10.2026 lief das Menue in der letzten Zeile unten aus dem Fenster:
+ * `top` wurde nur auf `innerHeight - 40` begrenzt, die Menuehoehe zaehlte nicht.
+ * Jetzt dieselbe Rechnung wie bei der Konverterauswahl (#30): unten, wenn es
+ * passt, sonst nach oben, und notfalls in der Hoehe begrenzt.
+ */
 function place() {
   const rect = button.value?.getBoundingClientRect()
   if (!rect) return
   const width = 250
+  const hoehe = menu.value?.scrollHeight ?? 0
+  const lage = klappPlatz(rect, hoehe, window.innerHeight)
+  const sichtbar = Math.min(hoehe, lage.maxHoehe)
   pos.value = {
-    top: Math.min(rect.bottom + 6, window.innerHeight - 40),
-    left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))
+    top: lage.oben ? rect.top - 6 - sichtbar : rect.bottom + 6,
+    left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)),
+    maxHoehe: lage.maxHoehe
   }
 }
 
@@ -62,8 +75,10 @@ async function toggle() {
   open.value = !open.value
   if (!open.value) return
   place()
+  // Erst nach dem Zeichnen ist die Hoehe bekannt; dann noch einmal legen.
   await nextTick()
-  items()[0]?.focus()
+  place()
+  items()[0]?.focus({ preventScroll: true })
 }
 
 function close(focusButton = false) {
@@ -139,7 +154,8 @@ function pick(fn: () => void) {
       <Teleport to="body">
       <div v-if="open" ref="menu" class="ui-menu ui-menu-float" role="menu"
            :aria-label="t('imports.action.menuLabel', { name: item.filename })"
-           :style="{ top: pos.top + 'px', left: pos.left + 'px' }" @keydown="onMenuKey">
+           :style="{ top: pos.top + 'px', left: pos.left + 'px', maxHeight: pos.maxHoehe > 0 ? pos.maxHoehe + 'px' : undefined, overflowY: 'auto' }"
+           @keydown="onMenuKey">
         <NuxtLink v-if="item.tabular" class="ui-menu-item" role="menuitem" :to="`/imports/${item.id}/mapping`"
                   @click="close()">
           <span class="mi" aria-hidden="true">⇄</span>{{ t(zuordnungBeschriftung) }}

@@ -191,7 +191,12 @@
         "language": "Language",
         "languageUsage": "Usage",
         "addLanguage": "Add language",
-        "removeLanguage": "Remove language {index}"
+        "removeLanguage": "Remove language {index}",
+        "formats": "Format",
+        "format": "Format (carrier class and value)",
+        "addFormat": "Add format",
+        "removeFormat": "Remove format {index}",
+        "formatUnknown": "“{value}” is not in any format value list of the schema. The value is kept until another one is chosen."
       },
       "authority": {
         "search": "Search {kind} …",

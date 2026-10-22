@@ -30,6 +30,86 @@ GitHub weiter.
 
 ---
 
+## 2026-10-22 — Luca Wollny und Jasper Stratil: abgeschnittene Klappmenüs, Firefox, Format im Datensatzeditor
+
+Live auf `https://avefiimporter.goo1.de`. Meldungen von Luca Wollny (#30, #31,
+21.10.) und Jasper Stratil (#28, 13.10.). Umgesetzt in `e7f3014`,
+Abhängigkeiten in `79bc117`.
+
+### Zwei Fehler, eine Ursache: Regeln für Elemente, die es nicht mehr gab
+
+`app.css` hatte Regeln für `#importsTable` und `#mappingApp`. Beide IDs gab es
+seit der Neufassung auf Nuxt am 25.08. nicht mehr. Die Regeln griffen also fast
+zwei Monate lang nicht — mit Kommentaren darüber, die genau die beiden Fehler
+beschrieben, die sie verhindern sollten. Jetzt hängen sie als Klassen
+(`.imports-table`, `.mapping-table`) an den Elementen selbst. Neu:
+`tests/frontend/css-selektoren.test.ts` meldet jeden ID-Selektor in `app.css`,
+für den es kein Element gibt; auf dem alten Stand schlägt er mit genau diesen
+beiden IDs an.
+
+### Konverterauswahl am unteren Rand abgeschnitten (#30)
+
+**Gemeldet von Luca Wollny (21.10.).** Die Hülle der Zuordnungstabelle schnitt
+unten ab (`overflow-y:hidden`), und die Konverterauswahl öffnete immer nach
+unten. Gemessen in der letzten Spalte von Profil 8: Auswahl bis 764 px, Hülle
+bis 740 px, auch durch Scrollen nicht erreichbar.
+
+Jetzt schneidet die Hülle nicht mehr ab, und die Auswahl klappt nach oben auf,
+wenn unten der Platz fehlt; reicht er auf keiner Seite, wird sie in der Höhe
+begrenzt und rollt innen. Dieselbe Rechnung (`app/utils/klappplatz.ts`) nutzen
+die Zielauswahl der Zuordnung und das Zeilenmenü der Importliste, das in der
+letzten Zeile bisher unten aus dem Fenster lief. Nachgetestet in Firefox und
+Chromium, deutsch, 1280×800: alle drei vollständig sichtbar.
+
+### Importtabelle in Firefox zu breit (#31)
+
+**Gemeldet von Luca Wollny (21.10.).** Ohne die feste Tabellenbreite richtete
+sich die Tabelle nach ihrem Inhalt. Gemessen, deutsch: in Firefox bei jeder
+Fensterbreite 1131 px Tabelle in 1084 px Hülle, die Aktionsspalte ragte 36 bis
+132 px hinaus; in Chromium ab 1024 px abwärts ebenso. Dazu kam, dass sechs
+Prozentspalten (88 %) plus 200 px für die Aktionen erst ab rund 1670 px
+Tabellenbreite aufgingen. Jetzt feste Breite, der Dateiname nimmt den Rest,
+unter 760 px rollt die Hülle. Nachgetestet von 820 bis 1920 px in Firefox und
+Chromium: Die Tabelle passt, die Aktionsspalte hat ihre 200 px.
+
+### Format im Datensatzeditor (#28)
+
+**Gemeldet von Jasper Stratil (13.10.).** Auf der Exemplar-Ebene tauchte
+`has_format` im Editor nicht auf; der Editor reichte es unsichtbar durch. Jetzt
+gibt es eine Liste „Format" mit derselben nach Trägerklasse gruppierten Auswahl
+wie am Ziel „Format (alle Trägerklassen)". Ein Wert, den keine Liste kennt,
+bleibt stehen und wird gekennzeichnet; was sich nicht auflösen lässt, wird beim
+Speichern nicht umgeschrieben. Tests: `tests/frontend/datensatz-format.test.ts`.
+
+Der Abgleich des Zielkatalogs gegen den Editor fand sieben weitere Feldgruppen
+auf Manifestations- und Exemplar-Ebene, die nur durchgereicht werden (weitere
+Titel, Länge, Weblinks, Ereignisdaten). Die Bearbeitung einzelner Datensätze ist
+laut Werkvertrag nicht geschuldet; festgehalten als nachgelagert in #32.
+
+### Aus eigenem Antrieb
+
+* **Abhängigkeiten:** vite 8.3.5 und launch-editor 2.14.2 (Dependabot-Hinweise
+  vom 21.10.), innerhalb der bestehenden Versionsbereiche. Produktiv-Build
+  geprüft. Offen bleiben braces und node-forge, für die es keine reparierte
+  Fassung gibt.
+* **CI von Elias:** Seit dem 16.10. testet und baut GitHub Actions jeden Push
+  auf `main` und spiegelt danach nach GitLab. Auf der Demo nachgezogen.
+* **Barrierefreiheit:** axe-Lauf im hellen Schema nach den Änderungen,
+  58 Zustände, bestanden (kein Befund der Schwere „serious" oder „critical").
+
+### Geschlossen
+
+#24 (Elias: der Importer braucht kein `described_by`), #26, #27, #29
+(nachgetestet von Jasper und Luca).
+
+### Offen geblieben
+
+* Nachtest #28, #30, #31.
+* #28: ein Exemplar mit mehreren Formaten oder mehrere Exemplare (Elias).
+* Weiterhin: technische Abnahme LP B, #10, #11, #20 (Werkart).
+
+---
+
 ## 2026-10-12 — Luca Wollny und Jasper Stratil: Werteliste, Klammern, Formate
 
 Live auf `https://avefiimporter.goo1.de`. Testrunde von Luca Wollny (Mail vom

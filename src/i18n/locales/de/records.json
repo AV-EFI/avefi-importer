@@ -191,7 +191,12 @@
         "language": "Sprache",
         "languageUsage": "Verwendung",
         "addLanguage": "Sprache hinzufügen",
-        "removeLanguage": "Sprache {index} entfernen"
+        "removeLanguage": "Sprache {index} entfernen",
+        "formats": "Format",
+        "format": "Format (Trägerklasse und Wert)",
+        "addFormat": "Format hinzufügen",
+        "removeFormat": "Format {index} entfernen",
+        "formatUnknown": "„{value}“ steht in keiner Format-Werteliste des Schemas. Der Wert bleibt erhalten, solange kein anderer gewählt wird."
       },
       "authority": {
         "search": "{kind} suchen …",
