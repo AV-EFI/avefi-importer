@@ -15,8 +15,9 @@
 # Liefergegenstand nicht existierte (#23).
 #
 # Der Testbetrieb laeuft im Entwicklungsmodus: Code ist gemountet, Aenderungen
-# sind sofort wirksam. Der Auslieferungspfad (npm run build) ist im Dockerfile
-# als eigene Stufe enthalten und wird in der README beschrieben.
+# sind sofort wirksam. Fuer den Produktivbetrieb ist diese Datei nicht gedacht.
+# Dafuer hat das Dockerfile die Stufen `production` (Weboberflaeche) und
+# `worker`; beschrieben in docs/deployment.md, Abschnitt „Auslieferungsbau".
 
 services:
   web:
@@ -42,7 +43,7 @@ services:
       # nach wie der Hintergrundprozess. Steht das hier auf aus und dort auf an,
       # zeigt der Editor etwas anderes als der Export — genau der Fehler, den
       # der Anwender gemeldet hat.
-      - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-1}
+      - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-0}
       - AUTHORITY_LIMIT=${AUTHORITY_LIMIT:-500}
     # Ohne Reverse Proxy stehen die Marken auf false und richten nichts an;
     # Traefik liest sie dann gar nicht erst.
@@ -53,6 +54,13 @@ services:
       - "traefik.http.services.${TRAEFIK_ROUTER:-avefi}.loadbalancer.server.port=3000"
     volumes:
       - ./:/app:rw
+      # Abhaengigkeiten und erzeugte Typen kommen aus dem Abbild. Ohne diese
+      # beiden Zeilen verdeckt der eingehaengte Code das node_modules aus dem
+      # Abbild, und in einem frischen Klon startet nichts (`nuxt: not found`,
+      # `tsx: not found`). Nach einer Aenderung an package-lock.json:
+      #   docker compose -f docker-compose.dev.yml up -d --build -V
+      - /app/node_modules
+      - /app/.nuxt
       - avefi_files:/mnt/files
     depends_on:
       db:
@@ -80,10 +88,17 @@ services:
       # Gegen den Geisterprozess: der Worker beendet sich regelmaessig selbst,
       # restart:always zieht ihn mit aktuellem Code wieder hoch.
       - WORKER_MAX_UPTIME=600
-      - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-1}
+      - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-0}
       - AUTHORITY_LIMIT=${AUTHORITY_LIMIT:-500}
     volumes:
       - ./:/app:rw
+      # Abhaengigkeiten und erzeugte Typen kommen aus dem Abbild. Ohne diese
+      # beiden Zeilen verdeckt der eingehaengte Code das node_modules aus dem
+      # Abbild, und in einem frischen Klon startet nichts (`nuxt: not found`,
+      # `tsx: not found`). Nach einer Aenderung an package-lock.json:
+      #   docker compose -f docker-compose.dev.yml up -d --build -V
+      - /app/node_modules
+      - /app/.nuxt
       - avefi_files:/mnt/files
     depends_on:
       db:

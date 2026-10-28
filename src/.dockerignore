@@ -1,0 +1,20 @@
+# Was nicht ins Abbild gehoert.
+#
+# Ohne diese Datei kopiert `COPY . .` das ganze Arbeitsverzeichnis: die `.env`
+# mit echten Zugangsdaten, ein `node_modules` vom Rechner, auf dem gebaut wird
+# (auf macOS mit Binaerdateien, die unter Linux nicht laufen und die frisch
+# installierten aus `npm ci` ueberschreiben), dazu erzeugte Verzeichnisse.
+# Bis zum 28.10.2026 fehlte sie.
+
+node_modules
+.nuxt
+.output
+.data
+dist
+.env
+.env.*
+!.env.example
+docker-compose.local.yml
+*.log
+tmp
+obf-*

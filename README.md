@@ -44,35 +44,50 @@ Fuenf Container: `web` (Nuxt, Port 3000), `worker` (Hintergrundprozess),
 (`127.0.0.1:8081`). Der erste Aufbau dauert einige Minuten, im Wesentlichen
 wegen des efi-conv-Images.
 
-`db/schema.sql` wird beim ersten Start automatisch geladen. **Ein Anmeldekonto
-legt es nicht an**, und ein Skript dafuer gibt es derzeit nicht; das erste Konto
-wird von Hand angelegt — der genaue, ausgefuehrte Weg steht in
-[`src/docs/deployment.md`](src/docs/deployment.md) unter „Initialisierung".
+`db/schema.sql` wird beim ersten Start automatisch geladen. Ein Anmeldekonto
+legt es nicht an; das erste Konto kommt aus `npm run seed`:
+
+```bash
+docker compose -f docker-compose.dev.yml exec web npm run seed
+```
+
+Das Passwort steht genau einmal in der Ausgabe, mit `SEED_PASSWORD` laesst es
+sich vorgeben. Einzelheiten in [`src/docs/deployment.md`](src/docs/deployment.md)
+unter „Initialisierung".
+
+Abhaengigkeiten kommen aus dem Abbild, nicht aus dem Arbeitsverzeichnis. Nach
+einer Aenderung an `package-lock.json` deshalb neu bauen:
+`docker compose -f docker-compose.dev.yml up -d --build -V`.
 
 ### Tests
 
 ```bash
 cd src
-docker run --rm -v "$PWD":/app -w /app node:24-alpine npx vitest run
+docker build --target base -t avefi-importer:dev .
+docker run --rm avefi-importer:dev npm test
 ```
 
-Stand: **332 Tests in 24 Dateien, alle erfolgreich.** Keine Datenbank noetig.
+Ohne Docker dieselbe Reihenfolge wie in der CI:
+`npm ci --ignore-scripts && npm rebuild esbuild && npx nuxt prepare && npm test`.
+
+Stand: **697 Tests in 61 Dateien, alle erfolgreich.** Keine Datenbank noetig.
 
 ### Auslieferungsbau
 
+Zwei Abbilder, eines je Container:
+
 ```bash
 cd src
-docker build --target production -t avefi-importer:prod .
+docker build --target production -t avefi-importer:web .
+docker build --target worker     -t avefi-importer:worker .
 ```
 
-Laeuft durch; das Image startet mit `node .output/server/index.mjs` und
-beantwortet `/login` mit HTTP 200. **Achtung:** Im Auslieferungsbetrieb muessen
-Datenbank und Sitzungsgeheimnis mit dem Praefix `NUXT_` gesetzt werden
-(`NUXT_DB_HOST`, `NUXT_SESSION_SECRET`, …). Nitro uebernimmt zur Laufzeit nur
-`NUXT_`-praefigierte Variablen in die `runtimeConfig`; die unpraefigierten
-Namen werden beim Bauen gelesen und eingebacken. Einzelheiten und die
-vollstaendige Tabelle der Variablen in
-[`src/docs/deployment.md`](src/docs/deployment.md).
+`web` startet mit `node .output/server/index.mjs`, `worker` mit
+`npm run worker`; beide setzen ihren Startbefehl selbst. Konfiguriert werden sie
+mit denselben Variablen wie der Entwicklungsaufbau (`DB_HOST`, `DB_PASS`,
+`SESSION_SECRET`, …). Die Form mit Praefix `NUXT_` wird ebenfalls angenommen,
+ist aber nicht noetig. Einzelheiten und die vollstaendige Tabelle der Variablen
+in [`src/docs/deployment.md`](src/docs/deployment.md).
 
 ## Ablauf
 
@@ -181,12 +196,11 @@ Berichte dieser Importe zeigen deshalb noch „0 mit Befund". Ein
 
 ### Der Testserver laeuft im Entwicklungsmodus
 
-`docker-compose.dev.yml` startet `web` und `worker` mit `npm run dev` und
-gemountetem Code, damit Aenderungen ohne neuen Aufbau wirken. Der Auslieferungsweg
-(`npm run build`, `npm start`) ist als eigene Stufe im `Dockerfile` enthalten und
-ausgefuehrt worden: Der Bau laeuft durch, das Image startet und antwortet. Die
-einzige Besonderheit ist die `NUXT_`-Schreibweise der Umgebungsvariablen, siehe
-oben und `src/docs/deployment.md`.
+`docker-compose.dev.yml` startet `web` mit `npm run dev` und `worker` mit
+`npm run worker`, beide mit eingehaengtem Code, damit Aenderungen ohne neuen
+Aufbau wirken. Fuer den Produktivbetrieb ist die Datei nicht gedacht; dafuer
+gibt es die Abbilder `production` und `worker`, siehe oben und
+`src/docs/deployment.md`.
 
 ### Normdatenanreicherung ist ausgeschaltet
 
@@ -267,16 +281,16 @@ lassen; einen Dienst, der neue vergibt, gibt es nicht.
 
 ```
 README.md · LICENSE
-handbuch/                Handreichung fuer Anwenderinnen (Stand PHP-Version, s. u.)
 samples/                 Beispieldateien (CSV, JSON, MARC-XML, EAD, AVefi nativ)
 src/                     die Anwendung  (siehe src/docs/architecture.md)
+src/docs/handbuch/       Handreichung fuer Anwenderinnen (Stand PHP-Version, s. u.)
 ```
 
-`handbuch/` beschreibt noch die PHP-Version: Es nennt drei Container statt
+`src/docs/handbuch/` beschreibt noch die PHP-Version: Es nennt drei Container statt
 fuenf, kennt weder den Worker noch den efi-conv-Dienst, nennt XLSX nicht unter
 den Formaten und fuehrt eine PID-Registrierung auf, die es nicht gibt. Kapitel 1
-(Installation) ist durchgehend ueberholt — es ruft `php app/bot.php` auf und
-nennt Port 8080. Fuer Betrieb und Technik gelten die Dateien unter `src/docs/`;
+(Installation) ist neu gefasst und verweist auf `src/docs/deployment.md`. Fuer
+Betrieb und Technik gelten die Dateien unter `src/docs/`;
 die Kapitel 2 bis 5 und 7 beschreiben Ablaeufe, die sich in der Bedienung nicht
 geaendert haben.
 

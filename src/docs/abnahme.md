@@ -4,7 +4,7 @@ Diese Seite sagt zu jedem Punkt der Abnahme-Checkliste, wo er liegt, wie er
 sich prüfen lässt und wer als Nächstes dran ist. Sie folgt der Gliederung der
 Checkliste im Pad vom 01.09.2026 und enthält selbst nichts Neues.
 
-**Stand: 22.10.2026**, `main` auf dem Stand dieses Tages oder später, live auf
+**Stand: 28.10.2026**, `main` auf dem Stand dieses Tages oder später, live auf
 `https://avefiimporter.goo1.de`. Wer eine Angabe hier nicht bestätigt findet,
 hat einen Fehler in dieser Seite gefunden und nicht in der Anwendung. Bitte
 melden.
@@ -13,9 +13,14 @@ melden.
 
 * **Leistungspaket A** ist abgenommen. Der Pull Request AV-EFI/efi-conv#34 ist
   am 28.09. gemergt.
-* **Leistungspaket B**: Alle Frontend-/UX-Punkte sind aus unserer Sicht
-  umgesetzt; #10 wartet auf Stefans Nachprüfung, #11 auf den menschlichen
-  Nachtest. Die technische Abnahme (Elias) steht aus.
+* **Leistungspaket B** ist am 22.10. abgenommen (Abnahmeprotokoll mit Matti
+  Stöhr vom selben Tag). #10 wartet auf Stefans Nachprüfung, #11 auf den
+  menschlichen Nachtest; beides hindert die Abnahme nicht.
+* **Nachtrag 28.10. (Sven Bingert):** In einem frischen Klon schlugen der
+  dokumentierte Testbefehl und der Compose-Aufbau fehl; für den Worker gab es
+  kein Produktivabbild. Behoben mit dem Pull Request vom 28.10.: Stufe
+  `worker` im Dockerfile, `.dockerignore`, Compose-Volumes, Anleitung. Siehe
+  [`deployment.md`](deployment.md), Abschnitte „Tests“ und „Auslieferungsbau“.
 * **Testdatensatz geklärt (Matti Stöhr, 01.10.):** Vereinbart ist die
   Paderborner Datei; die doppelte Signatur ist bekannt, und maßgeblich ist die
   bereinigte Kopie, mit der `efi-conv check` besteht. Siehe
@@ -39,14 +44,14 @@ melden.
 | Eigenständiges Repository für den CSV-Importer | dasselbe Repository | liegt vor |
 | Abhängigkeits- und Lock-Dateien | `src/package.json`, `src/package-lock.json` | liegt vor |
 | Mockup für das Importer-UI | die laufende Anwendung; der PHP-Prototyp liegt unter dem Tag `php-final` | liegt vor |
-| Automatisierte Tests der zentralen Funktionen | `src/tests/`, Aufruf `npm test`; der Prüfdienst hat eigene Tests in `src/efi-conv/test_service.py` | 627 Tests grün, dazu 12 im Prüfdienst |
+| Automatisierte Tests der zentralen Funktionen | `src/tests/`, Aufruf `npm test`; der Prüfdienst hat eigene Tests in `src/efi-conv/test_service.py` | 697 Tests in 61 Dateien grün, dazu 12 im Prüfdienst |
 | Dokumentierte Installation, Initialisierung, Start, Bau und Tests | [`deployment.md`](deployment.md), Abschnitte „Installation und Start“ bis „Tests“; [Handbuch, Installation](handbuch/01-installation.md) | liegt vor |
 | Beispielkonfiguration ohne Zugangsdaten | [`../.env.example`](../.env.example) | liegt vor, kein echter Wert |
 | Dokumentation des Mappingprofil-Formats | [`mapping-profile.md`](mapping-profile.md) | liegt vor |
 | Dokumentation der Umgebungsvariablen | [`deployment.md`](deployment.md), Abschnitt „Umgebungsvariablen“ | liegt vor, gegen `process.env` im Code abgeglichen |
 | Bekannte Einschränkungen und getroffene Annahmen | [`README.md`](../../README.md), Abschnitt „Bekannte Einschraenkungen und getroffene Annahmen“; [`CHANGELOG.md`](../../CHANGELOG.md), je Runde „Offen geblieben“ | liegt vor |
 | Kurze Beschreibung der Komponenten- und API-Struktur | [`architecture.md`](architecture.md) | liegt vor, mit Endpunktverzeichnis |
-| Reproduzierbar deploybare Anwendung | `src/Dockerfile`, `src/docker-compose.local.yml` (eigenständig), `src/docker-compose.dev.yml` (Demo), [`deployment.md`](deployment.md) | liegt vor |
+| Reproduzierbar deploybare Anwendung | `src/Dockerfile` (Stufen `production` und `worker`), `src/docker-compose.dev.yml` (Entwicklungs- und Testaufbau), [`deployment.md`](deployment.md), Abschnitt „Auslieferungsbau“ | liegt vor; seit 28.10. auch für den Worker |
 
 Im Pad sind fünf dieser Zeilen noch offen (Installation, Umgebungsvariablen,
 Einschränkungen, Komponenten/API, Deployment). Die Unterlagen liegen vor; offen

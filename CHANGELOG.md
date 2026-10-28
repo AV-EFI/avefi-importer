@@ -30,6 +30,100 @@ GitHub weiter.
 
 ---
 
+## 2026-10-28 — Sven Bingert: frischer Klon startet nicht, Worker ohne Produktivabbild
+
+Meldung von Sven Bingert (GWDG, Mail vom 27.10.), der von Elias Oltmanns das
+Deployment übernimmt. Umgesetzt im Pull Request vom 28.10. auf dem Branch
+`fix/deployment-frischer-klon`.
+
+### Testbefehl und Compose-Aufbau scheitern in einem frischen Klon
+
+**Gemeldet von Sven Bingert (27.10.).** Zwei Befehle aus der Anleitung schlugen
+fehl: der Testbefehl mit `Could not resolve 'vitest/config'`, und `web` und
+`worker` aus `docker-compose.dev.yml` mit `sh: nuxt: not found` bzw.
+`sh: tsx: not found`. Beides ließ sich in jedem frischen Klon nachstellen.
+
+Die Ursache war für beide dieselbe: Die Anleitung setzte ein installiertes
+`node_modules` im Arbeitsverzeichnis voraus. Auf dem Testserver lag eines von
+früher und verdeckte den fehlenden Schritt, deshalb fiel es dort nie auf.
+
+* Der Testbefehl hängte den Klon ein, ohne zu installieren; `npx` holte sich
+  ein fremdes vitest 5. Selbst mit Abhängigkeiten scheiterten ohne
+  `nuxt prepare` alle Testdateien an der fehlenden `.nuxt/tsconfig.json`.
+  Jetzt führt die Stufe `base` `nuxt prepare` aus, und getestet wird im Abbild:
+  `docker build --target base -t avefi-importer:dev . && docker run --rm
+  avefi-importer:dev npm test`. Ohne Docker gilt die Reihenfolge der CI.
+* In `docker-compose.dev.yml` verdeckte der eingehängte Code das
+  `node_modules` aus dem Abbild. Zwei anonyme Volumes (`/app/node_modules`,
+  `/app/.nuxt`) halten es sichtbar. Folge: Nach einer Änderung an
+  `package-lock.json` braucht es `up -d --build -V`.
+
+Abnahmekriterium: Leistungsbeschreibung B.8, „Die Anwendung kann anhand der
+bereitgestellten Dokumentation installiert, initialisiert, gestartet, gebaut und
+getestet werden". Gewährleistung.
+
+### Der Worker hatte kein Produktivabbild
+
+Beim Durchgehen der Anleitung gefunden. Die Doku sagte, der Worker laufe im
+Produktivbetrieb aus der Stufe `base`; ohne eingehängten Code startete er dort
+nicht, weil `#shared/*` ohne `.nuxt` nicht aufzulösen war. Neu ist die Stufe
+`worker`: nur Laufzeitabhängigkeiten (`npm ci --omit=dev`), Serverquellen,
+Schema, Start mit `npm run worker`, ohne dass eine Pipeline den Befehl setzen
+muss. Die Weboberfläche (`production`) bleibt unverändert. Wie am 22.10.
+gegenüber Elias angeboten, als Erweiterung.
+
+Geprüft in einem frischen Klon gegen eine leere Datenbank: Beide Abbilder
+bauen, die Anmeldung antwortet mit 200, der Worker arbeitet CSV-, XLSX- und
+AVefi-Dateien ab.
+
+### Höchstlaufzeit des Workers
+
+`WORKER_MAX_UPTIME=0` beendete den Worker sofort, eine unbrauchbare Angabe
+ergab still `NaN` und hob die Grenze auf. Jetzt heißt `0` „keine
+Höchstlaufzeit", unbrauchbare Angaben fallen mit Warnung auf 600 zurück
+(`server/worker/laufzeit.ts`, getestet). Das Abbild `worker` setzt `0`: Der
+Selbstneustart ist eine Vorkehrung für eingehängten Code und würde unter
+Kubernetes in `CrashLoopBackOff` laufen. Ohne Angabe bleibt es bei 600.
+
+### Nebenbefunde
+
+* **`.dockerignore` fehlte.** `COPY . .` nahm die `.env` mit Zugangsdaten und
+  ein `node_modules` vom Rechner des Bauenden ins Abbild auf.
+* **Die `NUXT_`-Warnung war veraltet und führte in eine Falle.** Die
+  Oberfläche liest `process.env` zuerst, die Namen ohne Präfix funktionieren
+  auch im gebauten Abbild. Wer nur die `NUXT_`-Form setzte, bekam dagegen einen
+  Worker auf `avefi`/`avefi`, weil er nur `DB_*` las. Jetzt liest er beide
+  (`server/db/config.ts`, getestet), und die Anleitung nennt die Namen ohne
+  Präfix.
+* **Widersprüche in der Doku:** `docker-compose.dev.yml` sei „nicht im Git"
+  (liegt dort seit #23); es gebe kein Skript für das erste Konto
+  (`npm run seed` gibt es); `abnahme.md` nannte eine `docker-compose.local.yml`
+  als Liefergegenstand, die nicht im Repository liegt; Testzahlen (332, 627);
+  `typecheck` mit 35 Befunden (läuft sauber); kaputter Link im Handbuch;
+  `APP_DOMAIN`-Vorgabe; fester Containername `avefi_efi_conv`; Kopf von
+  `db/schema.sql` mit dem PHP-Bot.
+* **`AUTHORITY_ENABLED`:** Code, `.env.example` und Doku sagten aus, die
+  Compose-Datei hatte `1` als Vorgabe. Jetzt überall aus. Die Demo behält die
+  Normdaten über ihre `.env`.
+* **Kaniko:** `test -x /sbin/tini` direkt nach `apk add` in allen Stufen. Fehlt
+  `tini`, scheitert der Bau und nicht erst der Containerstart.
+* Neuer Wächter `tests/betrieb/auslieferung.test.ts`: `.dockerignore`, die
+  Stufen im Dockerfile, die Volumes in der Compose-Datei und der alte
+  Testbefehl in der Anleitung.
+
+Stand: 697 Tests in 61 Dateien, `npm run typecheck` ohne Befund, Produktiv-Build und beide
+Abbilder geprüft.
+
+### Offen geblieben
+
+* Worauf die GWDG ausrollt (Podman Compose, Kubernetes, CD-Pipeline mit
+  Kaniko): Frage an Sven und Elias. Danach lässt sich die Anleitung für den
+  Produktivbetrieb weiter zuschneiden.
+* Ein Testlauf meldete einmal einen Fehler, während parallel ein Produktivbau
+  lief. Zwölf Läufe danach, vier davon parallel, waren grün; nicht nachstellbar.
+
+---
+
 ## 2026-10-22 — Luca Wollny und Jasper Stratil: abgeschnittene Klappmenüs, Firefox, Format im Datensatzeditor
 
 Live auf `https://avefiimporter.goo1.de`. Meldungen von Luca Wollny (#30, #31,

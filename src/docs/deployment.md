@@ -69,9 +69,31 @@ Vorgabewerten. Deshalb steht es jetzt zusaetzlich im Programm.
 | `db` | `postgres:16` | Datenbank. Laedt beim ersten Start `db/schema.sql`. |
 | `adminer` | `adminer` | Datenbankoberflaeche, nur auf `127.0.0.1:8081` gebunden. |
 
-Die Datei ist bewusst nicht im Git (`.gitignore`), weil sie Deployment-Spezifika
-enthaelt: die Traefik-Marken und den Hostnamen. Fuer eine eigene Installation
-wird sie kopiert und angepasst.
+Die Datei liegt im Repository und enthaelt keine Zugangsdaten; was geheim ist
+oder nur auf einem bestimmten Server gilt, kommt aus `.env`. Wer mehr aendern
+muss als diese Variablen, kopiert sie nach `docker-compose.local.yml` (steht in
+`.gitignore`).
+
+`web` und `worker` haengen den Code ein (`./:/app`), damit Aenderungen ohne
+neuen Aufbau wirken. Zwei anonyme Volumes, `/app/node_modules` und `/app/.nuxt`,
+halten dabei die Abhaengigkeiten und erzeugten Typen aus dem Abbild sichtbar.
+Ohne sie verdeckt der eingehaengte Code das `node_modules` des Abbilds, und in
+einem frischen Klon startet nichts (`sh: nuxt: not found`). Bis zum 28.10.2026
+fehlten sie; auf dem Testserver fiel das nicht auf, weil dort ein aelteres
+`node_modules` im Arbeitsverzeichnis lag.
+
+Folge: Abhaengigkeiten kommen nur ueber einen Neubau ins laufende System. Nach
+einer Aenderung an `package-lock.json`:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build -V
+```
+
+`-V` erneuert die anonymen Volumes; ohne die Angabe behielten die Container ihr
+altes `node_modules`.
+
+Fuer den Produktivbetrieb ist diese Datei nicht gedacht, siehe
+„Auslieferungsbau".
 
 ### Warum der Worker ein eigener Container ist
 
@@ -94,6 +116,11 @@ mit altem Code weiter, waehrend die Oberflaeche schon neuen zeigt. Der Worker
 benutzt deshalb `npm run worker` und nicht `tsx watch` — der
 Ueberwachungsprozess von `watch` ueberlebt das Prozessende, der Container bliebe
 stehen und `restart: always` griffe nicht.
+
+Im Produktivbetrieb ist der Selbstneustart unerwuenscht, unter Kubernetes etwa
+fuehrt er in `CrashLoopBackOff`. `WORKER_MAX_UPTIME=0` heisst deshalb „keine
+Hoechstlaufzeit", und das Abbild `worker` setzt diesen Wert. Bis zum 28.10.2026
+beendete `0` den Worker sofort.
 
 Eine Warteschlange in der Datenbank statt Redis oder eines Nachrichtendienstes:
 `SELECT … FOR UPDATE SKIP LOCKED` reicht fuer diese Last und spart einen
@@ -157,7 +184,7 @@ Modells, warfen bei jedem Satz, und das wurde stillschweigend uebergangen.
 Tests des Dienstes laufen im Container, ohne etwas nachzuinstallieren:
 
 ```bash
-docker exec avefi_efi_conv python -m unittest -v test_service
+docker compose -f docker-compose.dev.yml exec efi-conv python -m unittest -v test_service
 ```
 
 ## Installation und Start
@@ -195,41 +222,54 @@ auf einer bestehenden Datenbank wiederholbar:
 docker compose -f docker-compose.dev.yml exec -T db psql -U avefi -d avefi < db/schema.sql
 ```
 
-**Ein Anmeldekonto legt das Schema nicht an**, und ein Skript dafuer gibt es
-derzeit nicht (siehe „Offene Punkte" unten). Bis dahin wird das erste Konto von
-Hand angelegt. Der Hash muss argon2id mit den Vorgaben aus
-`server/lib/users.ts` sein:
+**Ein Anmeldekonto legt das Schema nicht an.** Das erste Konto samt
+Institution legt `npm run seed` an:
 
 ```bash
-# 1. Hash erzeugen (Passwort ersetzen)
-docker compose -f docker-compose.dev.yml exec -T web \
-  node -e "import('@node-rs/argon2').then(a=>a.hash(process.argv[1],{memoryCost:65536,timeCost:4,parallelism:1}).then(h=>console.log(h)))" \
-  'HierEinEigenesPasswort'
-
-# 2. Konto anlegen (Adresse und Hash einsetzen)
-docker compose -f docker-compose.dev.yml exec -T db psql -U avefi -d avefi -c \
-  "INSERT INTO users (institution_id,email,password_hash,name,is_admin)
-   VALUES (1,'admin@example.org','<Hash aus Schritt 1>','Administration',true)"
+docker compose -f docker-compose.dev.yml exec web npm run seed
 ```
 
-Danach ist die Anmeldung moeglich. Weitere Konten legt die Nutzerverwaltung in
-der Oberflaeche an; sie erzeugt Einmalpasswoerter, die genau einmal in der
-Antwort erscheinen.
+Anmeldename und Institution kommen aus `SEED_EMAIL` und `SEED_INSTITUTION`, das
+Passwort aus `SEED_PASSWORD`. Fehlt es, wird eines erzeugt und **genau einmal**
+ausgegeben. Ein vorhandenes Konto wird nur mit `SEED_FORCE=1` ueberschrieben.
+Mit den Abbildern aus dem Auslieferungsbau laeuft derselbe Schritt im
+`worker`-Abbild:
 
-Der Ablauf ist auf einer frisch aufgesetzten Datenbank durchgespielt worden:
-Schema geladen, Konto angelegt, `POST /api/auth/login` antwortet mit 200 und
-dem Konto, ein falsches Passwort mit 401.
+```bash
+docker run --rm --network <netz> -e DB_HOST=db -e DB_PASS=... \
+  -e SEED_EMAIL=admin@example.org avefi-importer:worker npm run seed
+```
+
+Weitere Konten legt die Nutzerverwaltung in der Oberflaeche an; sie erzeugt
+Einmalpasswoerter, die genau einmal in der Antwort erscheinen.
+
+Durchgespielt am 28.10.2026 in einem frischen Klon: Seed auf leerer Datenbank,
+danach antwortet `POST /api/auth/login` mit 200 und dem Konto.
 
 ### Tests
 
 Die Tests brauchen keine Datenbank und keinen laufenden Dienst:
 
 ```bash
-docker run --rm -v "$PWD":/app -w /app node:24-alpine npx vitest run
+docker build --target base -t avefi-importer:dev .
+docker run --rm avefi-importer:dev npm test
 ```
 
-Stand der Pruefung: **332 Tests in 24 Dateien, alle erfolgreich**, Laufzeit
-unter zwei Sekunden. Ohne Docker genuegt `npm test`.
+Ohne Docker dieselbe Reihenfolge wie in der CI (`.github/workflows/test.yml`):
+
+```bash
+npm ci --ignore-scripts && npm rebuild esbuild && npx nuxt prepare && npm test
+```
+
+`nuxt prepare` ist dabei kein Beiwerk. Es erzeugt `.nuxt/tsconfig.json`, von der
+`tsconfig.json` erbt; ohne die Datei scheitert jede Testdatei mit
+`Failed to load tsconfig '.nuxt/tsconfig.json'`. Bis zum 28.10.2026 stand hier
+ein Befehl, der den Klon ohne Installation einhaengte. Er funktionierte nur dort,
+wo zufaellig schon ein `node_modules` lag.
+
+Stand der Pruefung: **697 Tests in 61 Dateien, alle erfolgreich**, Laufzeit unter zehn
+Sekunden.
+`npm run typecheck` laeuft ohne Befund durch (geprueft am 28.10.2026).
 
 Abgedeckt sind Konverterkette und Typpruefung, Mappingprofile samt Aus- und
 Wiedereinlesen, Kopfzeilen-Aufloesung, Vorschau, Zielkatalog, Schemamodell,
@@ -240,65 +280,81 @@ von Hand geprueft, siehe `frontend-pruefen.md`.
 
 ## Auslieferungsbau
 
-Das `Dockerfile` hat drei Stufen. `base` ist der Entwicklungsstand mit
-gemountetem Code, `build` fuehrt `npm run build` aus, `production` uebernimmt nur
-das erzeugte `.output` in ein schlankes Image.
+Das `Dockerfile` hat vier Stufen:
+
+| Stufe | Inhalt | Startbefehl |
+|---|---|---|
+| `base` | Entwicklungsstand, alle Abhaengigkeiten, `nuxt prepare`. Grundlage fuer `docker-compose.dev.yml` und die Tests. | `npm run dev` |
+| `build` | fuehrt `npm run build` aus | — |
+| `production` | Weboberflaeche: nur das erzeugte `.output` und die Oberflaechenbeschreibungen | `node .output/server/index.mjs` |
+| `worker` | Hintergrundprozess: Laufzeitabhaengigkeiten (`npm ci --omit=dev`), `server/`, `shared/`, `db/`, `WORKER_MAX_UPTIME=0` | `npm run worker` |
 
 ```bash
-docker build --target production -t avefi-importer:prod .
+docker build --target production -t avefi-importer:web .
+docker build --target worker     -t avefi-importer:worker .
 ```
 
-**Geprueft:** Der Bau laeuft durch (21 Schritte, keine Fehler), das Image
-startet mit `node .output/server/index.mjs`, meldet `Listening on http://[::]:3000`
-und beantwortet `/login` mit HTTP 200 samt der erwarteten Kopfzeile
-`cache-control: no-store, private, max-age=0, must-revalidate`.
+Jedes Abbild startet von selbst das Richtige; eine Pipeline muss keinen
+Startbefehl setzen. Bis zum 28.10.2026 gab es keine Stufe `worker`. Der Worker
+liess sich im Produktivbetrieb nur aus `base` starten, und das ging ohne
+eingehaengten Code nicht (`#shared/*` war ohne `.nuxt` nicht aufloesbar).
 
-Start des ausgelieferten Images:
+Der Worker laeuft nicht aus `.output`, sondern als eigenes Programm, das `tsx`
+zur Laufzeit uebersetzt. Deshalb steht `tsx` unter `dependencies`. Er liest
+beim Start `db/schema.sql` von der Platte; die Weboberflaeche hat das Schema im
+Bundle. Dasselbe Abbild fuehrt auch `npm run seed` und `npm run migrate` aus.
+
+Start beider Abbilder, hier mit Docker; mit Podman genauso:
 
 ```bash
 docker run -d --name avefi-web \
-  -e NUXT_DB_HOST=db -e NUXT_DB_PORT=5432 \
-  -e NUXT_DB_NAME=avefi -e NUXT_DB_USER=avefi -e NUXT_DB_PASS=... \
-  -e NUXT_SESSION_SECRET=... \
+  -e DB_HOST=db -e DB_PASS=... -e SESSION_SECRET=... \
   -e FILES_PATH=/mnt/files -e EFI_CONV_URL=http://efi-conv:8000 \
   -v avefi_files:/mnt/files \
-  avefi-importer:prod
+  avefi-importer:web
+
+docker run -d --name avefi-worker \
+  -e DB_HOST=db -e DB_PASS=... \
+  -e FILES_PATH=/mnt/files -e EFI_CONV_URL=http://efi-conv:8000 \
+  -v avefi_files:/mnt/files \
+  avefi-importer:worker
 ```
 
-Der Worker laeuft im Auslieferungsbetrieb weiter aus der `base`-Stufe
-(`npm run worker`); `.output` enthaelt nur den Webteil.
+Beide brauchen **dasselbe Dateiverzeichnis** (`FILES_PATH`): Die Oberflaeche legt
+Uploads ab, der Worker liest sie und schreibt `avefi.v1.json` daneben. Der
+Validierungsdienst (`efi-conv/Dockerfile`) und PostgreSQL 16 laufen wie im
+Entwicklungsaufbau.
 
-Der Testserver laeuft absichtlich im Entwicklungsmodus (`npm run dev`, Code als
-Volume gemountet), damit Aenderungen ohne neuen Aufbau wirken. Der
-Auslieferungsweg ist dadurch nicht ungeprueft — er ist als eigene Stufe im
-Dockerfile enthalten und, wie oben beschrieben, ausgefuehrt worden.
+**Geprueft am 28.10.2026** in einem frischen Klon gegen eine leere Datenbank:
+Beide Abbilder bauen. `web` meldet `Listening on http://[::]:3000`, legt das
+Schema an und beantwortet die Anmeldung mit 200. `worker` legt das Schema an
+und arbeitet hochgeladene Dateien ab: CSV-Erkennung, XLSX-Blattwahl,
+Konvertierung nativer AVefi-Dateien.
+
+Der Testserver laeuft absichtlich im Entwicklungsmodus (`docker-compose.dev.yml`,
+Code eingehaengt), damit Aenderungen ohne neuen Aufbau wirken.
 
 ## Umgebungsvariablen
 
-### Zwei Schreibweisen
+### Schreibweise
 
-Im Entwicklungsbetrieb (`npm run dev`) wertet Nuxt die `runtimeConfig` in
-`nuxt.config.ts` beim Start aus; die unpraefigierten Namen wirken.
+Alle Variablen gelten mit dem Namen aus der Tabelle unten, im
+Entwicklungsaufbau wie in den Abbildern `production` und `worker`. Fuer
+Datenbank und Sitzungsgeheimnis wird zusaetzlich die Form mit Praefix `NUXT_`
+angenommen (`NUXT_DB_HOST`, `NUXT_SESSION_SECRET`, …). Noetig ist sie nicht.
+Sind beide gesetzt, gilt der Name ohne Praefix.
 
-Im Auslieferungsbetrieb ist das anders und **das ist die haeufigste Fehlerquelle
-beim Aufsetzen**: Nitro uebernimmt zur Laufzeit nur Variablen mit dem Praefix
-`NUXT_` in die `runtimeConfig`. Die unpraefigierten Namen werden beim Bauen
-gelesen und als Vorgabewert eingebacken. Wer im Auslieferungsimage nur
-`DB_HOST` setzt, landet auf dem eingebackenen Wert `db`.
-
-Das ist nachgestellt worden: dasselbe Image, dieselbe Datenbank — mit `DB_HOST`
-schlaegt die Anmeldung mit 401 fehl (falsche Datenbank), mit `NUXT_DB_HOST`
-antwortet sie mit 200.
-
-Betroffen sind nur die Werte, die tatsaechlich aus der `runtimeConfig` gelesen
-werden: `DB_*` und `SESSION_SECRET`. Alles andere liest der Code direkt aus
-`process.env` und funktioniert in beiden Betriebsarten mit dem einfachen Namen.
+Bis zum 28.10.2026 stand hier das Gegenteil: Im Auslieferungsbetrieb muesse die
+`NUXT_`-Form gesetzt werden. Das stimmte schon nicht mehr, weil die Oberflaeche
+`process.env` vor der eingebackenen `runtimeConfig` liest. Und es fuehrte in eine
+Falle: Der Worker las damals nur die Namen ohne Praefix und fiel bei reiner
+`NUXT_`-Form still auf `avefi`/`avefi` zurueck. Heute liest auch er beide.
 
 ### Verzeichnis
 
 | Variable | Pflicht | Vorgabe | Zweck |
 |---|---|---|---|
-| `DB_HOST` / `NUXT_DB_HOST` | ja | `db` | Rechnername der Datenbank. Im Auslieferungsbetrieb `NUXT_`-Form noetig. |
+| `DB_HOST` / `NUXT_DB_HOST` | ja | `db` | Rechnername der Datenbank. |
 | `DB_PORT` / `NUXT_DB_PORT` | nein | `5432` | Port der Datenbank. |
 | `DB_NAME` / `NUXT_DB_NAME` | ja | `avefi` | Name der Datenbank. |
 | `DB_USER` / `NUXT_DB_USER` | ja | `avefi` | Benutzer der Datenbank. |
@@ -306,12 +362,12 @@ werden: `DB_*` und `SESSION_SECRET`. Alles andere liest der Code direkt aus
 | `SESSION_SECRET` / `NUXT_SESSION_SECRET` | ja | `entwicklung-nur-lokal-aendern` | Schluessel der verschluesselten Sitzungscookies. Mindestens 32 Zeichen; kuerzere Werte werden aufgefuellt, ohne dadurch sicherer zu werden. Wechselt der Wert, sind alle Sitzungen ungueltig. |
 | `FILES_PATH` | nein | `/mnt/files` | Ablage der Uploads und Ergebnisdateien. Muss beschreibbar sein. |
 | `EFI_CONV_URL` | nein | `http://efi-conv:8000` | Adresse des Validierungsdienstes. Ist er nicht erreichbar, wird die Datei erzeugt, der Bericht vermerkt aber ausdruecklich, dass nicht geprueft wurde. |
-| `WORKER_MAX_UPTIME` | nein | `600` | Sekunden bis zur Selbstbeendigung des Workers. Nur im `worker`-Container sinnvoll. |
+| `WORKER_MAX_UPTIME` | nein | `600`, im Abbild `worker` `0` | Sekunden bis zur Selbstbeendigung des Workers; `0` heisst keine Hoechstlaufzeit. Unbrauchbare Angaben fallen mit Warnung auf 600 zurueck. Nur im `worker`-Container sinnvoll. |
 | `AUTHORITY_ENABLED` | nein | aus | Normdatenanreicherung. Wahr bei `1`, `true`, `ja`, `on`. Vertraglich nicht geschuldet. **In `web` UND `worker` gleich setzen** — siehe unten. |
 | `AUTHORITY_LIMIT` | nein | `500` | Obergrenze der frischen Nachschlagevorgaenge je Konvertierung. Unbrauchbare Angaben fallen auf 500 zurueck. Ebenfalls in beiden Containern gleich setzen. |
 | `EFI_CONV_REPO` | nein (Bauzeit) | `github.com/AV-EFI/efi-conv.git` | Herkunft von efi-conv beim Bauen des Sidecars. |
 | `EFI_CONV_REF` | nein (Bauzeit) | `main` | Zweig oder Commit von efi-conv. Fuer reproduzierbare Ergebnisse einen Commit eintragen. |
-| `APP_DOMAIN` | nein | `avefiimporter.goo1.de` | Nur fuer die Traefik-Regel in `docker-compose.dev.yml`. Die Anwendung selbst kennt keine feste Domain. |
+| `APP_DOMAIN` | nein | `localhost` | Nur fuer die Traefik-Regel in `docker-compose.dev.yml`. Die Anwendung selbst kennt keine feste Domain. |
 | `DB_SCHEMA_AUTO` | nein | an | Beim Start wird `db/schema.sql` angewandt. Mit `0` unterbleibt das; dann ist `npm run migrate` der Weg. Fuer eine fremdverwaltete Datenbank gedacht, in der die Anwendung nichts anlegen darf. |
 | `SEED_EMAIL` | nein (nur `npm run seed`) | `admin@av-efi.net` | Anmeldename des ersten Kontos. |
 | `SEED_PASSWORD` | nein (nur `npm run seed`) | zufaellig | Passwort des ersten Kontos. Fehlt die Angabe, wird eines erzeugt und auf der Konsole ausgegeben — genau einmal. |
@@ -387,12 +443,6 @@ laesst sich nicht erneut konvertieren.
 
 ## Offene Punkte
 
-* **`npm run typecheck` meldet 35 offene Befunde.** Bis zum 01.09.2026 war das
-  Skript gar nicht lauffaehig, weil `vue-tsc` fehlte. Die Befunde stammen aus
-  dieser Zeit und liegen ausserhalb des vertraglichen Kernablaufs; Tests und
-  Build laufen unberuehrt durch. Siehe README.
-* **Der Kopfkommentar in `db/schema.sql`** verweist noch auf den Seed-Bot der
-  PHP-Version (`php app/bot.php -t seed`). Der Hinweis stimmt nicht mehr.
 * **Die laufende Testdatenbank enthaelt eine Tabelle `jobs`**, die in
   `db/schema.sql` nicht vorkommt. Sie stammt aus der PHP-Version, wird von
   dieser Anwendung nicht benutzt und fehlt einer frisch aufgesetzten Datenbank

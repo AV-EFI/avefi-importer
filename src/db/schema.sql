@@ -1,7 +1,8 @@
 -- AVefi Importer — PostgreSQL-Schema
 -- Wird von Postgres beim ersten Start automatisch ausgeführt
--- (docker-entrypoint-initdb.d). Der Admin-User wird danach per Bot gesetzt:
---   docker compose exec web php app/bot.php -t seed
+-- (docker-entrypoint-initdb.d), ausserdem beim Start von Weboberflaeche und
+-- Worker (DB_SCHEMA_AUTO). Das erste Konto legt danach `npm run seed` an:
+--   docker compose -f docker-compose.dev.yml exec web npm run seed
 
 CREATE TABLE IF NOT EXISTS institutions (
     id          SERIAL PRIMARY KEY,

@@ -12,6 +12,7 @@
 import { standaloneDb } from '../db/config'
 import { schemaAnwenden, schemaAutomatisch, schemaVonPlatte } from '../db/schema'
 import { claim, complete, fail } from './queue'
+import { beschreibung, hoechstlaufzeit } from './laufzeit'
 import { setStatus } from '../lib/imports'
 import * as download from './jobs/download'
 import * as detect from './jobs/detect'
@@ -29,7 +30,9 @@ if (unknown.length) {
 }
 const runOnce = args.includes('--once')
 const verbose = args.includes('--verbose')
-const maxUptime = Number(process.env.WORKER_MAX_UPTIME || 600) * 1000
+const uptime = hoechstlaufzeit(process.env.WORKER_MAX_UPTIME)
+if (uptime.warnung !== null) console.warn(`[worker] ${uptime.warnung}`)
+const maxUptime = uptime.ms
 const startedAt = Date.now()
 
 /** classname -> ausfuehrende Funktion. Andere Werte sind ein Fehler, kein Nichtstun. */
@@ -39,7 +42,7 @@ const HANDLERS: Record<JobClass, (sql: Sql, payload: Record<string, unknown>) =>
   'worker/convert': convert.run
 }
 
-console.log(`[worker] Start, Node ${process.version}, max uptime ${maxUptime / 1000}s, once=${runOnce}`)
+console.log(`[worker] Start, Node ${process.version}, max uptime ${beschreibung(uptime)}, once=${runOnce}`)
 
 const sql = standaloneDb()
 
