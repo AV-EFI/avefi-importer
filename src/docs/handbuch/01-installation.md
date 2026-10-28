@@ -4,7 +4,7 @@ Dieses Kapitel beschrieb die PHP-Version und ist überholt. Es nannte drei
 Container statt fünf, rief `php app/bot.php -t seed` auf und verwies auf
 Port 8080.
 
-Für die aktuelle Version gilt **[`src/docs/deployment.md`](../src/docs/deployment.md)**.
+Für die aktuelle Version gilt **[`src/docs/deployment.md`](../deployment.md)**.
 Dort stehen Installation, Initialisierung, Start, Bau, Tests, alle
 Umgebungsvariablen und die fünf Container (`web`, `worker`, `efi-conv`, `db`,
 `adminer`).
@@ -22,6 +22,15 @@ docker compose -f docker-compose.dev.yml exec web npm run seed
 
 `seed` legt Institution und Verwaltungskonto an und gibt das Passwort einmalig
 aus. Mit `SEED_PASSWORD` lässt es sich vorgeben.
+
+Die Abhängigkeiten kommen aus dem Abbild, nicht aus dem Arbeitsverzeichnis.
+Nach einer Änderung an `package-lock.json` deshalb mit
+`docker compose -f docker-compose.dev.yml up -d --build -V` neu bauen.
+
+Für den Produktivbetrieb gibt es zwei eigene Abbilder, `production` für die
+Weboberfläche und `worker` für den Hintergrundprozess. Wie man sie baut und
+startet, steht in [`../deployment.md`](../deployment.md), Abschnitt
+„Auslieferungsbau".
 
 Die Compose-Datei liegt im Repository und enthält keine Zugangsdaten: Was
 geheim ist oder nur auf einem bestimmten Server gilt — Passwörter, Domain,
