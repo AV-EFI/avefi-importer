@@ -63,7 +63,7 @@ src/
     lib/
       mapping/          Kern: transform, targets, builder, runner, profile,
                         header, preview, suggest, completeness, schema-model
-      converters/       Formaterkennung und Konverter (csv, spreadsheet, xml,
+      converters/       Formaterkennung und Konverter (csv, spreadsheet, xlsx, xml,
                         marcXml, ead, genericJson, avefiJson, fingerprint …)
       authority/        Normdaten (GND, Wikidata, VIAF) mit Zwischenspeicher;
                         pipeline.ts ist der EINE Weg, den Vorschau und
@@ -315,9 +315,9 @@ fest eingebauten Konverter:
 | `ead_v1` | EAD |
 
 Zum Trennzeichen von CSV: Es wird erkannt, nicht geraten. Zur Behandlung von
-Excel-Datumswerten siehe `server/lib/converters/excelValue.ts` — `exceljs`
-liefert Zeitpunkte in UTC, was ohne Gegenmassnahme aus dem 1. Januar den
-31. Dezember des Vorjahres macht.
+Excel-Datumswerten siehe `server/lib/converters/excelValue.ts` — der Leser
+(`server/lib/converters/xlsx.ts`) liefert Zeitpunkte in UTC, was ohne
+Gegenmassnahme aus dem 1. Januar den 31. Dezember des Vorjahres macht.
 
 ## Pruefung
 

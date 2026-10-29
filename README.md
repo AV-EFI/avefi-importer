@@ -70,7 +70,7 @@ docker run --rm avefi-importer:dev npm test
 Ohne Docker dieselbe Reihenfolge wie in der CI:
 `npm ci --ignore-scripts && npm rebuild esbuild && npx nuxt prepare && npm test`.
 
-Stand: **697 Tests in 61 Dateien, alle erfolgreich.** Keine Datenbank noetig.
+Stand: **718 Tests in 62 Dateien, alle erfolgreich.** Keine Datenbank noetig.
 
 ### Auslieferungsbau
 
@@ -132,12 +132,16 @@ hat, waere schlimmer als ein offener Befund.
 
 ### `.xls` und `.ods` werden nicht gelesen
 
-Gelesen wird `.xlsx` (und CSV/TSV). Fuer `.xls` (BIFF8, bis Excel 2003) und
-`.ods` gibt es in Node keine Bibliothek, die zugleich gepflegt, im
-npm-Hauptregistry vorhanden und frei von offenen Sicherheitsmeldungen ist:
-`exceljs` (MIT, npm) kann beides nicht, und das einzige Paket, das beides kann
-(SheetJS), liegt seit 2023 nicht mehr im npm-Hauptregistry; die dort verbliebene
-Version stammt von 2022 und hat zwei ungepatchte Schwachstellen hoher Schwere.
+Gelesen wird `.xlsx` (und CSV/TSV), mit einem eigenen schmalen Leser
+(`src/server/lib/converters/xlsx.ts`, auf `yauzl` und `sax`). Bis zum
+29.10.2026 las der Importer mit `exceljs`; das wird nicht mehr gepflegt, und
+der Vergleich ueber alle echten Lieferungen fand dort Fehler, die der neue Leser
+nicht hat (siehe CHANGELOG). Fuer `.xls` (BIFF8, bis Excel 2003) und `.ods`
+gibt es in Node keine Bibliothek, die zugleich gepflegt, im npm-Hauptregistry
+vorhanden und frei von offenen Sicherheitsmeldungen ist: Das einzige Paket, das
+beides kann (SheetJS), liegt seit 2023 nicht mehr im npm-Hauptregistry; die dort
+verbliebene Version stammt von 2022 und hat zwei ungepatchte Schwachstellen
+hoher Schwere.
 
 Der Vertrag verlangt CSV und XLSX; beide funktionieren. `.xls` und `.ods` waren
 Zugabe. Statt still zu scheitern, sagt der Importer beim Hochladen im Klartext,

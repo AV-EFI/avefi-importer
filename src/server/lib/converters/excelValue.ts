@@ -3,11 +3,12 @@
  *
  * Excel legt ein Datum als Zahl ab. Ungeformatiert kaeme aus einem Drehdatum
  * "22371" statt "12.03.1961". In PhpSpreadsheet hiess der richtige Weg
- * getFormattedValue(); in exceljs gibt es kein Gegenstueck: cell.text liefert
- * bei Formelzellen "[object Object]" und bei Datumszellen die JS-Darstellung in
- * der ORTSZEIT des Prozesses.
+ * getFormattedValue(); in exceljs, mit dem bis zum 29.10.2026 gelesen wurde,
+ * gab es kein Gegenstueck: cell.text lieferte bei Formelzellen "[object Object]"
+ * und bei Datumszellen die JS-Darstellung in der ORTSZEIT des Prozesses.
  *
- * Genau daran haengt der bekannte Fehler: exceljs setzt den Zeitpunkt auf UTC
+ * Genau daran haengt der bekannte Fehler: Der Leser (xlsx.ts, wie zuvor
+ * exceljs) setzt den Zeitpunkt auf UTC
  * (Excel-Serie 0 = 1899-12-30T00:00:00Z). Wer ihn mit getDate()/getFullYear()
  * ausliest, bekommt in einer Zeitzone westlich von UTC den Vortag — aus dem
  * 12.03.1961 wird der 11.03.1961. Nachgemessen mit
@@ -282,7 +283,10 @@ function group(value: number, decimals: number | null, thousands: boolean): stri
   return fracPart === undefined ? grouped : `${grouped},${fracPart}`
 }
 
-/** Zellwert, wie exceljs ihn liefert. Bewusst locker typisiert. */
+/**
+ * Zellwert, wie der Leser in xlsx.ts ihn liefert (dieselbe Form wie frueher
+ * exceljs). Bewusst locker typisiert.
+ */
 export interface RawCell {
   value: unknown
   numFmt?: string | undefined

@@ -233,12 +233,19 @@ Anmeldename und Institution kommen aus `SEED_EMAIL` und `SEED_INSTITUTION`, das
 Passwort aus `SEED_PASSWORD`. Fehlt es, wird eines erzeugt und **genau einmal**
 ausgegeben. Ein vorhandenes Konto wird nur mit `SEED_FORCE=1` ueberschrieben.
 Mit den Abbildern aus dem Auslieferungsbau laeuft derselbe Schritt im
-`worker`-Abbild:
+`worker`-Abbild. Auf einer leeren Datenbank vorher das Schema anlegen, sonst
+bricht der Seed mit `relation "institutions" does not exist` ab. Das erledigt
+`npm run migrate` oder der erste Start von `web` bzw. `worker`:
 
 ```bash
 docker run --rm --network <netz> -e DB_HOST=db -e DB_PASS=... \
+  avefi-importer:worker npm run migrate
+docker run --rm --network <netz> -e DB_HOST=db -e DB_PASS=... \
   -e SEED_EMAIL=admin@example.org avefi-importer:worker npm run seed
 ```
+
+Im Compose-Aufbau ist das nicht noetig, dort legt PostgreSQL das Schema beim
+ersten Start aus `db/schema.sql` an.
 
 Weitere Konten legt die Nutzerverwaltung in der Oberflaeche an; sie erzeugt
 Einmalpasswoerter, die genau einmal in der Antwort erscheinen.
@@ -267,7 +274,7 @@ npm ci --ignore-scripts && npm rebuild esbuild && npx nuxt prepare && npm test
 ein Befehl, der den Klon ohne Installation einhaengte. Er funktionierte nur dort,
 wo zufaellig schon ein `node_modules` lag.
 
-Stand der Pruefung: **697 Tests in 61 Dateien, alle erfolgreich**, Laufzeit unter zehn
+Stand der Pruefung: **718 Tests in 62 Dateien, alle erfolgreich**, Laufzeit unter zehn
 Sekunden.
 `npm run typecheck` laeuft ohne Befund durch (geprueft am 28.10.2026).
 

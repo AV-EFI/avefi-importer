@@ -30,6 +30,100 @@ GitHub weiter.
 
 ---
 
+## 2026-10-29 — Eigener XLSX-Leser statt exceljs
+
+Anlass: Elias Oltmanns (Mail vom 28.10.) fragte nach den npm-Meldungen zu
+veralteten Paketen beim Bauen. Fünf davon kamen über `exceljs` herein
+(`fstream`, `rimraf@2`, `glob@7`, `inflight`, `lodash.isequal`). `exceljs`
+wird nicht mehr gepflegt; die letzte Version ist 4.4.0, und deren Bereiche
+lassen sich mit `npm upgrade` nicht anheben. Als Erweiterung im Rahmen der
+Gewährleistung, auf dem Branch `fix/eigener-xlsx-leser`.
+
+### Was sich ändert
+
+`exceljs` ist ganz aus dem Projekt. Gelesen wird mit
+`server/lib/converters/xlsx.ts`, rund 550 Zeilen samt Kommentaren, auf zwei gepflegten Paketen:
+`yauzl` (ZIP, MIT) und `sax` (XML im Datenstrom, BlueOak-1.0.0; lag schon im
+Abhängigkeitsbaum). Der Leser gibt je Zelle dieselbe Form heraus wie zuvor
+`exceljs` (`{ value, numFmt }`). Die Formatierung in `excelValue.ts` ist
+unverändert, deshalb bleibt die Ausgabe gleich.
+
+Nach außen gibt es dieselben zwei Funktionen wie bisher (`listSheets`,
+`extractSheet` in `spreadsheet.ts`). Aufrufer, Datenbank und Oberfläche sind
+nicht berührt.
+
+* 82 Pakete weniger im Baum; von den npm-Meldungen bleiben die zwei, die über
+  Nuxt und `@nuxtjs/i18n` kommen. Das Abbild `worker` ist 31 MB kleiner.
+* Die Override-Regel für `uuid` entfällt; `uuid` kam nur über `exceljs`.
+* `excelDates.test.ts` baut seine Mappe jetzt selbst (`tests/converters/xlsxBau.ts`,
+  ZIP mit `node:zlib`), neu sind 21 Tests in `tests/converters/xlsx.test.ts`.
+
+### Wie geprüft wurde
+
+Vergleichslauf alter gegen neuen Leser über alle 76 XLSX-Uploads auf dem
+Testserver (9 verschiedene Dateien), die Beispieldatei, 10 fremde Mappen aus
+anderen Projekten (LibreOffice, Excel für Windows und Mac) und drei eigens
+erzeugte Mappen mit Sonderfällen (openpyxl, PhpSpreadsheet, 1904-Datumssystem):
+Blattliste und CSV je Blatt, Zelle für Zelle. Zusätzlich gegen openpyxl als
+unabhängige Gegenprobe: 54.881 Zellen, Blattnamen, Reihenfolge und
+Zahlenformate; abweichend nur zwei Zellen, an denen die Gegenprobe selbst
+anders zählt (1904-Seriennummer, Uhrzeit als Text).
+
+In den AVefi-Lieferungen (62 Blätter, 35.749 gefüllte Zellen) weichen 35 Zellen
+ab, alle in der Mappe mit den Erschließungsdaten der Expo. In allen 35 lag
+`exceljs` falsch:
+
+* **Ein zerbrochener Umlaut.** Aus „Brasilianische Tänzerinnen" wurde
+  „Brasilianische T��nzerinnen". `exceljs` wandelte jeden Block des
+  Datenstroms einzeln in Text um und zerschnitt so Zeichen, die über eine
+  Blockgrenze reichen. In einer erzeugten Mappe mit 70.000 Zeilen traf es 7
+  Zellen. Behoben mit einem `StringDecoder`; der Test baut eine Mappe, in der
+  sicher ein Zeichen auf einer Grenze liegt.
+* **22 Formeln mit dem Ergebnis 0** kamen als leere Zelle an.
+* **12 Formeln mit Fehler** (`#REF!`) kamen als leere Zelle an. Jetzt steht dort,
+  was auch Excel zeigt; eine Fehlerzelle ohne Formel lieferte schon bisher
+  ihren Code.
+
+In den übrigen Mappen fand der Vergleich weitere Fehler von `exceljs`, die in
+den AVefi-Lieferungen bisher nicht vorkamen:
+
+* In vier Mappen aus LibreOffice und in Mappen aus openpyxl fehlten die
+  Blattnamen („Sheet1" statt „Novice"), und das Herauslösen einzelner
+  Blätter scheiterte mit „nicht enthalten". openpyxl verweist mit absoluten
+  Pfaden auf die Blätter (`/xl/worksheets/sheet1.xml`), die `exceljs` nicht
+  zuordnete. Eine Mappe aus openpyxl ließ sich gar nicht öffnen.
+* Formeln mit Datumsformat lieferten die Seriennummer („22382" statt
+  „11.04.1961"), Wahrheitswerte aus Formeln „1" statt „true".
+* Eingebetteter Text mit mehreren Formatläufen: nur der letzte Lauf.
+  Lautschrift (`<rPh>`) ersetzte den Wert.
+* `_xHHHH_`-Folgen (Excels Kodierung für Steuerzeichen) blieben stehen.
+* Die Blätter kamen nach `sheetId` statt in der Reihenfolge der Registerkarten.
+
+### Geschwindigkeit und Speicher
+
+Gemessen mit einer Mappe aus 74.000 Zeilen in drei Blättern: Blattliste und
+Herauslösen des großen Blatts so schnell wie mit `exceljs` (gut 3 Sekunden),
+Speicher 129 statt 168 MB. Beim Herauslösen wird nur noch das gewählte Blatt
+gelesen; `exceljs` musste die Mappe bis zum Ende durchlaufen.
+
+### Nebenbei
+
+* `deployment.md`, „Initialisierung": Wer den Seed mit den Abbildern aus dem
+  Auslieferungsbau gegen eine leere Datenbank laufen lässt, braucht vorher
+  `npm run migrate`. Beim Durchspielen aufgefallen; die Anleitung vom 28.10.
+  sagte das nicht.
+
+### Offen geblieben
+
+* Die npm-Meldungen zu `glob@10` (über Nuxt) und `vue-i18n@10` (über
+  `@nuxtjs/i18n`) bleiben, bis dort neue Versionen kommen.
+* `.xls` und `.ods` werden weiterhin nicht gelesen.
+
+Stand: 718 Tests in 62 Dateien grün, `npm run typecheck` ohne Befund,
+Produktiv-Build und beide Abbilder geprüft.
+
+---
+
 ## 2026-10-28 — Sven Bingert: frischer Klon startet nicht, Worker ohne Produktivabbild
 
 Meldung von Sven Bingert (GWDG, Mail vom 27.10.), der von Elias Oltmanns das
