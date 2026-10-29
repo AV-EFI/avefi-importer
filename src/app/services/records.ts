@@ -26,16 +26,16 @@ export function recordsService(): {
     konfigurationPfad: () => api('/records/config'),
     datensatzPfad: (importId, recordId) => api(`/imports/${importId}/records/${recordId}`),
     pruefen: (datensatz) =>
-      $fetch<CheckResponse>(api('/records/validate'), { method: 'POST', body: datensatz as unknown as Record<string, unknown> }),
+      apiFetch<CheckResponse>(api('/records/validate'), { method: 'POST', body: datensatz as unknown as Record<string, unknown> }),
     speichern: (importId, recordId, datensatz) =>
-      $fetch<SaveResponse>(api(`/imports/${importId}/records/${recordId}`),
+      apiFetch<SaveResponse>(api(`/imports/${importId}/records/${recordId}`),
         { method: 'PUT', body: datensatz as unknown as Record<string, unknown> }),
     normdatenSuche: (kind, q) =>
-      $fetch<AuthoritySearchResponse>(api('/records/authority/search'), { query: { kind, q } }),
+      apiFetch<AuthoritySearchResponse>(api('/records/authority/search'), { query: { kind, q } }),
     // Faellt die Abfrage aus, bleibt der Ausschnitt leer statt die Seite zu
     // stoeren: Ein Normdatensatz ist eine Zugabe, kein Teil des Datensatzes.
     normdatenDetail: (source, id) =>
-      $fetch<AuthorityDetailResponse>(api('/records/authority/detail'), { query: { source, id } })
+      apiFetch<AuthorityDetailResponse>(api('/records/authority/detail'), { query: { source, id } })
         .catch(() => null)
   }
 }

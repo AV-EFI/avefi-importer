@@ -1,3 +1,5 @@
+import type { FetchOptions } from 'ofetch'
+
 /*
  * Basis der API-Aufrufe.
  *
@@ -16,6 +18,8 @@
  *   await $fetch(api('/imports'))
  *   await useFetch<T>(() => api(`/mappings/${id.value}`))
  *
+ * Fuer Anfragen gibt es `apiFetch()` gleich darunter.
+ *
  * `useRuntimeConfig()` braucht den Nuxt-Kontext und wirft ausserhalb davon —
  * etwa wenn diese Funktion nach einem `await` auf oberster Ebene eines
  * `<script setup>` gerufen wird oder aus einem Ereignisbehandler heraus. Ein
@@ -33,4 +37,21 @@ export function useApi(): (path: string) => string {
   }
   const base = basis ?? '/api'
   return (path: string): string => `${base}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+/**
+ * `$fetch` fuer Adressen aus `useApi()`, ohne die typisierten Serverrouten.
+ *
+ * Seit Nuxt 4.6 leitet TypeScript bei `$fetch(url, { method })` den
+ * Antworttyp aus allen Serverrouten her, sobald `url` ein beliebiger `string`
+ * ist — und das sind Adressen aus `useApi()` immer, weil die Basis
+ * konfigurierbar ist. Der Typecheck bricht dann mit TS2321 („Excessive stack
+ * depth") ab, an jedem Aufruf mit Methode. Die hergeleiteten Typen waeren fuer
+ * diese Adressen ohnehin nur `unknown` gewesen; die Services nennen ihre
+ * Antwortformen selbst.
+ *
+ * Zur Laufzeit ist es derselbe `$fetch`-Aufruf.
+ */
+export function apiFetch<T = unknown>(url: string, opts?: FetchOptions<'json'>): Promise<T> {
+  return ($fetch as unknown as (u: string, o?: FetchOptions<'json'>) => Promise<T>)(url, opts)
 }

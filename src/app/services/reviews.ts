@@ -81,7 +81,7 @@ export function reviewsService(): {
     einerPfad: (id) => api(`/reviews/${id}`),
     anzahlPfad: () => api('/reviews/count'),
     originalPfad: (importId) => api(`/imports/${importId}/original`),
-    zuweisen: (id, body) => $fetch<ZuweisungAntwort>(api(`/reviews/${id}/assign`), { method: 'POST', body }),
-    ablehnen: (id, body) => $fetch<AblehnungAntwort>(api(`/reviews/${id}/reject`), { method: 'POST', body })
+    zuweisen: (id, body) => apiFetch<ZuweisungAntwort>(api(`/reviews/${id}/assign`), { method: 'POST', body }),
+    ablehnen: (id, body) => apiFetch<AblehnungAntwort>(api(`/reviews/${id}/reject`), { method: 'POST', body })
   }
 }

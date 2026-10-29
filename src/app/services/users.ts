@@ -57,12 +57,12 @@ export function usersService(): {
     listePfad: () => api('/users'),
     einerPfad: (id) => api(`/users/${id}`),
     profilPfad: () => api('/profile'),
-    anlegen: (body) => $fetch<PasswortAntwort>(api('/users'), { method: 'POST', body }),
-    aendern: (id, body) => $fetch(api(`/users/${id}`), { method: 'PATCH', body }),
-    loeschen: (id) => $fetch(api(`/users/${id}`), { method: 'DELETE' }),
+    anlegen: (body) => apiFetch<PasswortAntwort>(api('/users'), { method: 'POST', body }),
+    aendern: (id, body) => apiFetch(api(`/users/${id}`), { method: 'PATCH', body }),
+    loeschen: (id) => apiFetch(api(`/users/${id}`), { method: 'DELETE' }),
     passwortSetzen: (id, body) =>
-      $fetch<PasswortAntwort>(api(`/users/${id}/password`), { method: 'POST', body }),
-    profilAendern: (body) => $fetch(api('/profile'), { method: 'PATCH', body }),
-    eigenesPasswort: (body) => $fetch(api('/profile/password'), { method: 'POST', body })
+      apiFetch<PasswortAntwort>(api(`/users/${id}/password`), { method: 'POST', body }),
+    profilAendern: (body) => apiFetch(api('/profile'), { method: 'PATCH', body }),
+    eigenesPasswort: (body) => apiFetch(api('/profile/password'), { method: 'POST', body })
   }
 }

@@ -31,6 +31,7 @@ const MUSTER: Array<[string, RegExp]> = [
   ['useFetch', /\buse(?:Lazy)?Fetch\s*[<(]/],
   ['useAsyncData', /\buse(?:Lazy)?AsyncData\s*[<(]/],
   ['$fetch', /\$fetch\s*[<(]/],
+  ['apiFetch', /\bapiFetch\s*[<(]/],
   ["feste '/api/'-Adresse", /['"`]\/api\//]
 ]
 
@@ -82,6 +83,6 @@ describe('Adressen, die der Server der Oberflaeche mitgibt', () => {
 
   it('editorAktion setzt die Basis mit useApi davor', () => {
     const text = readFileSync(join(wurzel, 'app/services/mappings.ts'), 'utf8')
-    expect(text).toMatch(/editorAktion:[\s\S]{0,200}\$fetch\(api\(`\$\{endpoint\}/)
+    expect(text).toMatch(/editorAktion:[\s\S]{0,200}apiFetch(?:<\w+>)?\(api\(`\$\{endpoint\}/)
   })
 })

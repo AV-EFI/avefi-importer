@@ -116,26 +116,26 @@ export function mappingsService(): {
     normdatenWertePfad: (id) => api(`/mappings/${id}/authority-values`),
     kandidatenPfad: (id) => api(`/mappings/${id}/candidates`),
     einfuehren: (profil) =>
-      $fetch<EinfuhrAntwort>(api('/mappings'), { method: 'POST', body: { profile: profil } }),
+      apiFetch<EinfuhrAntwort>(api('/mappings'), { method: 'POST', body: { profile: profil } }),
     anlegen: (name, datei) =>
-      $fetch<NeuAntwort>(api(`/mappings/new?name=${encodeURIComponent(name)}`),
+      apiFetch<NeuAntwort>(api(`/mappings/new?name=${encodeURIComponent(name)}`),
         { method: 'POST', body: datei, ...ALS_DATEI }),
-    umbenennen: (id, name) => $fetch(api(`/mappings/${id}`), { method: 'PATCH', body: { name } }),
-    loeschen: (id) => $fetch(api(`/mappings/${id}`), { method: 'DELETE' }),
+    umbenennen: (id, name) => apiFetch(api(`/mappings/${id}`), { method: 'PATCH', body: { name } }),
+    loeschen: (id) => apiFetch(api(`/mappings/${id}`), { method: 'DELETE' }),
     versionPfad: (id, version) => api(`/mappings/${id}/versions/${version}`),
     zuruecksetzen: (id, version) =>
-      $fetch(api(`/mappings/${id}/restore`), { method: 'POST', body: { version } }),
+      apiFetch(api(`/mappings/${id}/restore`), { method: 'POST', body: { version } }),
     beispielSetzen: (id, datei) =>
-      $fetch(api(`/mappings/${id}/sample?name=${encodeURIComponent(datei.name)}`),
+      apiFetch(api(`/mappings/${id}/sample?name=${encodeURIComponent(datei.name)}`),
         { method: 'POST', body: datei, ...ALS_DATEI }),
     speichern: (id, mapping) =>
-      $fetch(api(`/mappings/${id}/save`), { method: 'POST', body: { mapping } }),
+      apiFetch(api(`/mappings/${id}/save`), { method: 'POST', body: { mapping } }),
     // Die Adresse kommt relativ zur API-Basis vom Server; die Basis setzt useApi().
     editorAktion: <T>(endpoint: string, aktion: string, body: Record<string, unknown>) =>
-      $fetch(api(`${endpoint}/${aktion}`), { method: 'POST', body }) as Promise<T>,
+      apiFetch<T>(api(`${endpoint}/${aktion}`), { method: 'POST', body }),
     normdatenWerte: (id, mapping) =>
-      $fetch<AuthorityValuesResponse>(api(`/mappings/${id}/authority-values`), { method: 'POST', body: { mapping } }),
+      apiFetch<AuthorityValuesResponse>(api(`/mappings/${id}/authority-values`), { method: 'POST', body: { mapping } }),
     kandidaten: (id, body) =>
-      $fetch<CandidateResponse>(api(`/mappings/${id}/candidates`), { method: 'POST', body })
+      apiFetch<CandidateResponse>(api(`/mappings/${id}/candidates`), { method: 'POST', body })
   }
 }
