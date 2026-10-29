@@ -44,7 +44,7 @@ melden.
 | Eigenständiges Repository für den CSV-Importer | dasselbe Repository | liegt vor |
 | Abhängigkeits- und Lock-Dateien | `src/package.json`, `src/package-lock.json` | liegt vor |
 | Mockup für das Importer-UI | die laufende Anwendung; der PHP-Prototyp liegt unter dem Tag `php-final` | liegt vor |
-| Automatisierte Tests der zentralen Funktionen | `src/tests/`, Aufruf `npm test`; der Prüfdienst hat eigene Tests in `src/efi-conv/test_service.py` | 697 Tests in 61 Dateien grün, dazu 12 im Prüfdienst |
+| Automatisierte Tests der zentralen Funktionen | `src/tests/`, Aufruf `npm test`; der Prüfdienst hat eigene Tests in `src/efi-conv/test_service.py` | 718 Tests in 62 Dateien grün, dazu 12 im Prüfdienst |
 | Dokumentierte Installation, Initialisierung, Start, Bau und Tests | [`deployment.md`](deployment.md), Abschnitte „Installation und Start“ bis „Tests“; [Handbuch, Installation](handbuch/01-installation.md) | liegt vor |
 | Beispielkonfiguration ohne Zugangsdaten | [`../.env.example`](../.env.example) | liegt vor, kein echter Wert |
 | Dokumentation des Mappingprofil-Formats | [`mapping-profile.md`](mapping-profile.md) | liegt vor |

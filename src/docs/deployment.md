@@ -267,7 +267,7 @@ npm ci --ignore-scripts && npm rebuild esbuild && npx nuxt prepare && npm test
 ein Befehl, der den Klon ohne Installation einhaengte. Er funktionierte nur dort,
 wo zufaellig schon ein `node_modules` lag.
 
-Stand der Pruefung: **697 Tests in 61 Dateien, alle erfolgreich**, Laufzeit unter zehn
+Stand der Pruefung: **718 Tests in 62 Dateien, alle erfolgreich**, Laufzeit unter zehn
 Sekunden.
 `npm run typecheck` laeuft ohne Befund durch (geprueft am 28.10.2026).
 

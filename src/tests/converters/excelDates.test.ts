@@ -1,12 +1,12 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import ExcelJS from 'exceljs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { cellText, formatExcelDate, formatExcelNumber, isDateFormat } from '../../server/lib/converters/excelValue'
 import { extractSheet, listSheets, unsupportedWorkbookMessage } from '../../server/lib/converters/spreadsheet'
+import { schreibeMappe } from './xlsxBau'
 
-/** 12. Maerz 1961, wie exceljs ein Excel-Datum ablegt: als Zeitpunkt in UTC. */
+/** 12. Maerz 1961, wie der Leser ein Excel-Datum ablegt: als Zeitpunkt in UTC. */
 const DREHDATUM = new Date(Date.UTC(1961, 2, 12))
 
 describe('Datumsformate', () => {
@@ -94,21 +94,28 @@ describe('Arbeitsmappe', () => {
     dir = await mkdtemp(join(tmpdir(), 'avefi-xlsx-'))
     file = join(dir, 'Bestand.xlsx')
 
-    const wb = new ExcelJS.Workbook()
-    const cover = wb.addWorksheet('Deckblatt')
-    cover.getCell('A1').value = 'Bestandsübersicht'
-
-    const films = wb.addWorksheet('Filme')
-    films.addRow(['Titel', 'Drehdatum', 'Laufzeit', 'Signatur'])
-    const row = films.addRow(['Metropolis', DREHDATUM, new Date(Date.UTC(1899, 11, 30, 2, 33, 0)), 3200201])
-    row.getCell(2).numFmt = 'dd.mm.yyyy'
-    row.getCell(3).numFmt = 'h:mm:ss'
-    films.addRow(['Nosferatu', new Date(Date.UTC(1922, 2, 4)), null, 3200202]).getCell(2).numFmt = 'dd.mm.yyyy'
-
-    const legende = wb.addWorksheet('Legende')
-    legende.getCell('A1').value = 'nur eine Spalte'
-
-    await wb.xlsx.writeFile(file)
+    // Excel legt ein Datum als Seriennummer ab: Tage seit dem 30.12.1899.
+    const serie = (d: Date): number => d.getTime() / 86400000 + 25569
+    const s = (i: number): string => `<v>${i}</v>`
+    schreibeMappe(file, {
+      zeichenketten: ['Bestandsübersicht', 'Titel', 'Drehdatum', 'Laufzeit', 'Signatur', 'Metropolis', 'Nosferatu', 'nur eine Spalte']
+        .map((t) => `<si><t>${t}</t></si>`),
+      formate: { 164: 'dd.mm.yyyy', 165: 'h:mm:ss' },
+      stile: [164, 165], // Stil 1: Datum, Stil 2: Laufzeit
+      blaetter: [
+        { name: 'Deckblatt', daten: `<row r="1"><c r="A1" t="s">${s(0)}</c></row>` },
+        {
+          name: 'Filme',
+          daten:
+            `<row r="1">${[1, 2, 3, 4].map((i, c) => `<c r="${'ABCD'[c]}1" t="s">${s(i)}</c>`).join('')}</row>` +
+            `<row r="2"><c r="A2" t="s">${s(5)}</c><c r="B2" s="1"><v>${serie(DREHDATUM)}</v></c>` +
+            `<c r="C2" s="2"><v>${serie(new Date(Date.UTC(1899, 11, 30, 2, 33, 0)))}</v></c><c r="D2"><v>3200201</v></c></row>` +
+            `<row r="3"><c r="A3" t="s">${s(6)}</c><c r="B3" s="1"><v>${serie(new Date(Date.UTC(1922, 2, 4)))}</v></c>` +
+            '<c r="D3"><v>3200202</v></c></row>'
+        },
+        { name: 'Legende', daten: `<row r="1"><c r="A1" t="s">${s(7)}</c></row>` }
+      ]
+    })
   })
 
   afterAll(async () => {

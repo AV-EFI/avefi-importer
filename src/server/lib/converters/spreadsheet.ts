@@ -6,9 +6,10 @@
  * nichts mehr von einer hochgeladenen CSV — Kopfzeilen-Hash, Profil,
  * Konvertierung. Die hochgeladene Datei bleibt unveraendert in org/.
  *
- * Gelesen wird mit exceljs im Datenstrom (WorkbookReader). Der Grund ist der
- * Speicher: Die Mappe mit den Erschliessungsdaten hat 32 Blaetter; sie ganz zu
- * laden, nur um Blattnamen aufzuzaehlen, ist unnoetig.
+ * Gelesen wird mit dem eigenen Leser in xlsx.ts, Blatt fuer Blatt im
+ * Datenstrom. Der Grund ist der Speicher: Die Mappe mit den Erschliessungsdaten
+ * hat 32 Blaetter; sie ganz zu laden, nur um Blattnamen aufzuzaehlen, ist
+ * unnoetig. Bis zum 29.10.2026 las hier exceljs (siehe Kopf von xlsx.ts).
  *
  * Zur Bibliothekswahl siehe unterstuetzte Formate weiter unten.
  */
@@ -16,8 +17,8 @@ import { createWriteStream } from 'node:fs'
 import { basename } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
-import ExcelJS from 'exceljs'
 import { cellText } from './excelValue'
+import { openWorkbook, type XlsxRow } from './xlsx'
 import { csvLine } from './csv'
 import { sanitizeFilename } from '../storage'
 
@@ -27,9 +28,8 @@ import { sanitizeFilename } from '../storage'
  * xls (BIFF8, bis Excel 2003) und ods (OpenDocument) werden NICHT gelesen. In
  * Node gibt es dafuer keine Bibliothek, die zugleich gepflegt, im
  * npm-Hauptregistry vorhanden und frei von offenen Sicherheitsmeldungen ist:
- * exceljs (MIT) kann kein xls und kein ods, und das einzige Paket, das beides
- * kann, liegt im Register nur als Version von 2022 mit zwei ungepatchten
- * Meldungen hoher Schwere. Der Werkvertrag verlangt CSV und XLSX; xls und ods
+ * Das einzige Paket, das beides kann (SheetJS), liegt im Register nur als
+ * Version von 2022 mit zwei ungepatchten Meldungen hoher Schwere. Der Werkvertrag verlangt CSV und XLSX; xls und ods
  * waren Zugabe. Statt still zu scheitern, sagt der Importer, was zu tun ist.
  */
 export const SUPPORTED_WORKBOOK_FORMATS = ['xlsx'] as const
@@ -85,23 +85,12 @@ export interface SheetInfo {
   usable: boolean
 }
 
-function newReader(path: string): ExcelJS.stream.xlsx.WorkbookReader {
-  return new ExcelJS.stream.xlsx.WorkbookReader(path, {
-    worksheets: 'emit',
-    sharedStrings: 'cache',
-    styles: 'cache',
-    hyperlinks: 'ignore',
-    entries: 'emit'
-  })
-}
-
 /** Zellen einer Zeile als Text, Leerzellen am Ende abgeschnitten. */
-function rowCells(row: ExcelJS.Row): string[] {
+function rowCells(row: XlsxRow): string[] {
   const values: string[] = []
-  const last = row.cellCount
-  for (let c = 1; c <= last; c++) {
-    const cell = row.getCell(c)
-    values.push(cellText({ value: cell.value, numFmt: cell.numFmt }))
+  for (let c = 0; c < row.length; c++) {
+    const cell = row[c]
+    values.push(cell ? cellText(cell) : '')
   }
   while (values.length > 0 && (values[values.length - 1] ?? '').trim() === '') values.pop()
   return values
@@ -120,27 +109,31 @@ function guardWorkbook(path: string, baseFormat: string | null | undefined): voi
 export async function listSheets(path: string, baseFormat: string | null = 'xlsx'): Promise<SheetInfo[]> {
   guardWorkbook(path, baseFormat)
   const out: SheetInfo[] = []
-  const reader = newReader(path)
-  for await (const worksheet of reader as AsyncIterable<ExcelJS.Worksheet>) {
-    let filled = 0
-    let cols = 0
-    for await (const row of worksheet as unknown as AsyncIterable<ExcelJS.Row>) {
-      const cells = rowCells(row)
-      if (cells.length === 0) continue
-      filled++
-      if (cells.length > cols) cols = cells.length
+  const workbook = await openWorkbook(path)
+  try {
+    // Reihenfolge wie die Registerkarten. exceljs lieferte die Reihenfolge des
+    // Archivs und sortierte nach sheetId; nach einem Verschieben der Blaetter
+    // in Excel stimmte das nicht mehr mit der Anzeige ueberein.
+    for (const sheet of workbook.sheets) {
+      let filled = 0
+      let cols = 0
+      for await (const row of workbook.rows(sheet)) {
+        const cells = rowCells(row)
+        if (cells.length === 0) continue
+        filled++
+        if (cells.length > cols) cols = cells.length
+      }
+      out.push({
+        index: sheet.id,
+        name: sheet.name,
+        rows: Math.max(0, filled - 1),
+        cols,
+        usable: filled >= 2 && cols >= 2
+      })
     }
-    out.push({
-      index: Number(worksheet.id ?? out.length + 1),
-      name: String(worksheet.name ?? `Blatt ${out.length + 1}`),
-      rows: Math.max(0, filled - 1),
-      cols,
-      usable: filled >= 2 && cols >= 2
-    })
+  } finally {
+    workbook.close()
   }
-  // Der Datenstrom liefert die Blaetter in der Reihenfolge des Archivs, nicht
-  // der Mappe. Nach id sortiert entspricht die Anzeige den Registerkarten.
-  out.sort((a, b) => a.index - b.index)
   return out
 }
 
@@ -170,16 +163,19 @@ export async function extractSheet(
   let written = 0
   let maxCols = 0
   let skippedEmpty = 0
-  let found = false
 
-  async function* lines(): AsyncGenerator<string> {
-    const reader = newReader(path)
-    for await (const worksheet of reader as AsyncIterable<ExcelJS.Worksheet>) {
-      const isWanted = !found && String(worksheet.name ?? '') === sheetName
-      for await (const row of worksheet as unknown as AsyncIterable<ExcelJS.Row>) {
-        // Auch nicht gewuenschte Blaetter muessen durchlaufen werden, sonst
-        // bleibt der Datenstrom stehen.
-        if (!isWanted) continue
+  const workbook = await openWorkbook(path)
+  try {
+    // Gelesen wird nur das gewuenschte Blatt. exceljs musste die Mappe bis
+    // zum Ende durchlaufen, auch fuer das erste von 32 Blaettern.
+    const sheet = workbook.sheets.find((s) => s.name === sheetName)
+    if (!sheet) {
+      out.destroy()
+      throw new Error(`Das Tabellenblatt „${sheetName}“ ist in der Datei nicht enthalten.`)
+    }
+
+    async function* lines(): AsyncGenerator<string> {
+      for await (const row of workbook.rows(sheet!)) {
         const cells = rowCells(row)
         if (cells.length === 0) {
           if (written > 0) skippedEmpty++
@@ -189,13 +185,13 @@ export async function extractSheet(
         written++
         yield csvLine(cells, ',')
       }
-      if (isWanted) found = true
     }
+
+    await pipeline(Readable.from(lines()), out)
+  } finally {
+    workbook.close()
   }
 
-  await pipeline(Readable.from(lines()), out)
-
-  if (!found) throw new Error(`Das Tabellenblatt „${sheetName}“ ist in der Datei nicht enthalten.`)
   return { rows: Math.max(0, written - 1), cols: maxCols, skippedEmpty }
 }
 
