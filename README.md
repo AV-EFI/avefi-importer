@@ -10,7 +10,7 @@ und schlaegt das Profil vor. Geprueft wird mit dem echten `efi-conv` in einem
 eigenen Container, nicht mit einer nachgebauten Pruefung.
 
 Diese Version loest die PHP-Version ab; deren letzter Stand liegt im Tag
-`php-final`. Stack: Nuxt 4.5, Vue 3.5, TypeScript, Nitro,
+`php-final`. Stack: Nuxt 4.6, Vue 3.5, TypeScript, Nitro,
 PostgreSQL 16, Docker.
 
 **Die Anwendung liegt in [`src/`](src/). Alle Befehle laufen dort.**

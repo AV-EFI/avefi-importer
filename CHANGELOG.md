@@ -30,6 +30,71 @@ GitHub weiter.
 
 ---
 
+## 2026-10-29, mittags — npm audit: Nuxt 4.6, vue-i18n, zod, undici
+
+Anlass: Beim XLSX-Umbau zeigte `npm audit` 19 betroffene Pakete (10 hoch,
+5 mittel, 4 niedrig), Dependabot dazu Hinweise zu Nuxt, Vite, launch-editor,
+node-forge und braces. Gewährleistung, auf dem Branch `fix/npm-audit`
+(baut auf `fix/eigener-xlsx-leser` auf).
+
+### Was aktualisiert wurde
+
+Alles innerhalb der bestehenden Versionsbereiche, kein Major-Sprung:
+
+* **Nuxt 4.5.2 → 4.6.3** (Server-Routenregeln, Nitro-Server, Vite-Builder).
+* **vue-i18n und `@intlify/*` 11.4.9 → 11.4.16** (`escapeParameter` ließ
+  HTML in Platzhaltern durch).
+* **zod 4.4.3 → 4.6.7** (Speicherverbrauch bei übergroßen Eingaben).
+* **undici 8.12.3**, **seroval 1.7.3**, **node-forge 1.4.2**,
+  **serialize-javascript 7.1.4**, **vitest 4.1.12** samt `@vitest/mocker`,
+  Vue 3.5.44 und Folgepakete.
+* **`@intlify/unplugin-vue-i18n` 11.2.8**: zieht die neue Fassung der
+  i18n-Bauerweiterung, die das Haupt-`vue-i18n` mitbenutzt. Damit fällt die
+  zweite, veraltete Kopie `vue-i18n@10` weg, mit ihr eine Meldung und eine
+  npm-Warnung beim Bauen.
+* Die Override-Regel für `simple-git` entfällt; Nuxt bringt das Paket nicht
+  mehr mit. `package.json` hat damit keine Overrides mehr.
+
+Danach meldet `npm audit` nur noch **deepmerge 4.3.1** (niedrig): Es wird
+ausschließlich beim Bauen von Rollup über Nitro benutzt, nicht zur Laufzeit,
+und eine reparierte Fassung gibt es nicht. Beim Installieren warnt npm nur noch
+über `glob@10` (über Nuxt).
+
+### Eine Anpassung im Code: `apiFetch()`
+
+Nuxt 4.6 leitet bei `$fetch(adresse, { method })` den Antworttyp aus allen
+Serverrouten her, sobald die Adresse ein beliebiger `string` ist. Adressen aus
+`useApi()` sind das immer, weil die API-Basis konfigurierbar ist. Der Typecheck
+brach daran mit TS2321 („Excessive stack depth") ab, Aufruf für Aufruf.
+
+Neu ist `apiFetch()` neben `useApi()` in `app/composables/useApi.ts`: derselbe
+`$fetch`-Aufruf, nur ohne die Routentypen. Die Services nannten ihre
+Antwortformen ohnehin selbst. Umgestellt sind alle 30 Aufrufe in
+`app/services` und `useAuth`. `tests/frontend/abfragen.test.ts` bewacht
+`apiFetch` wie `$fetch`: In Pages, Layouts und Komponenten darf keins von
+beiden stehen.
+
+### Geprüft
+
+* 719 Tests in 62 Dateien grün, `npm run typecheck` ohne Befund,
+  Produktiv-Build und beide Abbilder.
+* Demo auf dem Branch (Nuxt 4.6.3, Vue 3.5.44), danach der
+  Barrierefreiheitslauf `tests/a11y/axe.mjs` über alle Kernseiten und
+  Zustände, hell und dunkel, breit und schmal: 107 Stände, kein Befund
+  der Schwere „serious“ oder „critical“. Deutsch und Englisch geprüft.
+
+### Offen geblieben
+
+* deepmerge 4.3.1 (siehe oben).
+* Dependabot zeigt für `main` noch Hinweise zu Vite und launch-editor. Beide
+  sind seit dem 22.10. auf reparierten Fassungen (Vite 8.3.5, launch-editor
+  2.14.2); die Hinweise schließen sich, sobald GitHub den Stand neu einliest.
+* Dependabot meldet außerdem `braces` 3.0.3. Es kommt über Nitro (`globby`,
+  `fast-glob`, `micromatch`) und dient dort der Dateisuche beim Bauen. Eine
+  reparierte Fassung gibt es nicht, `npm audit` führt die Meldung nicht.
+
+---
+
 ## 2026-10-29 — Eigener XLSX-Leser statt exceljs
 
 Anlass: Elias Oltmanns (Mail vom 28.10.) fragte nach den npm-Meldungen zu
@@ -283,7 +348,7 @@ laut Werkvertrag nicht geschuldet; festgehalten als nachgelagert in #32.
 * **CI von Elias:** Seit dem 16.10. testet und baut GitHub Actions jeden Push
   auf `main` und spiegelt danach nach GitLab. Auf der Demo nachgezogen.
 * **Barrierefreiheit:** axe-Lauf im hellen Schema nach den Änderungen,
-  58 Zustände, bestanden (kein Befund der Schwere „serious" oder „critical").
+  58 Zustände, bestanden (kein Befund der Schwere „serious“ oder „critical“).
 
 ### Geschlossen
 
