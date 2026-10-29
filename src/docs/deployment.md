@@ -233,12 +233,19 @@ Anmeldename und Institution kommen aus `SEED_EMAIL` und `SEED_INSTITUTION`, das
 Passwort aus `SEED_PASSWORD`. Fehlt es, wird eines erzeugt und **genau einmal**
 ausgegeben. Ein vorhandenes Konto wird nur mit `SEED_FORCE=1` ueberschrieben.
 Mit den Abbildern aus dem Auslieferungsbau laeuft derselbe Schritt im
-`worker`-Abbild:
+`worker`-Abbild. Auf einer leeren Datenbank vorher das Schema anlegen, sonst
+bricht der Seed mit `relation "institutions" does not exist` ab. Das erledigt
+`npm run migrate` oder der erste Start von `web` bzw. `worker`:
 
 ```bash
 docker run --rm --network <netz> -e DB_HOST=db -e DB_PASS=... \
+  avefi-importer:worker npm run migrate
+docker run --rm --network <netz> -e DB_HOST=db -e DB_PASS=... \
   -e SEED_EMAIL=admin@example.org avefi-importer:worker npm run seed
 ```
+
+Im Compose-Aufbau ist das nicht noetig, dort legt PostgreSQL das Schema beim
+ersten Start aus `db/schema.sql` an.
 
 Weitere Konten legt die Nutzerverwaltung in der Oberflaeche an; sie erzeugt
 Einmalpasswoerter, die genau einmal in der Antwort erscheinen.

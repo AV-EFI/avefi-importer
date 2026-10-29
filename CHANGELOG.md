@@ -106,6 +106,13 @@ Herauslösen des großen Blatts so schnell wie mit `exceljs` (gut 3 Sekunden),
 Speicher 129 statt 168 MB. Beim Herauslösen wird nur noch das gewählte Blatt
 gelesen; `exceljs` musste die Mappe bis zum Ende durchlaufen.
 
+### Nebenbei
+
+* `deployment.md`, „Initialisierung": Wer den Seed mit den Abbildern aus dem
+  Auslieferungsbau gegen eine leere Datenbank laufen lässt, braucht vorher
+  `npm run migrate`. Beim Durchspielen aufgefallen; die Anleitung vom 28.10.
+  sagte das nicht.
+
 ### Offen geblieben
 
 * Die npm-Meldungen zu `glob@10` (über Nuxt) und `vue-i18n@10` (über
