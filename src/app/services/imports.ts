@@ -56,7 +56,7 @@ export function importsService(): {
     standPfad: () => api('/imports/status'),
     // Faellt die Abfrage aus, bleibt die Anzeige stehen statt zu blinken:
     // Der Stand wird im Takt geholt, ein Aussetzer ist kein Ereignis.
-    stand: <T>() => $fetch(api('/imports/status')).then((d) => d as T).catch(() => null),
+    stand: <T>() => apiFetch<T>(api('/imports/status')).catch(() => null),
     einerPfad: (id) => api(`/imports/${id}`),
     berichtPfad: (id) => api(`/imports/${id}/report`),
     datensaetzePfad: (id) => api(`/imports/${id}/records`),
@@ -67,11 +67,11 @@ export function importsService(): {
     // Der Upload laeuft ueber XMLHttpRequest, weil nur der einen Fortschritt
     // meldet; deshalb hier nur die Adresse.
     hochladenPfad: (dateiname) => api(`/imports/upload?name=${encodeURIComponent(dateiname)}`),
-    loeschen: (id) => $fetch(api(`/imports/${id}`), { method: 'DELETE' }),
-    benennen: (id, label) => $fetch(api(`/imports/${id}`), { method: 'PATCH', body: { label } }),
-    neuKonvertieren: (id) => $fetch(api(`/imports/${id}/reconvert`), { method: 'POST' }),
-    vonAdresse: (url) => $fetch(api('/imports/url'), { method: 'POST', body: { url } }),
+    loeschen: (id) => apiFetch(api(`/imports/${id}`), { method: 'DELETE' }),
+    benennen: (id, label) => apiFetch(api(`/imports/${id}`), { method: 'PATCH', body: { label } }),
+    neuKonvertieren: (id) => apiFetch(api(`/imports/${id}/reconvert`), { method: 'POST' }),
+    vonAdresse: (url) => apiFetch(api('/imports/url'), { method: 'POST', body: { url } }),
     blaetterWaehlen: (id, sheets) =>
-      $fetch<BlattAuswahlAntwort>(api(`/imports/${id}/sheets`), { method: 'POST', body: { sheets } })
+      apiFetch<BlattAuswahlAntwort>(api(`/imports/${id}/sheets`), { method: 'POST', body: { sheets } })
   }
 }

@@ -27,12 +27,12 @@ export function useAuth() {
   }
 
   async function login(email: string, password: string) {
-    await $fetch(api('/auth/login'), { method: 'POST', body: { email, password } })
+    await apiFetch(api('/auth/login'), { method: 'POST', body: { email, password } })
     await refresh()
   }
 
   async function logout() {
-    await $fetch(api('/auth/logout'), { method: 'POST' }).catch(() => {})
+    await apiFetch(api('/auth/logout'), { method: 'POST' }).catch(() => {})
     user.value = null
     await navigateTo('/login')
   }
