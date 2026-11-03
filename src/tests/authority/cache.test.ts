@@ -80,8 +80,15 @@ describe('Zwischenspeicher in der Datenbank', () => {
     // PHP-Stand, davon 17 mit ID. Diese festgeschriebenen Nicht-Treffer duerfen
     // die neue Vergleichsregel nicht aushebeln.
     expect(AUTHORITY_CACHE_GENERATION).toBeGreaterThan(1)
-    expect(cacheSourceColumn('gnd')).toBe('gnd/v2')
+    expect(cacheSourceColumn('gnd')).toBe(`gnd/v${AUTHORITY_CACHE_GENERATION}`)
+    expect(cacheSourceColumn('gnd', 2)).toBe('gnd/v2')
     expect(cacheSourceColumn('gnd', 1)).toBe('gnd')
+  })
+
+  it('liest nach dem Abgleich vom 03.11.2026 nicht mehr unter v2 (#38)', () => {
+    // Unter v2 liegen fuer VIAF-Namen mit Lebensdaten Nicht-Treffer und fuer
+    // Wikidata-Personen „mehrdeutig“. Ohne neue Generation blieben sie stehen.
+    expect(AUTHORITY_CACHE_GENERATION).toBeGreaterThanOrEqual(3)
   })
 
   it('schreibt mit ON CONFLICT, damit ein zweiter Lauf nicht scheitert', async () => {

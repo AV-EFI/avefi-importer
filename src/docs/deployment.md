@@ -311,16 +311,21 @@ zur Laufzeit uebersetzt. Deshalb steht `tsx` unter `dependencies`. Er liest
 beim Start `db/schema.sql` von der Platte; die Weboberflaeche hat das Schema im
 Bundle. Dasselbe Abbild fuehrt auch `npm run seed` und `npm run migrate` aus.
 
-Start beider Abbilder, hier mit Docker; mit Podman genauso:
+Start beider Abbilder, hier mit Docker; mit Podman genauso. Alle Container
+brauchen ein **gemeinsames Netz**: Im Standardnetz von Docker loesen
+Containernamen nicht auf, `efi-conv:8000` und `db` waeren dort unbekannt.
 
 ```bash
-docker run -d --name avefi-web \
+docker network create avefi
+# PostgreSQL als `db` und efi-conv als `efi-conv` ebenfalls mit --network avefi starten.
+
+docker run -d --name avefi-web --network avefi \
   -e DB_HOST=db -e DB_PASS=... -e SESSION_SECRET=... \
   -e FILES_PATH=/mnt/files -e EFI_CONV_URL=http://efi-conv:8000 \
   -v avefi_files:/mnt/files \
   avefi-importer:web
 
-docker run -d --name avefi-worker \
+docker run -d --name avefi-worker --network avefi \
   -e DB_HOST=db -e DB_PASS=... \
   -e FILES_PATH=/mnt/files -e EFI_CONV_URL=http://efi-conv:8000 \
   -v avefi_files:/mnt/files \
@@ -328,7 +333,34 @@ docker run -d --name avefi-worker \
 ```
 
 Beide brauchen **dasselbe Dateiverzeichnis** (`FILES_PATH`): Die Oberflaeche legt
-Uploads ab, der Worker liest sie und schreibt `avefi.v1.json` daneben. Der
+Uploads ab, der Worker liest sie und schreibt `avefi.v1.json` daneben.
+
+Der Worker hat keine Adresse; die Oberflaeche ruft ihn nie auf, sie legt
+Auftraege in die Tabelle `worker_jobs`. Was er braucht, muss deshalb **am Worker
+selbst** stehen, nicht nur an `web`: `DB_*`, `FILES_PATH`, `EFI_CONV_URL` (er
+prueft beim Konvertieren) und `AUTHORITY_ENABLED`/`AUTHORITY_LIMIT` (siehe
+„Normdaten in beiden Containern"). Fehlt `EFI_CONV_URL`, nimmt er
+`http://efi-conv:8000`; das muss dann im Netz des Workers aufloesen.
+
+Beim Start schreibt der Worker beides ins Log:
+
+```text
+[worker] Pruefdienst unter http://efi-conv:8000 erreichbar, Schema …
+[worker] Normdaten nachschlagen: aus (AUTHORITY_ENABLED).
+```
+
+Ist der Pruefdienst nicht erreichbar, steht dort der Grund, etwa
+`Name des Dienstes nicht auflösbar (ENOTFOUND)` oder
+`Verbindung abgelehnt (ECONNREFUSED)`. Der Worker laeuft trotzdem weiter und
+erzeugt Dateien, nur ungeprueft; jeder Fehlschlag steht zusaetzlich als Zeile
+`[pruefung] …` im Log. Der Pruefbericht nennt die Fehlerart, aber nicht die
+Adresse des Dienstes. Das `GET /health` im Log von efi-conv ist dessen eigener
+Healthcheck gegen `127.0.0.1` und sagt nichts darueber, ob der Worker ihn
+erreicht. Pruefen laesst sich das im Worker-Container:
+
+```bash
+docker exec avefi-worker node -e 'fetch((process.env.EFI_CONV_URL||"http://efi-conv:8000")+"/health").then(r=>r.text()).then(console.log,e=>console.log(e.message,e.cause?.code))'
+``` Der
 Validierungsdienst (`efi-conv/Dockerfile`) und PostgreSQL 16 laufen wie im
 Entwicklungsaufbau.
 
@@ -368,7 +400,7 @@ Falle: Der Worker las damals nur die Namen ohne Praefix und fiel bei reiner
 | `DB_PASS` / `NUXT_DB_PASS` | ja | `avefi` | Passwort. Die Vorgabe ist ein Entwicklungswert und gehoert ersetzt. |
 | `SESSION_SECRET` / `NUXT_SESSION_SECRET` | ja | `entwicklung-nur-lokal-aendern` | Schluessel der verschluesselten Sitzungscookies. Mindestens 32 Zeichen; kuerzere Werte werden aufgefuellt, ohne dadurch sicherer zu werden. Wechselt der Wert, sind alle Sitzungen ungueltig. |
 | `FILES_PATH` | nein | `/mnt/files` | Ablage der Uploads und Ergebnisdateien. Muss beschreibbar sein. |
-| `EFI_CONV_URL` | nein | `http://efi-conv:8000` | Adresse des Validierungsdienstes. Ist er nicht erreichbar, wird die Datei erzeugt, der Bericht vermerkt aber ausdruecklich, dass nicht geprueft wurde. |
+| `EFI_CONV_URL` | nein | `http://efi-conv:8000` | Adresse des Validierungsdienstes, in `web` **und** im Worker. Ist er nicht erreichbar, wird die Datei erzeugt, der Bericht vermerkt aber ausdruecklich, dass nicht geprueft wurde, und nennt die Fehlerart. |
 | `WORKER_MAX_UPTIME` | nein | `600`, im Abbild `worker` `0` | Sekunden bis zur Selbstbeendigung des Workers; `0` heisst keine Hoechstlaufzeit. Unbrauchbare Angaben fallen mit Warnung auf 600 zurueck. Nur im `worker`-Container sinnvoll. |
 | `AUTHORITY_ENABLED` | nein | aus | Normdatenanreicherung. Wahr bei `1`, `true`, `ja`, `on`. Vertraglich nicht geschuldet. **In `web` UND `worker` gleich setzen** — siehe unten. |
 | `AUTHORITY_LIMIT` | nein | `500` | Obergrenze der frischen Nachschlagevorgaenge je Konvertierung. Unbrauchbare Angaben fallen auf 500 zurueck. Ebenfalls in beiden Containern gleich setzen. |
@@ -410,8 +442,13 @@ Hinweis in der Pruefleiste; beim naechsten Durchlauf ist es aus dem
 Zwischenspeicher da, denn auch Nicht-Treffer werden dort abgelegt.
 
 Ist die Anreicherung aus, laeuft alles unveraendert durch — nur ohne
-Normdaten-IDs. Laender- und Sprachtabellen liegen im Programm und brauchen kein
-Netz; sie wirken immer.
+Normdaten-IDs. Pruefbericht und Pruefleiste des Editors sagen das je Spalte mit
+einem Normdatenschritt (Meldung `authority.disabled`); bis zum 03.11.2026
+geschah es stumm, und die Konverter sahen aus wie defekt (#38). Laender- und
+Sprachtabellen liegen im Programm und brauchen kein Netz; sie wirken immer.
+Die Laendertabelle fuehrt nur GND-Nummern: Hinter „Land normalisieren" steht
+deshalb immer eine GND-ID, gleich welche Quelle ein Normdatenschritt danach
+befragt.
 
 ## Zwischenspeicherung
 

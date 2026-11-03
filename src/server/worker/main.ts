@@ -14,6 +14,8 @@ import { schemaAnwenden, schemaAutomatisch, schemaVonPlatte } from '../db/schema
 import { claim, complete, fail } from './queue'
 import { beschreibung, hoechstlaufzeit } from './laufzeit'
 import { setStatus } from '../lib/imports'
+import { baseUrl, pruefdienstStatus } from './validate'
+import { authorityEnabledFromEnv } from '../lib/authority/resolve'
 import * as download from './jobs/download'
 import * as detect from './jobs/detect'
 import * as convert from './jobs/convert'
@@ -60,6 +62,22 @@ if (schemaAutomatisch()) {
     console.error('[worker] Schema fehlgeschlagen, Start abgebrochen:', e instanceof Error ? e.message : e)
     process.exit(1)
   }
+}
+
+// Erreichbarkeit des Pruefdienstes und Normdatenschalter einmal beim Start
+// melden. Beides blockiert nicht: Ohne Pruefdienst wird weiter konvertiert,
+// nur ungeprueft. Anlass #38/#39 (03.11.2026): Ein falsch angebundener
+// Pruefdienst und ein ausgeschalteter Normdatenschalter waren nur in der
+// Oberflaeche zu erkennen, nicht in `docker logs`.
+{
+  const status = await pruefdienstStatus()
+  if (status.erreichbar) {
+    console.log(`[worker] Pruefdienst unter ${baseUrl()} erreichbar, Schema ${status.version ?? 'unbekannt'}.`)
+  } else {
+    const roh = status.roh === null ? '' : ` [${status.roh}]`
+    console.warn(`[worker] Pruefdienst unter ${baseUrl()} nicht erreichbar: ${status.grund}${roh}. Konvertierungen werden erzeugt, aber nicht geprueft. EFI_CONV_URL pruefen.`)
+  }
+  console.log(`[worker] Normdaten nachschlagen: ${authorityEnabledFromEnv() ? 'ein' : 'aus (AUTHORITY_ENABLED)'}.`)
 }
 
 /** Fuehrt einen Auftrag aus und pflegt seinen Zustand. */

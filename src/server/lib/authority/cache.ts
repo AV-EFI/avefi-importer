@@ -42,8 +42,11 @@ export function cacheKey(source: string, kind: string, queryNorm: string): strin
  * hoch, und alte Ergebnisse werden nicht mehr gelesen.
  *   1 — PHP-Stand: reiner Zeichenvergleich, GND-Personen trafen nie.
  *   2 — Abgleich mit umgedrehter Namensform.
+ *   3 — Lebensdaten ohne zweites Komma (VIAF), Wikidata-Personen ohne
+ *       gleichnamige Nicht-Menschen (#38, 03.11.2026). Unter 2 liegen fuer
+ *       genau diese Faelle Nicht-Treffer und „mehrdeutig“.
  */
-export const AUTHORITY_CACHE_GENERATION = 2
+export const AUTHORITY_CACHE_GENERATION = 3
 
 /** Wert der Spalte source: "gnd" in Generation 1, sonst "gnd/v2". */
 export function cacheSourceColumn(source: string, generation = AUTHORITY_CACHE_GENERATION): string {

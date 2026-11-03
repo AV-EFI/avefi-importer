@@ -930,6 +930,7 @@
     },
     "checkMsg": {
       "authority_ambiguous": "„{value}“ passt auf {n} Normdatensätze. Es wurde keine ID eingetragen. Bitte manuell zuordnen.",
+      "authority_disabled": "Die Normdatenabfrage ist auf diesem Server ausgeschaltet (AUTHORITY_ENABLED). {anzahl} Werte der Spalte „{spalte}“ wurden nicht nachgeschlagen. Bestätigte Zuordnungen und die Länder- und Sprachtabellen wirken trotzdem.",
       "authority_duplicate_source": "Dieselbe Normdatenquelle wird in diesem Zweig zweimal befragt. Die zweite Abfrage liefert dasselbe Ergebnis.",
       "authority_kind_mismatch": "Das Ziel nimmt eine andere Art von Normdatensatz auf als die, nach der gesucht wird. So findet die Abfrage nichts.",
       "authority_limit": "Obergrenze von {grenze} Normdatenabfragen je Import erreicht.",

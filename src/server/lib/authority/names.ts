@@ -35,16 +35,37 @@ export function invertName(label: string): string | null {
 }
 
 /**
+ * Angehaengte Lebensdaten am Ende eines Namens.
+ *
+ * VIAF schreibt sie mit oder ohne Komma und auch an natuerliche Namen:
+ * "Rainer Werner Fassbinder, 1945-1982", "Wim Wenders, 1945-",
+ * "Wolf, Günther 1925-2018". Bis zum 03.11.2026 griff nur der Fall mit zweitem
+ * Komma ("Sielmann, Heinz, 1917-2006"); alle anderen trafen nie (#38).
+ */
+const LEBENSDATEN = /(?:,\s*|\s+)(?:(?:ca|geb|gest|b|d|fl)\.\s*)?-?\d{3,4}\??(?:\s*-\s*(?:\d{3,4}\??)?)?\.?\s*$/iu
+
+/** Der Name ohne angehaengte Lebensdaten, oder null, wenn keine dastehen. */
+export function ohneLebensdaten(label: string): string | null {
+  const kurz = label.replace(LEBENSDATEN, '').trim()
+  return kurz !== '' && kurz !== label.trim() ? kurz : null
+}
+
+/**
  * Alle Formen, in denen ein Name der Quelle mit einer Anfrage verglichen wird:
  * die Vergleichsform des Namens selbst und, falls invertiert geschrieben, die
- * umgedrehte Form.
+ * umgedrehte Form — jeweils auch ohne angehaengte Lebensdaten.
  */
 export function comparableForms(label: string): string[] {
-  const forms = [compareForm(label)]
-  const inverted = invertName(label)
-  if (inverted !== null) {
-    const f = compareForm(inverted)
-    if (!forms.includes(f)) forms.push(f)
+  const forms: string[] = []
+  const add = (s: string | null): void => {
+    if (s === null) return
+    const f = compareForm(s)
+    if (f !== '' && !forms.includes(f)) forms.push(f)
+  }
+  const kurz = ohneLebensdaten(label)
+  for (const name of kurz === null ? [label] : [label, kurz]) {
+    add(name)
+    add(invertName(name))
   }
   return forms
 }

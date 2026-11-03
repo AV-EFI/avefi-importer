@@ -930,6 +930,7 @@
     },
     "checkMsg": {
       "authority_ambiguous": "“{value}” matches {n} authority records. No ID was entered. Please assign it manually.",
+      "authority_disabled": "Authority lookups are switched off on this server (AUTHORITY_ENABLED). {anzahl} values in column “{spalte}” were not looked up. Confirmed matches and the country and language tables still apply.",
       "authority_duplicate_source": "The same authority source is queried twice in this branch. The second lookup returns the same result.",
       "authority_kind_mismatch": "The target takes a different kind of authority record than the one being searched for. The lookup will not find anything.",
       "authority_limit": "The limit of {grenze} authority lookups per import has been reached.",

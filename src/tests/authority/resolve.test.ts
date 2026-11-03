@@ -116,6 +116,37 @@ describe('Anreicherung ist standardmaessig aus', () => {
     expect(r.resolve('Heinz Sielmann', 'gnd', 'person')).toBeNull()
   })
 
+  // #38 (03.11.2026): Bis dahin blieb der Bericht bei ausgeschaltetem Schalter
+  // leer, und die Konverter sahen aus wie defekt.
+  it('meldet den ausgeschalteten Schalter einmal je Spalte, mit Anzahl', async () => {
+    const r = await resolveAuthorities([
+      { column: 'Regie', source: 'gnd', kind: 'person', values: ['Heinz Sielmann', 'Günther Wolf'] },
+      { column: 'Regie', source: 'wikidata', kind: 'person', values: ['Heinz Sielmann'] },
+      { column: 'Land', source: 'wikidata', kind: 'place', values: ['Deutschland'] }
+    ], { fetchJson: verbotenerNetzzugriff })
+
+    const meldungen = r.issues.filter((i) => i.code === 'authority.disabled')
+    expect(meldungen.map((i) => [i.sourceField, i.params?.['anzahl'], i.severity])).toEqual([
+      ['Regie', 3, 'warning'],
+      ['Land', 1, 'warning']
+    ])
+  })
+
+  it('meldet nichts, was der Zwischenspeicher beantwortet', async () => {
+    const cache = memoryAuthorityCache()
+    await cache.put('gnd', 'person', compareForm('Heinz Sielmann'), {
+      id: '118614355', label: 'Sielmann, Heinz', note: '', ambiguous: false, candidates: []
+    })
+    const r = await resolveAuthorities(bedarf('Regie', ['Heinz Sielmann']), { cache, fetchJson: verbotenerNetzzugriff })
+    expect(r.issues.filter((i) => i.code === 'authority.disabled')).toEqual([])
+  })
+
+  it('meldet nichts, wenn der Schalter an ist', async () => {
+    const fetchJson = stubFetch({ 'lobid.org': gndAntwort([]) })
+    const r = await resolveAuthorities(bedarf('Regie', ['Niemand Bekanntes']), { ...an, fetchJson })
+    expect(r.issues.filter((i) => i.code === 'authority.disabled')).toEqual([])
+  })
+
   it('authorityEnabledFromEnv liest die Umgebung, Standard ist aus', () => {
     expect(authorityEnabledFromEnv({})).toBe(false)
     expect(authorityEnabledFromEnv({ AUTHORITY_ENABLED: '0' })).toBe(false)

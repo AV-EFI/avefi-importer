@@ -41,9 +41,11 @@ WORKDIR /app
 RUN apk update && apk add --no-cache tini && rm -rf /var/cache/apk/* && test -x /sbin/tini
 ENV NODE_ENV=production
 COPY --from=build /app/.output /app/.output
-# Die Oberflaechenbeschreibungen werden zur Laufzeit von der Platte gelesen
-# (/dokumentation/oberflaeche). Ohne sie bliebe die Seite leer.
-COPY --from=build /app/docs/oberflaeche /app/docs/oberflaeche
+# Die Doku-Rubriken (/dokumentation/handbuch, /dokumentation/oberflaeche)
+# werden zur Laufzeit von der Platte gelesen. Kopiert wird das ganze docs/,
+# damit eine neue Rubrik nicht wieder nur im Entwicklungsaufbau funktioniert
+# (#39: das Handbuch fehlte und antwortete mit 500).
+COPY --from=build /app/docs /app/docs
 EXPOSE 3000
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", ".output/server/index.mjs"]

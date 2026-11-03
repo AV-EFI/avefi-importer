@@ -388,6 +388,7 @@
       "dangling_reference": "Ein Satz verweist auf einen anderen, den die Lieferung nicht enthält. Meist fehlt das Werk zur Manifestation oder das Exemplar zum Werk, etwa weil die zugeordnete Spalte in dieser Zeile leer war.",
       "no_items_associated": "Zu dieser Manifestation gehört kein Exemplar. AVefi verlangt zu jeder Manifestation mindestens eines; ohne Exemplar wird die Lieferung abgelehnt.",
       "authority_ambiguous": "Der Name passt auf mehrere Normdatensätze. Der Importer trägt bewusst keine ID ein. Über die Spalte lässt sich die Normdatenquelle einschränken; welcher Satz gemeint ist, wählst du im Datensatz-Editor unter „same_as“.",
+      "authority_disabled": "Die Konverter „Normdaten nachschlagen“ fragen nur, wenn der Betreiber AUTHORITY_ENABLED in der Weboberfläche und im Worker einschaltet. Bis dahin lassen sich Treffer im Zuordnungseditor von Hand suchen und bestätigen; bestätigte Zuordnungen greifen auch ohne den Schalter.",
       "schema": "Der Wert passt nicht zu dem, was das AVefi-Schema an dieser Stelle erlaubt. Oft hilft ein Konverter in der Zuordnung: „date“ für Datumsangaben, „duration“ für Laufzeiten, „number“ für Zahlen.",
       "missing_identifier": "Der Satz hat keine Kennung. Ohne has_identifier lässt sich später kein PID vergeben. In der Zuordnung muss eine Spalte auf eine Kennung zeigen, oder ein Festwert muss sie liefern.",
       "validation_unavailable": "Der Prüfdienst war nicht erreichbar. Die Datei wurde erzeugt, aber nicht geprüft — über die Schemakonformität sagt dieser Bericht also nichts. „Neu konvertieren“ startet die Prüfung erneut."
@@ -452,8 +453,8 @@
       "identifier_not_unique__records": "Die Kennung {key} ist nicht eindeutig, sie kommt auch in Prüfsatz {stellen} vor. | Die Kennung {key} ist nicht eindeutig, sie kommt auch in den Prüfsätzen {stellen} vor.",
       "dangling_reference": "Der Verweis {ref} zeigt auf keinen Datensatz dieser Lieferung.",
       "no_items_associated": "Zu {category} {key} gehört kein Exemplar.",
-      "validation_unavailable__schema": "Die Prüfung gegen das AVefi-Schema war nicht möglich. Die Datei wurde erzeugt, aber nicht geprüft.",
-      "validation_unavailable__crossref": "Die satzübergreifende Prüfung war nicht möglich. Kennungen und Verweise wurden nicht geprüft.",
+      "validation_unavailable__schema": "Die Prüfung gegen das AVefi-Schema war nicht möglich. Die Datei wurde erzeugt, aber nicht geprüft. Die Ursache steht unter „Wortlaut des Prüfwerkzeugs“.",
+      "validation_unavailable__crossref": "Die satzübergreifende Prüfung war nicht möglich. Kennungen und Verweise wurden nicht geprüft. Die Ursache steht unter „Wortlaut des Prüfwerkzeugs“.",
       "missing_title": "Der Datensatz hat keinen Titel. AVefi verlangt einen Haupttitel.",
       "item_without_manifestation": "Zu diesem Exemplar gibt es keine Manifestation; die Zuordnung is_item_of bleibt leer.",
       "mapping_failed": "Die Zeile konnte nicht nach AVefi umgesetzt werden.",

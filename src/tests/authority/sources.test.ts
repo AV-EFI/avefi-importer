@@ -3,7 +3,9 @@
 import { describe, expect, it } from 'vitest'
 import { SOURCE_NAME_FORM } from '../../server/lib/authority/types.js'
 import { gndCategory, gndSearchUrl, parseGnd, searchGnd } from '../../server/lib/authority/gnd.js'
-import { parseWikidata, searchWikidata, wikidataSearchUrl } from '../../server/lib/authority/wikidata.js'
+import {
+  parseWikidata, parseWikidataTreffer, searchWikidata, wikidataNichtMenschenUrl, wikidataSearchUrl
+} from '../../server/lib/authority/wikidata.js'
 import { parseViaf, searchViaf, viafSearchUrl } from '../../server/lib/authority/viaf.js'
 import { gndAntwort, stubFetch, viafAntwort, wikidataAntwort } from './fixtures.js'
 
@@ -83,6 +85,65 @@ describe('Wikidata', () => {
 
   it('fragt auf Deutsch an', () => {
     expect(wikidataSearchUrl('Sielmann')).toContain('language=de')
+  })
+
+  // #38 (03.11.2026), Antworten vom selben Tag nachgebildet: Zu "Rainer Werner
+  // Fassbinder" fuehrt Wikidata auch einen gleichnamigen Film.
+  describe('Personen ohne gleichnamige Nicht-Menschen', () => {
+    const suche = wikidataAntwort([
+      { id: 'Q44426', label: 'Rainer Werner Fassbinder', description: 'deutscher Filmregisseur' },
+      { id: 'Q33561976', label: 'Rainer Werner Fassbinder', description: 'Film von Christian Braad Thomsen (1975)' }
+    ])
+    const keineMenschen = { query: { search: [{ title: 'Q33561976' }, { title: 'Q125960580' }] } }
+    const zweiQuellen = () => stubFetch((url) => (url.includes('list=search') ? keineMenschen : suche))
+
+    it('streicht, was der Suchindex als Nicht-Menschen kennt', async () => {
+      const fetchJson = zweiQuellen()
+      const treffer = await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)
+      expect(treffer.map((c) => c.id)).toEqual(['Q44426'])
+      expect(fetchJson.calls).toHaveLength(2)
+    })
+
+    it('fragt die Nicht-Menschen ab, nicht die Menschen', () => {
+      expect(new URL(wikidataNichtMenschenUrl('Rainer Werner Fassbinder')).searchParams.get('srsearch'))
+        .toBe('-haswbstatement:P31=Q5 inlabel:"Rainer Werner Fassbinder"')
+    })
+
+    it('laesst stehen, was der Suchindex nicht kennt — lieber mehrdeutig als falsch eindeutig', async () => {
+      const fetchJson = stubFetch((url) => (url.includes('list=search') ? { query: { search: [] } } : suche))
+      expect((await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)).map((c) => c.id))
+        .toEqual(['Q44426', 'Q33561976'])
+    })
+
+    it('behaelt das ungefilterte Ergebnis, wenn der Suchindex ausfaellt', async () => {
+      const fetchJson = stubFetch((url) => {
+        if (url.includes('list=search')) throw new Error('Wikidata nicht erreichbar')
+        return suche
+      })
+      expect(await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)).toHaveLength(2)
+    })
+
+    it('filtert nur bei Personen — bei Orten hilft der Filter nicht', async () => {
+      const fetchJson = zweiQuellen()
+      expect(await searchWikidata('Rainer Werner Fassbinder', 'place', fetchJson)).toHaveLength(2)
+      expect(fetchJson.calls).toHaveLength(1)
+    })
+
+    it('fragt nicht nach, wenn es nichts zu filtern gibt', async () => {
+      const fetchJson = stubFetch((url) => (url.includes('list=search') ? keineMenschen : { search: [] }))
+      expect(await searchWikidata('Niemand', 'person', fetchJson)).toEqual([])
+      expect(fetchJson.calls).toHaveLength(1)
+    })
+
+    it('liest nur gueltige Kennungen aus der Trefferliste', () => {
+      expect([...parseWikidataTreffer({ query: { search: [{ title: 'Q1' }, { title: 'Property:P31' }, {}] } })])
+        .toEqual(['Q1'])
+    })
+
+    it('nimmt Anfuehrungszeichen aus der Anfrage, damit die Suchsyntax heil bleibt', () => {
+      expect(new URL(wikidataNichtMenschenUrl('Der "Kaiser" Beckenbauer')).searchParams.get('srsearch'))
+        .toBe('-haswbstatement:P31=Q5 inlabel:"Der Kaiser Beckenbauer"')
+    })
   })
 })
 

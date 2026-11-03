@@ -12,7 +12,7 @@
  * Verlust still ist: Nichts schlaegt fehl, solange irgendwo noch ein altes
  * node_modules liegt.
  */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -82,6 +82,24 @@ describe('Dockerfile', () => {
 
   it('laesst die Weboberflaeche bei node .output/server/index.mjs', () => {
     expect(stufe(dockerfile, 'production')).toMatch(/CMD \["node", "\.output\/server\/index\.mjs"\]/)
+  })
+
+  // Anlass am 03.11.2026 (#39, Elias Oltmanns): /api/doku/handbuch antwortete
+  // im Produktivabbild mit 500, weil nur docs/oberflaeche kopiert wurde. Auf
+  // dem Testserver ist der Code eingehaengt, dort fehlt nie etwas.
+  it('nimmt jede Doku-Rubrik ins Produktivabbild mit', () => {
+    const production = stufe(dockerfile, 'production')
+    const ganz = /^COPY --from=build \/app\/docs \/app\/docs\s*$/m.test(production)
+    const rubriken = readdirSync(join(wurzel, 'server/lib/doku'))
+      .filter((datei) => datei.endsWith('.ts'))
+      .flatMap((datei) => [...lies(`server/lib/doku/${datei}`).matchAll(/ordnername: '([^']+)'/g)])
+      .map((treffer) => treffer[1]!)
+    expect(rubriken.length, 'gefundene Rubriken').toBeGreaterThanOrEqual(2)
+    for (const ordner of rubriken) {
+      expect(existsSync(join(wurzel, 'docs', ordner)), `docs/${ordner} im Repo`).toBe(true)
+      const einzeln = new RegExp(`^COPY --from=build /app/docs/${ordner} /app/docs/${ordner}\\s*$`, 'm').test(production)
+      expect(ganz || einzeln, `docs/${ordner} in der Stufe production`).toBe(true)
+    }
   })
 
   it('bricht den Bau ab, wenn tini fehlt', () => {

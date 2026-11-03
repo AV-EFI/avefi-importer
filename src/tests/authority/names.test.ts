@@ -7,8 +7,39 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  comparableForms, compareForm, foldUmlauts, invertName, nameMatches, toInvertedForm
+  comparableForms, compareForm, foldUmlauts, invertName, nameMatches, ohneLebensdaten, toInvertedForm
 } from '../../server/lib/authority/names.js'
+
+// #38 (03.11.2026): Schreibweisen, die VIAF AutoSuggest an diesem Tag lieferte.
+describe('Lebensdaten in VIAF-Namen', () => {
+  it.each([
+    ['Rainer Werner Fassbinder, 1945-1982', 'rainer werner fassbinder'],
+    ['Fassbinder, Rainer Werner, 1945-1982', 'rainer werner fassbinder'],
+    ['Wim Wenders, 1945-', 'wim wenders'],
+    ['Wenders, Wim, 1945-', 'wim wenders'],
+    ['Wolf, Günther 1925-2018', 'günther wolf'],
+    ['Sielmann, Heinz, 1917-2006', 'heinz sielmann']
+  ])('"%s" passt auf "%s"', (label, anfrage) => {
+    expect(nameMatches(label, anfrage)).toBe(true)
+  })
+
+  it('schneidet auch Vorsaetze und Fragezeichen ab', () => {
+    expect(ohneLebensdaten('Müller, Hans, ca. 1900-1950')).toBe('Müller, Hans')
+    expect(ohneLebensdaten('Schulz, Erika, geb. 1950')).toBe('Schulz, Erika')
+    expect(ohneLebensdaten('Otto, 912?-973')).toBe('Otto')
+  })
+
+  it('laesst Namen ohne Lebensdaten und reine Zahlen stehen', () => {
+    expect(ohneLebensdaten('Heinz Sielmann')).toBeNull()
+    expect(ohneLebensdaten('1982')).toBeNull()
+    expect(ohneLebensdaten('Berlin, Deutschland')).toBeNull()
+  })
+
+  it('macht aus einem anderen Namen keinen Treffer', () => {
+    expect(nameMatches('Wolf, Günther J., 1939-', 'günther wolf')).toBe(false)
+    expect(nameMatches('Rainer Werner Fassbinder Foundation', 'rainer werner fassbinder')).toBe(false)
+  })
+})
 
 describe('invertName', () => {
   it('dreht "Nachname, Vorname" um', () => {
