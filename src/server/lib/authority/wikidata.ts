@@ -10,9 +10,22 @@
  * Trotzdem laeuft der Abgleich auch hier ueber nameMatches(): Einzelne Labels
  * sind aus Katalogen importiert und stehen doch invertiert da.
  *
- * Ein Typfilter nach Art des Datensatzes ist nicht moeglich — wbsearchentities
- * liefert nur Label und Beschreibung. Die Beschreibung ("deutscher Tierfilmer")
- * bleibt deshalb das einzige Unterscheidungsmerkmal und wird mitgefuehrt.
+ * wbsearchentities liefert nur Label und Beschreibung, keinen Typ. Bei
+ * Personen ist das zu wenig: Zu "Rainer Werner Fassbinder" gibt es auch einen
+ * gleichnamigen Film, zu "Ingrid Caven" drei weitere Eintraege, und der
+ * Abgleich liess jeden solchen Namen als mehrdeutig offen (#38, 03.11.2026).
+ *
+ * Deshalb fragt eine zweite Anfrage den Suchindex nach den gleichnamigen
+ * Eintraegen, die *keine* Menschen sind (`-haswbstatement:P31=Q5`), und genau
+ * diese fallen heraus. Andersherum — nur die Menschen behalten — waere es
+ * gefaehrlich: Der Suchindex vergleicht anders als wbsearchentities, und ein
+ * Mensch, den er nicht findet, fiele heraus. Aus einem mehrdeutigen Namen
+ * wuerde so still ein eindeutiger. In dieser Richtung kann eine Luecke des
+ * Index nur bewirken, dass ein Name mehrdeutig bleibt.
+ *
+ * Bei Orten hilft ein solcher Filter nicht: Auch ein versenktes Dampfschiff
+ * namens "Deutschland" hat Koordinaten, und "Berlin" gibt es vielfach. Andere
+ * Arten bleiben ungefiltert.
  */
 
 import type { AuthorityCandidate, AuthorityKind } from './types.js'
@@ -36,6 +49,31 @@ export function wikidataSearchUrl(q: string, size: number = WIKIDATA_RESULT_SIZE
     search: q
   })
   return `${WIKIDATA_API}?${p.toString()}`
+}
+
+/** Gleichnamige Eintraege, die keine Menschen sind, ueber den Suchindex. */
+export function wikidataNichtMenschenUrl(q: string): string {
+  const name = q.replace(/["\\]/g, ' ').replace(/\s+/g, ' ').trim()
+  const p = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    list: 'search',
+    srnamespace: '0',
+    srlimit: '50',
+    srprop: '',
+    srsearch: `-haswbstatement:P31=Q5 inlabel:"${name}"`
+  })
+  return `${WIKIDATA_API}?${p.toString()}`
+}
+
+/** Kennungen aus einer Antwort von list=search. */
+export function parseWikidataTreffer(payload: unknown): Set<string> {
+  const ids = new Set<string>()
+  for (const raw of asArray(asRecord(asRecord(payload)['query'])['search'])) {
+    const id = asText(asRecord(raw)['title'])
+    if (WIKIDATA_ID_PATTERN.test(id)) ids.add(id)
+  }
+  return ids
 }
 
 export function parseWikidata(payload: unknown, _kind: AuthorityKind): AuthorityCandidate[] {
@@ -65,5 +103,15 @@ export async function searchWikidata(
   kind: AuthorityKind,
   fetchJson: FetchJson
 ): Promise<AuthorityCandidate[]> {
-  return parseWikidata(await fetchJson(wikidataSearchUrl(q)), kind)
+  const out = parseWikidata(await fetchJson(wikidataSearchUrl(q)), kind)
+  if (kind !== 'person' || out.length === 0) return out
+
+  // Schlaegt die zweite Anfrage fehl, bleibt es beim ungefilterten Ergebnis:
+  // Das ist der alte Stand und schlimmstenfalls mehrdeutig, nie falsch.
+  try {
+    const keineMenschen = parseWikidataTreffer(await fetchJson(wikidataNichtMenschenUrl(q)))
+    return out.filter((c) => !keineMenschen.has(c.id))
+  } catch {
+    return out
+  }
 }

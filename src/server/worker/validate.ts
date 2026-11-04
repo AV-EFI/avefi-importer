@@ -21,8 +21,79 @@ export interface CheckResult extends CheckResponse {
   unavailable: string | null
 }
 
-function baseUrl(): string {
+/** Adresse des Pruefdienstes. Gehoert ins Log des Betreibers, nicht in den Pruefbericht. */
+export function baseUrl(): string {
   return (process.env.EFI_CONV_URL || 'http://efi-conv:8000').replace(/\/+$/, '')
+}
+
+/**
+ * Lesbare Namen fuer die Fehlercodes, die Node bei Netzfehlern liefert.
+ *
+ * Anlass ist #39 (03.11.2026): Im Pruefbericht stand nur „fetch failed". So
+ * meldet Node jeden Netzfehler; der eigentliche Grund steckt in `error.cause`
+ * und ging bis dahin verloren. Ob der Name nicht aufloest oder der Port zu ist,
+ * entscheidet aber, wo der Betreiber suchen muss.
+ */
+const NETZFEHLER: Readonly<Record<string, string>> = {
+  ENOTFOUND: 'Name des Dienstes nicht auflösbar',
+  EAI_AGAIN: 'Namensauflösung vorübergehend gescheitert',
+  ECONNREFUSED: 'Verbindung abgelehnt',
+  ECONNRESET: 'Verbindung abgebrochen',
+  ETIMEDOUT: 'Verbindungsaufbau dauerte zu lange',
+  UND_ERR_CONNECT_TIMEOUT: 'Verbindungsaufbau dauerte zu lange',
+  EHOSTUNREACH: 'Rechner nicht erreichbar',
+  ENETUNREACH: 'Netz nicht erreichbar'
+}
+
+interface MitUrsache { name?: string; message?: string; cause?: { code?: unknown; message?: unknown } }
+
+/**
+ * Ursache eines gescheiterten Aufrufs, fuer den Pruefbericht.
+ *
+ * Bewusst ohne Adresse: Interne Hostnamen gehoeren dem Betreiber, er findet sie
+ * in der Logzeile von {@link meldeUnerreichbar}. Die Fehlerart genuegt der
+ * Nutzerin, um den Fehler zu melden.
+ */
+export function netzGrund(e: unknown, timeoutMs: number): string {
+  const fehler = (typeof e === 'object' && e !== null ? e : {}) as MitUrsache
+  if (fehler.name === 'AbortError' || fehler.name === 'TimeoutError') {
+    return `Zeitüberschreitung: keine Antwort nach ${Math.round(timeoutMs / 1000)} s`
+  }
+  const code = typeof fehler.cause?.code === 'string' ? fehler.cause.code : null
+  if (code !== null) {
+    const text = NETZFEHLER[code]
+    return text === undefined
+      ? `Verbindung zum Prüfdienst fehlgeschlagen (${code})`
+      : `Verbindung zum Prüfdienst fehlgeschlagen: ${text} (${code})`
+  }
+  if (e instanceof Error) return e.message
+  return String(e)
+}
+
+/** Logzeile fuer den Betreiber, mit Adresse und der rohen Meldung von Node. */
+export function meldeUnerreichbar(pfad: string, grund: string, e: unknown): void {
+  const roh = (typeof e === 'object' && e !== null ? (e as MitUrsache).cause?.message : undefined)
+  const zusatz = typeof roh === 'string' && roh !== '' ? ` [${roh}]` : ''
+  console.warn(`[pruefung] ${baseUrl()}${pfad}: ${grund}${zusatz}`)
+}
+
+/** Erreichbarkeit des Pruefdienstes, fuer die Startmeldung des Workers. */
+export async function pruefdienstStatus(
+  timeoutMs = 5_000
+): Promise<{ erreichbar: true; version: string | null } | { erreichbar: false; grund: string; roh: string | null }> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(`${baseUrl()}/health`, { signal: controller.signal })
+    if (!res.ok) return { erreichbar: false, grund: `efi-conv antwortete mit HTTP ${res.status}.`, roh: null }
+    const body = (await res.json().catch(() => ({}))) as { schema?: { version?: string | null } }
+    return { erreichbar: true, version: body.schema?.version ?? null }
+  } catch (e) {
+    const roh = (typeof e === 'object' && e !== null ? (e as MitUrsache).cause?.message : undefined)
+    return { erreichbar: false, grund: netzGrund(e, timeoutMs), roh: typeof roh === 'string' ? roh : null }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** So viele Datensaetze gehen in einer Anfrage an den Dienst. */
@@ -95,7 +166,8 @@ export async function checkRecords(
     try {
       response = await postCheck(slice, sliceMap, timeoutMs)
     } catch (e) {
-      merged.unavailable = e instanceof Error ? e.message : String(e)
+      merged.unavailable = netzGrund(e, timeoutMs)
+      meldeUnerreichbar('/check', merged.unavailable, e)
       merged.issues.push({
         severity: 'warning',
         source: 'schema',
@@ -178,7 +250,8 @@ export async function checkCrossref(
     const antwort = await postCrossref(records.map(querSicht), rowMap, timeoutMs)
     return { issues: antwort.issues.map((i) => ({ source: 'crossref' as const, ...i })), unavailable: null }
   } catch (e) {
-    const grund = e instanceof Error ? e.message : String(e)
+    const grund = netzGrund(e, timeoutMs)
+    meldeUnerreichbar('/crossref', grund, e)
     return {
       issues: [{
         severity: 'warning',

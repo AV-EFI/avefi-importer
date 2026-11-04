@@ -214,6 +214,8 @@ export async function resolveAuthorities(
   const hits = new Map<string, AuthorityHit>()
   let suppressed = 0
   let fetched = 0
+  /** Werte, die nur am ausgeschalteten Schalter scheiterten, je Spalte. */
+  const abgeschaltet = new Map<string, number>()
 
   const note = (text: string, issue?: ValidationIssue): void => {
     if (notes.length < MAX_NOTES) {
@@ -261,6 +263,7 @@ export async function resolveAuthorities(
 
       if (!enabled) {
         stats.skipped++
+        abgeschaltet.set(req.column, (abgeschaltet.get(req.column) ?? 0) + 1)
         continue
       }
       if (fetched >= limit) {
@@ -300,6 +303,20 @@ export async function resolveAuthorities(
     }
   }
 
+  // Anlass #38 (03.11.2026): Bei ausgeschaltetem Schalter blieb der Bericht
+  // leer, und der Konverter sah aus wie defekt. Die Meldung kommt einmal je
+  // Lauf und Spalte, nicht je Wert, mit sourceField, damit der Editor sie an
+  // der Spalte zeigt. Sie geht an `note` vorbei: Gerade sie darf nicht unter
+  // „… weitere Meldungen" verschwinden.
+  const abgeschalteteMeldungen: ValidationIssue[] = []
+  for (const [spalte, anzahl] of abgeschaltet) {
+    notes.push(`Spalte "${spalte}": Normdatenabfrage ausgeschaltet (AUTHORITY_ENABLED) — ${anzahl} Werte nicht nachgeschlagen`)
+    abgeschalteteMeldungen.push({
+      severity: 'warning', code: 'authority.disabled', sourceField: spalte, params: { anzahl, spalte },
+      message: `Die Normdatenabfrage ist ausgeschaltet (AUTHORITY_ENABLED). ${anzahl} Werte der Spalte "${spalte}" wurden nicht nachgeschlagen.`
+    })
+  }
+  issues.unshift(...abgeschalteteMeldungen)
   if (stats.limitReached) {
     note(
       `Obergrenze von ${limit} Normdatenabfragen je Import erreicht — ${stats.skipped} Werte blieben ungeprueft.`,

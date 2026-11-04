@@ -388,6 +388,7 @@
       "dangling_reference": "A record points to another one that the delivery does not contain. Usually the work is missing for a manifestation, or the item for a work, because the mapped column was empty in that row.",
       "no_items_associated": "This manifestation has no item. AVefi requires at least one item per manifestation; without it the delivery is rejected.",
       "authority_ambiguous": "The name matches several authority records. The importer deliberately fills in no ID. The column lets you narrow the authority source; which record is meant you choose in the record editor under “same_as”.",
+      "authority_disabled": "The “Look up authority data” converters only query when the operator switches on AUTHORITY_ENABLED in both the web interface and the worker. Until then, matches can be searched for and confirmed by hand in the mapping editor; confirmed matches apply even without the switch.",
       "schema": "The value does not match what the AVefi schema allows here. A converter in the mapping often helps: “date” for dates, “duration” for running times, “number” for numbers.",
       "missing_identifier": "The record has no identifier. Without has_identifier no PID can be assigned later. In the mapping a column has to point at an identifier, or a fixed value has to supply one.",
       "validation_unavailable": "The validation service could not be reached. The file was produced but not checked — this report says nothing about schema conformance. “Reconvert” starts the check again."
@@ -452,8 +453,8 @@
       "identifier_not_unique__records": "The identifier {key} is not unique; it also appears in checked record {stellen}. | The identifier {key} is not unique; it also appears in checked records {stellen}.",
       "dangling_reference": "The reference {ref} points to no record in this delivery.",
       "no_items_associated": "No item belongs to {category} {key}.",
-      "validation_unavailable__schema": "The check against the AVefi schema was not possible. The file was produced but not checked.",
-      "validation_unavailable__crossref": "The cross-record check was not possible. Identifiers and references were not checked.",
+      "validation_unavailable__schema": "The check against the AVefi schema was not possible. The file was produced but not checked. The cause is listed under “Wording of the checking tool”.",
+      "validation_unavailable__crossref": "The cross-record check was not possible. Identifiers and references were not checked. The cause is listed under “Wording of the checking tool”.",
       "missing_title": "The record has no title. AVefi requires a main title.",
       "item_without_manifestation": "There is no manifestation for this item; is_item_of remains empty.",
       "mapping_failed": "The row could not be converted to AVefi.",

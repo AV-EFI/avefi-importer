@@ -45,7 +45,7 @@ export {
 } from './http.js'
 
 /* ------------------------------------------------------------ Namensformen */
-export { comparableForms, compareForm, foldUmlauts, invertName, nameMatches, toInvertedForm } from './names.js'
+export { comparableForms, compareForm, foldUmlauts, invertName, nameMatches, ohneLebensdaten, toInvertedForm } from './names.js'
 
 /* ----------------------------------------------------------------- Quellen */
 export { GND_SEARCH_URL, gndSearchUrl, parseGnd, searchGnd } from './gnd.js'

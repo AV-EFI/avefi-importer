@@ -7,8 +7,9 @@
  * natuerlich.
  *
  * Zwei Folgen davon:
- *   1. Der Abgleich muss die umgedrehte Form mitpruefen (nameMatches), und die
- *      Lebensdaten hinter dem zweiten Komma werden dabei abgeschnitten.
+ *   1. Der Abgleich muss die umgedrehte Form mitpruefen (nameMatches), und
+ *      angehaengte Lebensdaten werden dabei abgeschnitten — mit oder ohne
+ *      Komma, auch an natuerlich geschriebenen Namen (ohneLebensdaten).
  *   2. AutoSuggest vergleicht am Zeilenanfang. "Heinz Sielmann" findet deshalb
  *      nichts, "Sielmann, Heinz" schon. Bei Personen und Koerperschaften wird
  *      darum zusaetzlich mit der invertierten Anfrage gesucht.

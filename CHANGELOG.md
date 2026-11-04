@@ -30,6 +30,117 @@ GitHub weiter.
 
 ---
 
+## 2026-11-03 — Prüfdienst im Produktivbetrieb, Normdatenkonverter
+
+Anlass: Zwei Meldungen von Luca (#38, #39) vom Test auf `import.av-efi.net`,
+dazu ein Nebenbefund von Elias Oltmanns in #39. Gewährleistung und kostenlose
+Erweiterung, auf dem Branch `fix/pruefdienst-und-normdaten`.
+
+### Prüfdienst nicht erreichbar (#39, Luca; Nebenbefund Elias Oltmanns)
+
+**Gemeldet:** Beide Prüfungen meldeten `validation_unavailable`. efi-conv lief
+und loggte nur `GET /health`, im Log der Weboberfläche stand nichts.
+
+**Ursache:** Bei der TIB eine unvollständige Netzwerkkonfiguration, inzwischen
+von Elias korrigiert. Dass sie so schwer zu finden war, lag an uns:
+
+* Die Prüfung beim Konvertieren macht der **Worker**, nicht `web`. Das stand
+  nirgends dort, wo man es beim Suchen findet.
+* Im Prüfbericht stand nur „fetch failed“. So meldet Node jeden Netzfehler;
+  der Grund (`ENOTFOUND`, `ECONNREFUSED` …) steckt in `error.cause` und ging
+  verloren. Der Worker schrieb außerdem nichts ins Log.
+* Die `docker run`-Beispiele in `docs/deployment.md` ließen ein gemeinsames
+  Netz weg; dort hätte `efi-conv:8000` nie aufgelöst.
+
+**Was daraus wurde:**
+
+* `server/worker/validate.ts`: Der Prüfbericht nennt die Fehlerart, etwa
+  „Verbindung zum Prüfdienst fehlgeschlagen: Name des Dienstes nicht auflösbar
+  (ENOTFOUND)“ oder „Zeitüberschreitung: keine Antwort nach 120 s“, aber
+  bewusst nicht die Adresse des Dienstes. Die steht in einer Zeile
+  `[pruefung] …` im Log, samt roher Meldung von Node.
+* Der Worker prüft beim Start einmal `/health` und schreibt ins Log, ob der
+  Prüfdienst erreichbar ist und ob Normdaten nachgeschlagen werden. Beides
+  blockiert nicht.
+* Der Hinweis im Prüfbericht verweist auf „Wortlaut des Prüfwerkzeugs“, wo die
+  Ursache steht.
+* `docs/deployment.md`: gemeinsames Netz in den Beispielen; welche Variablen
+  der Worker selbst braucht; wie man vom Worker aus prüft.
+
+**Nebenbefund — Handbuch im Produktivabbild (Elias Oltmanns):**
+`/api/doku/handbuch` antwortete mit 500. Die Stufe `production` kopierte nur
+`docs/oberflaeche`, das Handbuch kam als zweite Rubrik später dazu. Auf dem
+Testserver fiel das nie auf, weil dort der Code eingehängt ist. Jetzt wird das
+ganze `docs/` kopiert, und `tests/betrieb/auslieferung.test.ts` hält jede
+registrierte Doku-Rubrik gegen die `COPY`-Zeilen.
+
+### Normdatenkonverter (#38, Luca)
+
+**Gemeldet:** Beim Land immer GND, auch mit Wikidata oder VIAF; bei Personen
+kein Ergebnis mit keinem der drei Konverter; ein Wechsel der Quelle wirkte
+nicht.
+
+**Ursache:** Drei verschiedene Dinge.
+
+1. `AUTHORITY_ENABLED` war bei der TIB aus (Voreinstellung). Dann wird nichts
+   nachgeschlagen — bis heute **ohne jede Meldung**. Elias hat den Schalter
+   eingeschaltet.
+2. Beim Land kommt die GND-Nummer nicht aus einer Abfrage, sondern aus der
+   mitgelieferten Ländertabelle, und die führt nur GND-Nummern.
+3. Auch eingeschaltet trafen Wikidata und VIAF bei Personen fast nie:
+   Wikidata findet zu „Rainer Werner Fassbinder“ auch einen gleichnamigen Film
+   und ließ den Namen als mehrdeutig offen; VIAF hängt Lebensdaten an
+   („Rainer Werner Fassbinder, 1945-1982“), und abgeschnitten wurden sie nur
+   hinter einem zweiten Komma.
+
+**Was daraus wurde:**
+
+* `authority.disabled`: Ist der Schalter aus, meldet der Prüfbericht das je
+  Spalte mit Normdatenschritt als Warnung, mit Anzahl der nicht
+  nachgeschlagenen Werte. Die Meldung trägt die Spalte, die Prüfleiste des
+  Editors zeigt sie also dort, wo der Konverter sitzt. Texte de/en.
+* VIAF: Lebensdaten werden mit und ohne Komma abgeschnitten, auch an natürlich
+  geschriebenen Namen (`ohneLebensdaten` in `server/lib/authority/names.ts`).
+* Wikidata, nur bei Personen: Eine zweite Anfrage an den Suchindex fragt nach
+  gleichnamigen Einträgen, die **keine** Menschen sind
+  (`-haswbstatement:P31=Q5`), und streicht genau diese. Die umgekehrte
+  Richtung — nur Menschen behalten — wäre schneller gebaut, aber gefährlich:
+  Fände der Suchindex einen gleichnamigen Menschen nicht, würde ein
+  mehrdeutiger Name still eindeutig. So kann eine Lücke im Index nur bewirken,
+  dass ein Name mehrdeutig bleibt. Fällt die zweite Anfrage aus, gilt das
+  ungefilterte Ergebnis wie bisher.
+* Zwischenspeicher-Generation 3: Unter 2 liegen für genau diese Fälle
+  Nicht-Treffer und „mehrdeutig“. Alle Werte werden einmal neu nachgeschlagen.
+
+**Nachtest gegen die echten Dienste** (Fassbinder, Schygulla, Caven, Wenders,
+Sielmann, Günther Wolf), alter und neuer Stand am selben Nachmittag: GND
+vorher wie nachher 5 von 6. Wikidata vorher 3 von 6 (Fassbinder und Caven
+mehrdeutig), jetzt 5 von 6. VIAF vorher 2 von 6 (Fassbinder, Wenders und
+Sielmann ohne Treffer), jetzt 5 von 6. Günther Wolf bleibt überall
+mehrdeutig, wie er soll — es gibt mehrere.
+
+### Geprüft
+
+* 750 Tests in 63 Dateien grün (vorher 719), `nuxt typecheck` ohne Befund.
+  Jeder neue Wächter wurde einmal mit abgeschalteter Korrektur rot gesehen.
+* Produktivabbild gebaut: `docs/handbuch` liegt unter `/app/docs`, der Server
+  startet. Den angemeldeten Abruf des Handbuchs habe ich im Abbild nicht
+  gemacht, nur bis zur Anmeldung (401).
+* Startmeldung des Workers auf der Demo im Log.
+
+### Offen geblieben
+
+* **Land mit Wikidata oder VIAF:** Die Ländertabelle kennt nur GND. Wikidata-
+  Kennungen ließen sich in die Tabelle aufnehmen; zurückgestellt, bis klar
+  ist, ob das gebraucht wird. Über Wikidata nachgeschlagen bleibt
+  „Deutschland“ mehrdeutig (Staat, Lied, Kriegsschiff, U-Boot); ein Filter
+  nach Koordinaten hilft nicht, auch versenkte Schiffe haben welche.
+* Wikidata bei Orten, Körperschaften und Schlagworten bleibt ungefiltert.
+* Weboberfläche und Worker haben keinen eigenen Gesundheitsendpunkt; nur
+  efi-conv hat `/health`.
+
+---
+
 ## 2026-10-29, mittags — npm audit: Nuxt 4.6, vue-i18n, zod, undici
 
 Anlass: Beim XLSX-Umbau zeigte `npm audit` 19 betroffene Pakete (10 hoch,
