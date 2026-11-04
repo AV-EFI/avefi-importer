@@ -69,7 +69,7 @@
       "pageTitle": "User management",
       "heading": "User management",
       "crumb": "User management",
-      "lead": "The contract only asks for a simple demo login. This management screen is an extra — it creates accounts, locks them and resets passwords, nothing more.",
+      "lead": "Create accounts and institutions here, lock accounts and reset passwords. Each account only sees the imports of its own institution; mapping profiles are visible to everyone, with your own listed first. An account without an institution cannot import.",
       "create": {
         "heading": "Create a new account",
         "email": "Email",
@@ -161,6 +161,42 @@
         "deleted": "Account “{email}” deleted."
       }
     },
+    "institutions": {
+      "heading": "Institutions",
+      "lead": "Every account belongs to an institution and only sees its imports. Create and rename institutions here.",
+      "create": {
+        "name": "New institution",
+        "submit": "Create",
+        "submitting": "Creating …"
+      },
+      "table": {
+        "caption": "Institutions with the number of their accounts, imports and mapping profiles",
+        "name": "Name",
+        "accounts": "Accounts",
+        "imports": "Imports",
+        "profiles": "Mapping profiles",
+        "action": "Action",
+        "rename": "Rename",
+        "renameLabel": "Rename “{name}”",
+        "deleteLabel": "Delete “{name}”"
+      },
+      "rename": {
+        "label": "New name for “{name}”",
+        "save": "Save",
+        "cancel": "Cancel"
+      },
+      "deleteHint": "Only an institution without accounts, imports and mapping profiles can be deleted. If an institution no longer takes part, lock its accounts.",
+      "confirm": {
+        "deleteTitle": "Delete institution?",
+        "deleteText": "“{name}” will be deleted permanently. Nothing belongs to it any more.",
+        "deleteOk": "Delete"
+      },
+      "done": {
+        "created": "“{name}” has been created.",
+        "renamed": "“{alt}” is now called “{neu}”.",
+        "deleted": "“{name}” has been deleted."
+      }
+    },
     "profile": {
       "pageTitle": "My user profile",
       "heading": "My user profile",
@@ -206,6 +242,12 @@
       "user_self_delete": "Your own account cannot delete itself.",
       "user_last_admin": "This is the last active administrator. Create a second one first, then delete.",
       "institution_unknown": "This institution does not exist. Please reload the page.",
+      "institution_name_missing": "Please enter a name for the institution.",
+      "institution_name_long": "The name is too long, at most {max} characters.",
+      "institution_name_taken": "An institution called “{name}” already exists.",
+      "institution_not_found": "This institution does not exist (any more). Please reload the page.",
+      "institution_not_empty": "“{name}” cannot be deleted: {konten} accounts, {importe} imports and {profile} mapping profiles still belong to it.",
+      "institution_create_failed": "The institution could not be created. Please try again.",
       "profile_body_invalid": "The input was incomplete.",
       "password_current_wrong": "The current password is not correct.",
       "password_too_short": "The new password needs at least {min} characters.",

@@ -10,6 +10,7 @@
 import { randomBytes } from 'node:crypto'
 import { hash as argonHash } from '@node-rs/argon2'
 import { standaloneDb } from './config.js'
+import { institutionAnlegen, kurzname } from '../lib/institutionen.js'
 
 const email = process.env.SEED_EMAIL || 'admin@av-efi.net'
 const institution = process.env.SEED_INSTITUTION || 'AVefi Testinstitution'
@@ -20,12 +21,16 @@ const generated = !process.env.SEED_PASSWORD
 const sql = standaloneDb()
 
 try {
-  const slug = institution.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'institution'
-  const [inst] = await sql<{ id: number }[]>`
-    INSERT INTO institutions (name, slug) VALUES (${institution}, ${slug})
-    ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
-    RETURNING id`
-  if (!inst) throw new Error('Institution liess sich nicht anlegen.')
+  // Bestehende Institution finden, nicht umbenennen (#43): Wer sie in der
+  // Oberflaeche umbenannt hat, behaelt den Namen, auch wenn der Seed spaeter
+  // noch einmal laeuft. Gesucht wird ueber den Namen und ueber den Kurznamen in
+  // neuer und in alter Schreibweise; die alte warf Umlaute weg.
+  const alterKurzname = institution.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'institution'
+  const [gefunden] = await sql<{ id: number }[]>`
+    SELECT id FROM institutions
+     WHERE lower(name) = lower(${institution}) OR slug IN (${kurzname(institution)}, ${alterKurzname})
+     ORDER BY id LIMIT 1`
+  const inst = gefunden ?? { id: await institutionAnlegen(sql, institution) }
 
   const existing = await sql<{ id: number }[]>`SELECT id FROM users WHERE lower(email) = lower(${email})`
   const hash = await argonHash(password, { memoryCost: 65536, timeCost: 4, parallelism: 1 })

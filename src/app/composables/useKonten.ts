@@ -4,6 +4,7 @@
  */
 import type { MaybeRefOrGetter } from 'vue'
 import { usersService, type ProfileResponse, type UserResponse, type UsersResponse } from '~/services/users'
+import { institutionenService, type InstitutionenResponse } from '~/services/institutionen'
 
 export function useKontenListe() {
   const nutzerDienst = usersService()
@@ -21,4 +22,11 @@ export function useEigenesProfil() {
   const nutzerDienst = usersService()
   const pfad = nutzerDienst.profilPfad()
   return useFetch<ProfileResponse>(pfad, { key: `konten:${pfad}` })
+}
+
+/** Institutionen mit Belegung (#43); eigener Schluessel, unabhaengig von der Kontenliste. */
+export function useInstitutionenListe() {
+  const dienst = institutionenService()
+  const pfad = dienst.listePfad()
+  return useFetch<InstitutionenResponse>(pfad, { key: `konten:${pfad}` })
 }

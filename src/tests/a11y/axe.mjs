@@ -564,6 +564,30 @@ try {
     }
   })
 
+  // Institutionen (#43): Umbenennen offen, und die Rueckfrage beim Loeschen,
+  // sofern es eine leere Institution gibt. Geloescht wird dabei nichts.
+  await abschnitt('Institutionen', async () => {
+    await seite.goto(`${BASIS}/users`, { waitUntil: 'networkidle' })
+    await seite.waitForTimeout(1500)
+    const karte = seite.locator('section[aria-labelledby=inst-heading]')
+    const umbenennen = karte.locator('button[id^=inst-rename-]').first()
+    if (await umbenennen.count()) {
+      await umbenennen.click()
+      await seite.waitForTimeout(400)
+      await pruefe(seite, '/users · Institution umbenennen offen')
+      await seite.keyboard.press('Escape')
+      await seite.waitForTimeout(300)
+    }
+    const loeschen = karte.locator('.iconbtn-del').first()
+    if (await loeschen.count()) {
+      await loeschen.click()
+      await seite.waitForTimeout(500)
+      await pruefe(seite, '/users · Institution loeschen, Rueckfrage offen')
+      await seite.keyboard.press('Escape')
+      await seite.waitForTimeout(300)
+    }
+  })
+
   if (zurZuordnung !== null) await abschnitt(zurZuordnung + ' (geoeffnet)', async () => {
     await seite.goto(BASIS + zurZuordnung, { waitUntil: 'networkidle' })
     await seite.waitForSelector('table.maptable', { timeout: 30000 })

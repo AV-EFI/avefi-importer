@@ -232,6 +232,11 @@ docker compose -f docker-compose.dev.yml exec web npm run seed
 Anmeldename und Institution kommen aus `SEED_EMAIL` und `SEED_INSTITUTION`, das
 Passwort aus `SEED_PASSWORD`. Fehlt es, wird eines erzeugt und **genau einmal**
 ausgegeben. Ein vorhandenes Konto wird nur mit `SEED_FORCE=1` ueberschrieben.
+Eine vorhandene Institution findet der Seed ueber Namen oder Kurznamen und
+**benennt sie nicht um**: Wer sie in der Oberflaeche umbenannt hat, behaelt den
+neuen Namen (bis zum 04.11.2026 setzte ein erneuter Seed den alten zurueck).
+Weitere Institutionen legen Administratorinnen unter **Nutzer verwalten** an
+(#43).
 Mit den Abbildern aus dem Auslieferungsbau laeuft derselbe Schritt im
 `worker`-Abbild. Auf einer leeren Datenbank vorher das Schema anlegen, sonst
 bricht der Seed mit `relation "institutions" does not exist` ab. Das erledigt
