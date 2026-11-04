@@ -30,11 +30,74 @@ GitHub weiter.
 
 ---
 
+## 2026-11-04 — Institutionen in der Nutzerverwaltung (#43)
+
+Anlass: Wunsch von Jasper Stratil (#43): Administratorinnen sollen neue
+Institutionen anlegen können; dazu der Hinweistext der Nutzerverwaltung ohne
+Vertragsbezug. Kostenlose Erweiterung, auf dem Branch `feat/institutionen`
+(#44), auf den Stand nach #41 gebracht.
+
+**Vorher:** Institutionen gab es als Tabelle, und Importe waren schon nach
+Institution getrennt. Anlegen ließen sie sich aber nur über `npm run seed` oder
+SQL.
+
+**Was daraus wurde:**
+
+* Karte **„Institutionen“** unter den Konten (`app/components/admin/InstitutionList.vue`):
+  anlegen, umbenennen, **leere** löschen. Je Institution steht, wie viele
+  Konten, Importe und Zuordnungsprofile an ihr hängen. Die Karte hat eine eigene
+  Abfrage und hängt nicht an der Kontenseite; werden es viele Konten, zieht sie
+  ohne Umbau auf eine eigene Seite.
+* Schnittstelle `GET/POST /api/institutions`, `PATCH/DELETE /api/institutions/:id`,
+  nur für Administratorinnen. Logik in `server/lib/institutionen.ts`.
+* **Löschen nur, wenn nichts an der Institution hängt.** Importe und Profile
+  sind mit `ON DELETE CASCADE` angebunden; eine belegte Institution zu löschen,
+  hieße, ihre Importe still mitzulöschen. Der Server sperrt die Zeile
+  (`FOR UPDATE`), bevor er zählt, damit zwischen Prüfung und Löschen nichts
+  dazukommt. `tests/betrieb/institutionen.test.ts` liest alle
+  `REFERENCES institutions` aus `db/schema.sql` und verlangt, dass die
+  Leer-Prüfung jede dieser Tabellen kennt; einmal rot gesehen.
+* Archivieren gibt es bewusst nicht: Für eine Handvoll Institutionen braucht es
+  keinen zweiten Ordner, und wer nicht mehr mitarbeitet, dessen Konten werden
+  gesperrt.
+* Gleiche Namen, auch anders groß oder klein geschrieben, werden abgelehnt.
+  Anlegen und Umbenennen laufen unter einer Transaktionssperre, weil der Name
+  keinen UNIQUE-Index hat; zwei gleichzeitige Anfragen mit demselben Namen
+  ergeben eine Institution und eine Ablehnung.
+* **Kurzname:** entsteht aus dem Namen und bleibt beim Umbenennen gleich.
+  Umlaute werden umgeschrieben; die alte Regel im Seed warf sie weg
+  (`filmmuseum-d-sseldorf`). Bestehende Kurznamen bleiben.
+* **Seed:** findet eine bestehende Institution über Namen oder Kurznamen und
+  benennt sie nicht mehr um. Bis dahin setzte ein erneuter `npm run seed` eine
+  in der Oberfläche umbenannte Institution auf den alten Namen zurück.
+* **Hinweistext** der Nutzerverwaltung (de/en) beschreibt nur noch, was die
+  Seite kann. Der Vertragsbezug steht in `docs/abnahme.md`.
+* Handbuch Kapitel 5 um Institutionen ergänzt; dabei korrigiert: Mindestlänge
+  des Passworts ist 12 Zeichen, nicht 8, und ohne eigene Eingabe erzeugt der
+  Server ein Einmalpasswort.
+
+### Geprüft
+
+* 737 Tests in 63 Dateien grün (vorher 719), `nuxt typecheck` ohne Befund.
+* Gegen die Demo-Datenbank: anlegen, doppelter Name (409), zwei gleichzeitige
+  Anlagen, umbenennen, belegte Institution löschen (409 mit Zahlen), leere
+  löschen. Danach war die Datenbank im selben Zustand wie vorher.
+* Im Browser auf der Demo (15 Prüfpunkte): Karte, Hinweistext, kein Löschknopf
+  bei belegter Institution, anlegen samt Auswahl im Kontoformular, doppelter
+  Name, Fokus beim Umbenennen und zurück, umbenennen, löschen mit Rückfrage,
+  schmal ohne Überlauf, keine Fehler im Browser. Gefunden und behoben: Die
+  Erfolgsmeldung erschien, bevor die Liste neu geladen war.
+* Barrierefreiheitslauf `tests/a11y/axe.mjs`, erweitert um „Umbenennen offen“
+  und die Rückfrage beim Löschen.
+
+---
+
 ## 2026-11-03 — Prüfdienst im Produktivbetrieb, Normdatenkonverter
 
 Anlass: Zwei Meldungen von Luca (#38, #39) vom Test auf `import.av-efi.net`,
 dazu ein Nebenbefund von Elias Oltmanns in #39. Gewährleistung und kostenlose
-Erweiterung, auf dem Branch `fix/pruefdienst-und-normdaten`.
+Erweiterung, auf dem Branch `fix/pruefdienst-und-normdaten`, gemergt am
+04.11.2026 als #41.
 
 ### Prüfdienst nicht erreichbar (#39, Luca; Nebenbefund Elias Oltmanns)
 

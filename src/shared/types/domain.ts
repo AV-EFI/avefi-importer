@@ -572,6 +572,13 @@ export interface InstitutionRow {
   created_at: string
 }
 
+/** Institution mit der Zahl dessen, was an ihr haengt (#43). */
+export interface InstitutionMitBelegung extends InstitutionRow {
+  belegung: { konten: number; importe: number; profile: number }
+  /** Nichts haengt an ihr; nur dann ist Loeschen moeglich. */
+  leer: boolean
+}
+
 /* ------------------------------------------------------------ Worker-Queue */
 
 export type JobClass = 'worker/download' | 'worker/detect' | 'worker/convert'

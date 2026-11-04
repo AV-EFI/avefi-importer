@@ -5,7 +5,7 @@ import { usersService, type UserWithInstitution } from '~/services/users'
  *
  * Vertraglich genuegt eine einfache Demo-Anmeldung ohne Benutzerverwaltung.
  * Diese Seite ist Zugabe und bleibt deshalb schmal: anlegen, sperren, loeschen,
- * bearbeiten. Passwoerter erscheinen nur als Einmalpasswort in einem Fenster,
+ * bearbeiten; darunter die Institutionen (#43, eigene Komponente). Passwoerter erscheinen nur als Einmalpasswort in einem Fenster,
  * das ausdruecklich sagt, dass es sie kein zweites Mal gibt.
  */
 import { apiFailure, failureText } from '~/components/records/errors'
@@ -226,6 +226,8 @@ async function remove(user: UserWithInstitution) {
           </tbody>
         </table>
       </div>
+
+      <AdminInstitutionList @changed="refresh()" />
 
       <ImportsConfirmDialog :open="confirmDelete !== null" :title="t('admin.users.confirm.deleteTitle')"
                             :message="t('admin.users.confirm.deleteText', { email: confirmDelete?.email ?? '' })"

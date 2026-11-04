@@ -110,6 +110,14 @@ zusammenhängen (etwa m statt cm bei der Länge), klärt Elias mit Düsseldorf.
    Profilformat- und Schemaversion, Normdateneinstellungen und das einmal
    erkannte Trennzeichen.
 
+**Zugriffsschutz.** Der Vertrag verlangt nur eine einfache, konfigurierbare
+Demo-Authentifizierung ohne Benutzerverwaltung (`DEMO_PASSWORD`). Die
+Nutzerverwaltung unter `/users` — Konten anlegen, sperren, Passwörter
+zurücksetzen, seit #43 auch Institutionen anlegen, umbenennen und leere löschen
+— geht darüber hinaus und ist nicht Teil der Abnahme. Bis zum 04.11.2026 stand
+das als Hinweis in der Oberfläche; dort beschreibt der Text jetzt nur noch, was
+die Seite kann.
+
 ### Was die Prüfung in der Anwendung prüft
 
 Seit `d697ae3` prüft der Dienst in der Anwendung dasselbe wie `efi-conv check`,

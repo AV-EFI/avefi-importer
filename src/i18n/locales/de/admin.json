@@ -69,7 +69,7 @@
       "pageTitle": "Nutzerverwaltung",
       "heading": "Nutzerverwaltung",
       "crumb": "Nutzerverwaltung",
-      "lead": "Der Vertrag verlangt nur eine einfache Demo-Anmeldung. Diese Verwaltung ist Zugabe — sie legt Konten an, sperrt sie und setzt Passwörter zurück, mehr nicht.",
+      "lead": "Hier legst du Konten und Institutionen an, sperrst Konten und setzt Passwörter zurück. Jedes Konto sieht nur die Importe seiner Institution; Zuordnungsprofile sind für alle sichtbar, die eigenen stehen zuerst. Ein Konto ohne Institution kann nichts importieren.",
       "create": {
         "heading": "Neues Konto anlegen",
         "email": "E-Mail",
@@ -161,6 +161,42 @@
         "deleted": "Konto „{email}“ gelöscht."
       }
     },
+    "institutions": {
+      "heading": "Institutionen",
+      "lead": "Jedes Konto gehört zu einer Institution und sieht nur deren Importe. Hier legst du Institutionen an und benennst sie um.",
+      "create": {
+        "name": "Neue Institution",
+        "submit": "Anlegen",
+        "submitting": "Wird angelegt …"
+      },
+      "table": {
+        "caption": "Institutionen mit der Zahl ihrer Konten, Importe und Zuordnungsprofile",
+        "name": "Name",
+        "accounts": "Konten",
+        "imports": "Importe",
+        "profiles": "Zuordnungsprofile",
+        "action": "Aktion",
+        "rename": "Umbenennen",
+        "renameLabel": "„{name}“ umbenennen",
+        "deleteLabel": "„{name}“ löschen"
+      },
+      "rename": {
+        "label": "Neuer Name für „{name}“",
+        "save": "Speichern",
+        "cancel": "Abbrechen"
+      },
+      "deleteHint": "Löschen lässt sich nur eine Institution, an der weder Konten noch Importe noch Zuordnungsprofile hängen. Arbeitet eine Institution nicht mehr mit, sperre ihre Konten.",
+      "confirm": {
+        "deleteTitle": "Institution löschen?",
+        "deleteText": "„{name}“ wird endgültig gelöscht. An ihr hängt nichts mehr.",
+        "deleteOk": "Löschen"
+      },
+      "done": {
+        "created": "„{name}“ ist angelegt.",
+        "renamed": "„{alt}“ heißt jetzt „{neu}“.",
+        "deleted": "„{name}“ ist gelöscht."
+      }
+    },
     "profile": {
       "pageTitle": "Mein Nutzerprofil",
       "heading": "Mein Nutzerprofil",
@@ -206,6 +242,12 @@
       "user_self_delete": "Das eigene Konto kann sich nicht löschen.",
       "user_last_admin": "Das ist die letzte aktive Administratorin. Erst eine zweite anlegen, dann löschen.",
       "institution_unknown": "Diese Institution gibt es nicht. Bitte die Seite neu laden.",
+      "institution_name_missing": "Bitte einen Namen für die Institution angeben.",
+      "institution_name_long": "Der Name ist zu lang, höchstens {max} Zeichen.",
+      "institution_name_taken": "Eine Institution „{name}“ gibt es schon.",
+      "institution_not_found": "Diese Institution gibt es nicht (mehr). Bitte die Seite neu laden.",
+      "institution_not_empty": "„{name}“ lässt sich nicht löschen: Es hängen noch {konten} Konten, {importe} Importe und {profile} Zuordnungsprofile daran.",
+      "institution_create_failed": "Die Institution konnte nicht angelegt werden. Bitte noch einmal versuchen.",
       "profile_body_invalid": "Die Eingabe war unvollständig.",
       "password_current_wrong": "Das aktuelle Passwort stimmt nicht.",
       "password_too_short": "Das neue Passwort braucht mindestens {min} Zeichen.",
