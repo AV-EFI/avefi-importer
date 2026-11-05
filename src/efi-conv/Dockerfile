@@ -3,7 +3,7 @@
 # Der Vertrag verlangt Pruefung „mit efi-conv check oder unter direkter Nutzung
 # derselben Validierungslogik". Statt die Logik nachzubauen, laeuft hier das
 # echte Paket und die Node-Anwendung fragt es ueber HTTP.
-FROM python:3.12-slim
+FROM python:3.15-slim
 RUN apt-get update && apt-get install -y --no-install-recommends git \
  && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir fastapi "uvicorn[standard]"
