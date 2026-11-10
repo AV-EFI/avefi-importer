@@ -12,7 +12,7 @@ import type { Sql } from 'postgres'
 import type { AuthorityResolution } from '../../server/lib/authority/types.js'
 import { toResolution } from '../../server/lib/authority/types.js'
 import {
-  AUTHORITY_CACHE_GENERATION, cacheKey, cacheSourceColumn, dbAuthorityCache,
+  AUTHORITY_CACHE_GENERATION, AUTHORITY_CACHE_GENERATIONEN, cacheGeneration, cacheKey, cacheSourceColumn, dbAuthorityCache,
   layeredAuthorityCache, memoryAuthorityCache, noAuthorityCache
 } from '../../server/lib/authority/cache.js'
 
@@ -79,8 +79,8 @@ describe('Zwischenspeicher in der Datenbank', () => {
     // In der Tabelle der laufenden Instanz liegen 134 GND-Personen aus dem
     // PHP-Stand, davon 17 mit ID. Diese festgeschriebenen Nicht-Treffer duerfen
     // die neue Vergleichsregel nicht aushebeln.
-    expect(AUTHORITY_CACHE_GENERATION).toBeGreaterThan(1)
-    expect(cacheSourceColumn('gnd')).toBe(`gnd/v${AUTHORITY_CACHE_GENERATION}`)
+    expect(cacheGeneration('gnd')).toBeGreaterThan(1)
+    expect(cacheSourceColumn('gnd')).toBe(`gnd/v${cacheGeneration('gnd')}`)
     expect(cacheSourceColumn('gnd', 2)).toBe('gnd/v2')
     expect(cacheSourceColumn('gnd', 1)).toBe('gnd')
   })
@@ -88,7 +88,35 @@ describe('Zwischenspeicher in der Datenbank', () => {
   it('liest nach dem Abgleich vom 03.11.2026 nicht mehr unter v2 (#38)', () => {
     // Unter v2 liegen fuer VIAF-Namen mit Lebensdaten Nicht-Treffer und fuer
     // Wikidata-Personen „mehrdeutig“. Ohne neue Generation blieben sie stehen.
-    expect(AUTHORITY_CACHE_GENERATION).toBeGreaterThanOrEqual(3)
+    for (const quelle of ['gnd', 'viaf', 'wikidata']) expect(cacheGeneration(quelle)).toBeGreaterThanOrEqual(3)
+  })
+
+  it('fuehrt die Generation je Quelle (#38, 10.11.2026)', () => {
+    // Unter wikidata/v3 liegt etwa „Gorch Fock“ als mehrdeutig. GND und VIAF
+    // betrifft die Korrektur nicht; ihre Ergebnisse bleiben gueltig.
+    expect(cacheGeneration('wikidata')).toBeGreaterThanOrEqual(4)
+    expect(cacheGeneration('gnd')).toBe(3)
+    expect(cacheGeneration('viaf')).toBe(3)
+    expect(cacheSourceColumn('wikidata')).toBe(`wikidata/v${cacheGeneration('wikidata')}`)
+    expect(cacheGeneration('unbekannt')).toBe(AUTHORITY_CACHE_GENERATION)
+    expect(AUTHORITY_CACHE_GENERATION).toBe(Math.max(...Object.values(AUTHORITY_CACHE_GENERATIONEN)))
+  })
+
+  it('liest und schreibt jede Quelle unter ihrer eigenen Generation', async () => {
+    const spalten: unknown[] = []
+    const sql = ((_: TemplateStringsArray, ...werte: unknown[]) => {
+      spalten.push(werte[0])
+      return Promise.resolve([])
+    }) as unknown as Sql
+    ;(sql as unknown as { json: (v: unknown) => unknown }).json = (v) => v
+    const c = dbAuthorityCache(sql)
+    await c.put('wikidata', 'person', 'gorch fock', treffer)
+    await c.put('gnd', 'person', 'gorch fock', treffer)
+    await c.get('viaf', 'person', 'gorch fock')
+    const werte = spalten.join(' ')
+    expect(werte).toContain(`wikidata/v${cacheGeneration('wikidata')}`)
+    expect(werte).toContain('gnd/v3')
+    expect(werte).toContain('viaf/v3')
   })
 
   it('schreibt mit ON CONFLICT, damit ein zweiter Lauf nicht scheitert', async () => {

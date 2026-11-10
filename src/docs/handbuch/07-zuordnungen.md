@@ -222,6 +222,13 @@ Bleibt ein Name mehrdeutig — „Günther Wolf" gibt es in der GND mehrfach —
 Importer **nichts** ein. Eine falsche Normdaten-ID wandert in den Verbund und ist später
 schwer zu korrigieren; eine Lücke füllt jemand nach.
 
+Bei Personen in Wikidata zählen gleichnamige Einträge nicht mit, die sicher keine
+Menschen sind: der Film „Rainer Werner Fassbinder“, das Schiff „Gorch Fock“, eine
+Begriffsklärungsseite. Der Importer fragt dafür jeden exakt passenden Kandidaten nach
+seiner Art (Wikidata-Aussage „ist ein(e)“). Wer keine Art angegeben hat, zählt weiter
+mit — ein Name bleibt dann lieber mehrdeutig, als still einen falschen Treffer zu
+bekommen.
+
 Im aufgeklappten Zweig steht deshalb unter der Kette eine Liste der vorkommenden Werte
 mit ihrem Stand: automatisch aufgelöst, von Hand bestätigt oder bewusst offen gelassen.
 Über **Zuordnen** zeigt der Editor die Kandidaten samt Beruf und Lebensdaten; die
