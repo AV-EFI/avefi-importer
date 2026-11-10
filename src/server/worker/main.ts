@@ -73,6 +73,11 @@ if (schemaAutomatisch()) {
   const status = await pruefdienstStatus()
   if (status.erreichbar) {
     console.log(`[worker] Pruefdienst unter ${baseUrl()} erreichbar, Schema ${status.version ?? 'unbekannt'}.`)
+    if (status.probe?.ok === false) {
+      // #45: Das Schema lehnt schon die Referenzsaetze des Dienstes ab. Die
+      // Pruefberichte sagen es auch, hier sieht es der Betreiber zuerst.
+      console.warn(`[worker] Das AVefi-Schema des Pruefdienstes lehnt gueltige Referenzsaetze ab; die Schemapruefung ist ausgesetzt (${status.probe.detail ?? 'ohne Angabe'}). Abhilfe: Pruefdienst mit AVEFI_SCHEMA_REF auf einem frueheren Stand bauen.`)
+    }
   } else {
     const roh = status.roh === null ? '' : ` [${status.roh}]`
     console.warn(`[worker] Pruefdienst unter ${baseUrl()} nicht erreichbar: ${status.grund}${roh}. Konvertierungen werden erzeugt, aber nicht geprueft. EFI_CONV_URL pruefen.`)

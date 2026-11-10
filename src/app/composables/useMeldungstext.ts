@@ -14,6 +14,15 @@
  * dann in dem des Mappingkerns. Fehlt beides, gewinnt der mitgereiste deutsche
  * Satz. Ein Code in der Oberflaeche waere schlechter als ein Satz in der
  * falschen Sprache.
+ *
+ * Betrifft ein Befund den ganzen Datensatz (`params.field` ist leer), wird
+ * vor jedem Schluessel seine Variante `…__record` gesucht. Bis zum 10.11.2026
+ * stand dann „den Datensatz“ an der Stelle von {field} — ein Akkusativ, der
+ * nur in „Das AVefi-Schema beanstandet {field}“ passt. In „{field} enthaelt
+ * Angaben …“ wurde daraus „den Datensatz enthaelt Angaben …“ (Luca Wollny,
+ * #45). Ein Platzhalter fuer mehrere Satzstellen hat im Deutschen keine
+ * richtige Fuellung; deshalb eigene Saetze. tests/pruefung/ganzer-datensatz.test.ts
+ * verlangt sie fuer jeden Satz mit {field}.
  */
 import type { CompletenessHint, MappingMessage, ValidationIssue } from '#shared/types/domain'
 import { BRAUCHT_BAUSTEINE } from '#shared/meldungscodes'
@@ -54,7 +63,8 @@ export function meldungstexte(tRoh: Uebersetzer, te: (key: string) => boolean): 
     plural === undefined ? tRoh(key, named) : tRoh(key, named, plural)
 
   function satz(
-    code: string | undefined, params: Bausteine, rueckfall: string, bereiche: readonly string[], mehrzahl = true
+    code: string | undefined, params: Bausteine, rueckfall: string, bereiche: readonly string[], mehrzahl = true,
+    ganzerSatz = false
   ): string {
     if (code === undefined || code === '') return rueckfall
     const k = codeSchluessel(code)
@@ -62,7 +72,8 @@ export function meldungstexte(tRoh: Uebersetzer, te: (key: string) => boolean): 
     // `n` waehlt Einzahl oder Mehrzahl („in Zeile 5" / „in den Zeilen 5, 9").
     const plural = mehrzahl && typeof params['n'] === 'number' ? params['n'] : null
     for (const bereich of bereiche) {
-      const kandidaten = kind !== null ? [`${bereich}.${k}__${kind}`, `${bereich}.${k}`] : [`${bereich}.${k}`]
+      const grund = kind !== null ? [`${bereich}.${k}__${kind}`, `${bereich}.${k}`] : [`${bereich}.${k}`]
+      const kandidaten = ganzerSatz ? grund.flatMap((key) => [`${key}__record`, key]) : grund
       for (const key of kandidaten) {
         if (!te(key)) continue
         return plural !== null ? t(key, params, plural) : t(key, params)
@@ -97,7 +108,10 @@ export function meldungstexte(tRoh: Uebersetzer, te: (key: string) => boolean): 
       value: issue.value ?? '',
       ...(issue.params ?? {})
     }
-    if (p['field'] === '') p['field'] = t('imports.issue.wholeRecord')
+    // Betrifft den ganzen Datensatz: eigener Satz (`…__record`), sonst bleibt
+    // der Akkusativ als Rueckfall fuer Saetze, in die er passt.
+    const ganzerSatz = p['field'] === ''
+    if (ganzerSatz) p['field'] = t('imports.issue.wholeRecord')
     const feldKey = p['feldKey']
     if (typeof feldKey === 'string' && te(`imports.issueField.${feldKey}`)) p['feld'] = t(`imports.issueField.${feldKey}`)
 
@@ -106,7 +120,7 @@ export function meldungstexte(tRoh: Uebersetzer, te: (key: string) => boolean): 
       return d.text === issue.message ? issue.message : `${d.text} ${d.hint}`.trim()
     }
 
-    const s = satz(code, p, issue.message, BERICHT)
+    const s = satz(code, p, issue.message, BERICHT, true, ganzerSatz)
     // Gebuendelte Hinweise tragen Zahl und Beispiele; der Rueckfall hat sie
     // schon im Satz, der uebersetzte bekommt sie angehaengt.
     const count = issue.params?.['count']

@@ -129,6 +129,16 @@ efi-conv prüft in Wahrheit beim Laden als Pydantic-Modell; genau das macht der
 Dienst jetzt auch. Den leeren Schemaschritt in efi-conv selbst habe ich in
 AV-EFI/efi-conv#39 beschrieben.
 
+**Stand 10.11.2026 (#45):** Seit LinkML 1.12 (av-efi-schema, 26.10.2026) lehnt
+die Wurzel des JSON-Schemas auf main jeden Werk-, Manifestations- und
+Exemplarsatz ab — auch in `efi-conv check` selbst, nachgestellt mit den
+Testdaten von efi-conv. Mit diesem Schema kann keine Lieferung das
+Abnahmekriterium „besteht `efi-conv check`“ erfüllen, weder aus Paket A noch
+aus Paket B. Ob die neue Wurzel beabsichtigt ist, ist in #45 bei Elias
+Oltmanns angefragt. Die Anwendung erkennt den Zustand an einer Referenzprobe
+und setzt dann nur den Schemaschritt aus; mit `AVEFI_SCHEMA_REF=5970e32` prüft
+sie wie bis zum 26.10.
+
 ## Nutzertest und Testdatensatz
 
 Der Vertrag verlangt zwei Testpersonen. Beide sind im Pad abgehakt: Luca Wollny

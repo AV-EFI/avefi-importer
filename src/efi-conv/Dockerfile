@@ -19,7 +19,15 @@ RUN pip install --no-cache-dir "efi-conv @ git+https://${EFI_CONV_REPO}@${EFI_CO
 # Schema einmal beim Bauen holen und im Image einfrieren. Ohne das laedt
 # efi-conv es zur Laufzeit vom main-Branch — dann ist keine Konvertierung
 # reproduzierbar, weil sich das Schema unter der laufenden Anwendung aendert.
-RUN python -c "from efi_conv.core import check; check.get_schema_validator()" \
+#
+# AVEFI_SCHEMA_REF waehlt den Stand von github.com/AV-EFI/av-efi-schema
+# (Zweig, Tag oder Commit). Er wird beim Bauen auf einen Commit aufgeloest, und
+# dieser Commit steht danach in /health und in jedem Pruefbericht. Anlass #45:
+# Seit LinkML 1.12 (26.10.2026) lehnt die Wurzel des Schemas auf main jeden
+# Datensatz ab; mit einem frueheren Stand laesst sich das Abbild trotzdem bauen.
+ARG AVEFI_SCHEMA_REF=main
+COPY schema_holen.py /opt/schema_holen.py
+RUN AVEFI_SCHEMA_REF="${AVEFI_SCHEMA_REF}" python /opt/schema_holen.py \
  && ls -l /root/.cache/efi_conv/
 
 WORKDIR /app

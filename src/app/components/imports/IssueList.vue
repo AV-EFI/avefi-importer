@@ -94,7 +94,8 @@ const HANDBUCH: Record<string, string> = {
   rule_removed_without_pid: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
   rule_invalid_value: '03-bearbeiten-und-validieren#efi-conv-check-lehnt-den-datensatz-ab',
   missing_identifier: '03-bearbeiten-und-validieren#kennung-fehlt',
-  validation_unavailable: '03-bearbeiten-und-validieren#die-schemapruefung-war-nicht-moeglich'
+  validation_unavailable: '03-bearbeiten-und-validieren#die-schemapruefung-war-nicht-moeglich',
+  schema_unusable: '03-bearbeiten-und-validieren#die-schemapruefung-ist-ausgesetzt'
 }
 
 /** Punkt und Bindestrich sind in Codes zulaessig, in i18n-Schluesseln nicht. */

@@ -13,7 +13,25 @@ export interface CheckResponse {
   checked: number
   valid: number
   issues: ValidationIssue[]
-  schema?: { source?: string | null; file?: string; version?: string | null; sha256?: string | null }
+  schema?: SchemaAuskunft
+}
+
+/**
+ * Was der Pruefdienst ueber sein Schema sagt (`GET /health`, Feld `schema`).
+ *
+ * `ref` und `commit` nennen den Stand von av-efi-schema, der beim Bauen
+ * eingefroren wurde; `probe` sagt, ob dieses Schema bekannt gueltige
+ * Referenzsaetze annimmt. Tut es das nicht, setzt der Dienst den
+ * JSON-Schema-Schritt aus (#45). Aeltere Abbilder kennen die drei Felder nicht.
+ */
+export interface SchemaAuskunft {
+  source?: string | null
+  file?: string
+  version?: string | null
+  sha256?: string | null
+  ref?: string | null
+  commit?: string | null
+  probe?: { ok: boolean; detail: string | null }
 }
 
 export interface CheckResult extends CheckResponse {
@@ -80,14 +98,17 @@ export function meldeUnerreichbar(pfad: string, grund: string, e: unknown): void
 /** Erreichbarkeit des Pruefdienstes, fuer die Startmeldung des Workers. */
 export async function pruefdienstStatus(
   timeoutMs = 5_000
-): Promise<{ erreichbar: true; version: string | null } | { erreichbar: false; grund: string; roh: string | null }> {
+): Promise<
+  | { erreichbar: true; version: string | null; probe: SchemaAuskunft['probe'] | null }
+  | { erreichbar: false; grund: string; roh: string | null }
+> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const res = await fetch(`${baseUrl()}/health`, { signal: controller.signal })
     if (!res.ok) return { erreichbar: false, grund: `efi-conv antwortete mit HTTP ${res.status}.`, roh: null }
-    const body = (await res.json().catch(() => ({}))) as { schema?: { version?: string | null } }
-    return { erreichbar: true, version: body.schema?.version ?? null }
+    const body = (await res.json().catch(() => ({}))) as { schema?: SchemaAuskunft }
+    return { erreichbar: true, version: body.schema?.version ?? null, probe: body.schema?.probe ?? null }
   } catch (e) {
     const roh = (typeof e === 'object' && e !== null ? (e as MitUrsache).cause?.message : undefined)
     return { erreichbar: false, grund: netzGrund(e, timeoutMs), roh: typeof roh === 'string' ? roh : null }
@@ -186,6 +207,9 @@ export async function checkRecords(
     merged.schema = response.schema ?? merged.schema
     // Die Nummern des Dienstes zaehlen je Buendel — hier auf die Gesamtfolge heben.
     for (const issue of response.issues) {
+      // Meldungen ohne Satzbezug gelten fuer den ganzen Lauf, kommen aber aus
+      // jedem Buendel neu (etwa `schema_unusable`, #45). Einmal genuegt.
+      if (issue.record === undefined && schonGemeldet(merged.issues, issue)) continue
       // Herkunft festhalten: Der Bericht mischt Schema, Querlauf, Vollstaendigkeit
       // und Konvertierung, und die haben verschiedenes Gewicht.
       merged.issues.push({
@@ -209,6 +233,11 @@ export async function checkRecords(
 
   zaehleGueltige(merged)
   return merged
+}
+
+/** Gibt es schon eine Meldung ohne Satzbezug mit demselben Code und Wortlaut? */
+function schonGemeldet(issues: readonly ValidationIssue[], issue: ValidationIssue): boolean {
+  return issues.some((i) => i.record === undefined && i.code === issue.code && i.detail === issue.detail)
 }
 
 /**

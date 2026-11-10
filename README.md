@@ -112,7 +112,11 @@ festen Commit zeigen.
 
 Das Schema wird beim Bauen einmal geholt und im Image eingefroren. Sonst laedt
 efi-conv es zur Laufzeit vom main-Branch, und keine Konvertierung waere
-reproduzierbar.
+reproduzierbar. Welcher Stand von `AV-EFI/av-efi-schema` es ist, bestimmt das
+Bauargument `AVEFI_SCHEMA_REF` (Voreinstellung `main`); der Commit steht danach
+in jedem Pruefbericht. Lehnt das Schema schon bekannt gueltige Referenzsaetze
+ab, setzt der Dienst die Schemapruefung aus und sagt das einmal je Lauf, statt
+jeden Satz zu beanstanden (#45). Einzelheiten in `src/docs/deployment.md`.
 
 Zwei Endpunkte:
 

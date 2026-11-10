@@ -111,6 +111,9 @@ services:
         # Auf den Paket-A-Stand zeigen: EFI_CONV_REPO/EFI_CONV_REF setzen.
         EFI_CONV_REPO: ${EFI_CONV_REPO:-github.com/AV-EFI/efi-conv.git}
         EFI_CONV_REF: ${EFI_CONV_REF:-main}
+        # Stand des AVefi-Schemas (av-efi-schema: Zweig, Tag oder Commit). Mehr in
+        # docs/deployment.md, Abschnitt „efi-conv als Sidecar“.
+        AVEFI_SCHEMA_REF: ${AVEFI_SCHEMA_REF:-main}
     container_name: ${COMPOSE_PREFIX:-avefi}_efi_conv
     restart: always
     expose:

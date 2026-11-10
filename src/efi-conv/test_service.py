@@ -13,7 +13,34 @@ from __future__ import annotations
 
 import unittest
 
+import service
 from service import CheckRequest, CrossRequest, check, crossref
+
+
+def _validator_mit_wurzel(wurzel):
+    """Validator aus den $defs des eingefrorenen Schemas mit einer eigenen Wurzel."""
+    v = service.validator()
+    return type(v)({**wurzel, "$defs": v.schema["$defs"]})
+
+
+class MitNeutralerWurzel(unittest.TestCase):
+    """
+    Tests, die vom Modell und den Regeln handeln, nicht von der Wurzel.
+
+    Seit LinkML 1.12 lehnt die Wurzel des Schemas auf main jeden Satz ab
+    (#45). Welche Wurzel im Abbild steckt, haengt also davon ab, wann und mit
+    welchem AVEFI_SCHEMA_REF es gebaut wurde. Damit diese Tests in jedem
+    Abbild dasselbe pruefen, bekommen sie die Wurzel von vor LinkML 1.12:
+    `{type: object}`, die fuer einen Satz nichts festlegt.
+    """
+
+    def setUp(self):
+        self._alt = (service._validator, service._probe)
+        service._validator = _validator_mit_wurzel({"type": "object"})
+        service._probe = None
+
+    def tearDown(self):
+        service._validator, service._probe = self._alt
 
 
 def werk(**extra):
@@ -31,7 +58,7 @@ def pruefe(*records):
     return check(CheckRequest(records=list(records), row_map={"1": 7}))
 
 
-class Zusatzregeln(unittest.TestCase):
+class Zusatzregeln(MitNeutralerWurzel):
     def test_umgekehrter_zeitraum_wird_beanstandet(self):
         rec = werk(has_event=[{"category": "avefi:ProductionEvent", "has_date": "1990/1980"}])
         res = pruefe(rec)
@@ -63,23 +90,16 @@ class Schemafehler(unittest.TestCase):
     """
     Die Bausteine eines jsonschema-Fehlers.
 
-    Ueber /check laesst sich das nicht ausloesen: Die Wurzel des AVefi-Schemas
-    legt fuer einen Satz nichts fest (siehe _modellfehler). Geprueft wird
-    deshalb gegen den Teil des Schemas, der zur Kategorie gehoert.
+    Ueber /check laesst sich das nicht verlaesslich ausloesen: Die Wurzel des
+    AVefi-Schemas legte bis LinkML 1.12 fuer einen Satz nichts fest, seither
+    lehnt sie jeden ab (#45). Geprueft wird deshalb gegen den Teil des
+    Schemas, der zur Kategorie gehoert.
     """
 
     def fehler(self, rec):
-        from service import validator
-        v = validator()
-        teil = dict(v.schema)
-        teil["$ref"] = "#/$defs/WorkVariant"
-        return list(type(v)(teil).iter_errors(rec))
-
-    def test_wurzel_des_schemas_legt_nichts_fest(self):
-        # Wird das je anders, soll dieser Test es sagen: Dann prueft /check
-        # wieder etwas, und die Uebersetzung der Schemafehler wird sichtbar.
-        from service import validator
-        self.assertEqual(list(validator().iter_errors({"foo": 1})), [])
+        # Nur die $defs, nicht die Wurzel: Seit LinkML 1.12 beschreibt die
+        # Wurzel MovingImageRecord und wuerde mitpruefen (#45).
+        return list(_validator_mit_wurzel({"$ref": "#/$defs/WorkVariant"}).iter_errors(rec))
 
     def test_bausteine_eines_wertefehlers(self):
         from service import _schema_params
@@ -96,7 +116,7 @@ class Schemafehler(unittest.TestCase):
         self.assertEqual(p["missing"], "type")
 
 
-class Modell(unittest.TestCase):
+class Modell(MitNeutralerWurzel):
     """Was efi-conv check beim Laden ablehnt."""
 
     def modellfehler(self, rec):
@@ -132,6 +152,81 @@ class Modell(unittest.TestCase):
     def test_ungueltiger_satz_bekommt_keine_regelwarnung(self):
         codes = [i["code"] for i in pruefe(werk(type="Gibtsnicht"))["issues"]]
         self.assertNotIn("rules_unavailable", codes)
+
+
+class Referenzprobe(unittest.TestCase):
+    """Erkennt der Dienst ein Schema, das schon gueltige Saetze ablehnt? (#45)"""
+
+    def setUp(self):
+        self._alt = (service._validator, service._probe)
+        service._probe = None
+
+    def tearDown(self):
+        service._validator, service._probe = self._alt
+
+    def mit_wurzel(self, wurzel):
+        service._validator = _validator_mit_wurzel(wurzel)
+        service._probe = None
+
+    def test_referenzsaetze_sind_gueltig(self):
+        # Gegen die Definition ihrer Klasse, als Modell, nach den Regeln und
+        # untereinander. Sonst wuerde die Probe ein gutes Schema verwerfen.
+        for rec in service.REFERENZ:
+            klasse = rec["category"].split(":", 1)[1]
+            v = _validator_mit_wurzel({"$ref": f"#/$defs/{klasse}"})
+            self.assertEqual([e.message for e in v.iter_errors(rec)], [], klasse)
+            self.assertEqual(service._zusatzregeln(rec), [], klasse)
+        self.assertEqual(crossref(CrossRequest(records=list(service.REFERENZ)))["issues"], [])
+
+    def test_neutrale_wurzel_besteht_die_probe(self):
+        self.mit_wurzel({"type": "object"})
+        self.assertTrue(service.schemaprobe()["ok"])
+        codes = [i["code"] for i in pruefe(werk())["issues"]]
+        self.assertNotIn("schema_unusable", codes)
+
+    def test_wurzel_wie_seit_linkml_1_12_setzt_den_schemaschritt_aus(self):
+        # Nachbau der Wurzel auf main seit dem 26.10.2026.
+        self.mit_wurzel({
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"category": {"enum": ["avefi:MovingImageRecord"]}},
+            "required": ["category"],
+        })
+        probe = service.schemaprobe()
+        self.assertFalse(probe["ok"])
+        self.assertIn("avefi:WorkVariant", probe["detail"])
+
+        res = pruefe(werk(), werk(has_identifier=[{"category": "avefi:LocalResource", "id": "w2"}]))
+        codes = [i["code"] for i in res["issues"]]
+        # genau eine Meldung, keine Scheinbeanstandung je Satz
+        self.assertEqual(codes, ["schema_unusable"])
+        self.assertEqual(res["issues"][0]["severity"], "warning")
+        self.assertNotIn("record", res["issues"][0])
+        self.assertTrue(res["ok"])
+        self.assertEqual(res["valid"], 2)
+
+    def test_ausgesetzter_schemaschritt_prueft_das_modell_weiter(self):
+        self.mit_wurzel({"type": "object", "additionalProperties": False})
+        codes = [i["code"] for i in pruefe(werk(type="Gibtsnicht"))["issues"]]
+        self.assertIn("schema_unusable", codes)
+        self.assertIn("model_invalid", codes)
+
+    def test_eingefrorenes_schema_verhaelt_sich_wie_seine_probe(self):
+        # Mit dem echten Schema im Abbild: Besteht es die Probe, kommt keine
+        # Aussetzungsmeldung; besteht es sie nicht, kommt genau eine und
+        # keine einzige Schemabeanstandung. Welcher Fall vorliegt, sagt /health.
+        codes = [i["code"] for i in pruefe(werk())["issues"]]
+        if service.schemaprobe()["ok"]:
+            self.assertNotIn("schema_unusable", codes)
+        else:
+            self.assertEqual(codes.count("schema_unusable"), 1)
+            self.assertNotIn("schema", codes)
+
+    def test_gesundheitsauskunft_nennt_probe_und_stand(self):
+        info = service.schema_info()
+        self.assertIn("ok", info["probe"])
+        self.assertIn("commit", info)
+        self.assertIn("ref", info)
 
 
 class Querlauf(unittest.TestCase):

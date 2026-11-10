@@ -105,6 +105,12 @@ describe('pruefdienstStatus', () => {
 
   it('liest die Schemaversion, wenn der Dienst antwortet', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ schema: { version: '1.2.3' } })))
-    expect(await pruefdienstStatus()).toEqual({ erreichbar: true, version: '1.2.3' })
+    expect(await pruefdienstStatus()).toEqual({ erreichbar: true, version: '1.2.3', probe: null })
+  })
+
+  it('reicht das Ergebnis der Referenzprobe weiter (#45)', async () => {
+    const probe = { ok: false, detail: "avefi:WorkVariant: Additional properties are not allowed ('type' was unexpected)" }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ schema: { version: 'x@8c4eef72e6da', probe } })))
+    expect(await pruefdienstStatus()).toEqual({ erreichbar: true, version: 'x@8c4eef72e6da', probe })
   })
 })
