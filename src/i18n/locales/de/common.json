@@ -22,6 +22,10 @@
     "switch": "Design wechseln",
     "label": "Theme"
   },
+  "language": {
+    "switch": "Sprache wechseln zu {name}",
+    "label": "Sprache"
+  },
   "action": {
     "save": "Speichern",
     "cancel": "Abbrechen",

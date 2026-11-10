@@ -181,6 +181,10 @@ a:not(.btn){color:inherit}
 .ghost{border:1px solid var(--border);background:var(--surface);color:var(--ink);font:inherit;
   font-size:13px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer}
 .ghost:hover{border-color:var(--border-strong)}
+/* Knopf mit Symbol: Die Grundeinstellung der Bibliothek macht SVG zu Blockelementen,
+   dann stuende das Symbol ueber dem Text. */
+.ghost.with-icon{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ghost.with-icon svg{flex-shrink:0}
 
 /* Abzeichen: .badge kommt aus daisyUI. Die getoenten Zustandsfarben darunter
    sind anwendungseigen — daisyUI faerbt Abzeichen flaechig, wir brauchen

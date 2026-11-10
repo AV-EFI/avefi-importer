@@ -167,15 +167,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onDocClick)
   document.removeEventListener('keydown', onKey)
 })
-
-function toggleTheme() {
-  const root = document.documentElement
-  const cur = root.getAttribute('data-theme')
-  const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches
-  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark' : prefersDark ? 'light' : 'dark'
-  root.setAttribute('data-theme', next)
-  try { localStorage.setItem('avefi-theme', next) } catch { /* Speicher gesperrt */ }
-}
 </script>
 
 <template>
@@ -226,7 +217,8 @@ function toggleTheme() {
 
       <div class="who">
         <span v-if="user?.institution_name" class="dim">{{ user.institution_name }}</span>
-        <button type="button" class="ghost" :title="t('theme.switch')" :aria-label="t('theme.switch')" @click="toggleTheme">◐</button>
+        <CommonLanguageSwitch />
+        <CommonThemeSwitch />
 
         <div v-if="user" ref="menuRoot" class="usermenu">
           <button ref="menuButton" class="ui-avatar-btn" type="button" aria-haspopup="menu" :aria-expanded="menuOpen"
