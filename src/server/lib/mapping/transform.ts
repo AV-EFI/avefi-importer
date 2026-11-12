@@ -23,6 +23,7 @@
 
 import type { TransformOp, TransformStep } from '#shared/types/domain'
 import { meldung } from './meldungen.js'
+import { toIsoDate } from './isodate.js'
 import type { MappingMessage } from '#shared/types/domain'
 import type { SourceRow } from './header.js'
 import type { SchemaModel } from './schema-model.js'
@@ -876,74 +877,11 @@ function unknownValue(raw: string, mode: string, code: string, errors: MappingMe
 
 /* ------------------------------------------------- Einzelne Umwandlungen */
 
-/** Format-Buchstaben, wie sie schon in den Altprofilen stehen (PHP-Schreibweise). */
-const DATE_TOKENS: Record<string, string> = {
-  d: '(\\d{2})', j: '(\\d{1,2})',
-  m: '(\\d{2})', n: '(\\d{1,2})',
-  Y: '(\\d{4})', y: '(\\d{2})'
-}
-
-/** Datum nach einem vorgegebenen Quellformat lesen. */
-function parseWithFormat(v: string, format: string): string | null {
-  const order: string[] = []
-  let pattern = '^'
-  for (const ch of format) {
-    const token = DATE_TOKENS[ch]
-    if (token !== undefined) {
-      order.push(ch)
-      pattern += token
-    } else {
-      pattern += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    }
-  }
-  pattern += '$'
-
-  const m = v.match(new RegExp(pattern))
-  if (m === null) return null
-
-  let year = 0
-  let month = 1
-  let day = 1
-  order.forEach((ch, i) => {
-    const n = Number.parseInt(m[i + 1] ?? '', 10)
-    if (!Number.isFinite(n)) return
-    if (ch === 'Y') year = n
-    else if (ch === 'y') year = n < 70 ? 2000 + n : 1900 + n
-    else if (ch === 'm' || ch === 'n') month = n
-    else if (ch === 'd' || ch === 'j') day = n
-  })
-  if (year === 0 || month < 1 || month > 12 || day < 1 || day > 31) return null
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-
-/** Datum nach ISO (JJJJ, JJJJ-MM oder JJJJ-MM-TT) — das ist zugleich EDTF-konform. */
-export function toIsoDate(input: string, from: string, errors: MappingMessage[]): string {
-  const v = input.trim()
-  if (v === '') return ''
-
-  if (from !== '') {
-    const parsed = parseWithFormat(v, from)
-    if (parsed !== null) return parsed
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
-  if (/^\d{4}-\d{2}$/.test(v)) return v
-  if (/^\d{4}$/.test(v)) return v
-
-  let m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
-  if (m !== null) return `${m[3]}-${(m[2] ?? '').padStart(2, '0')}-${(m[1] ?? '').padStart(2, '0')}`
-
-  m = v.match(/^(\d{1,2})\.(\d{4})$/)
-  if (m !== null) return `${m[2]}-${(m[1] ?? '').padStart(2, '0')}`
-
-  m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (m !== null) return `${m[3]}-${(m[1] ?? '').padStart(2, '0')}-${(m[2] ?? '').padStart(2, '0')}`
-
-  m = v.match(/(\d{4})/)
-  if (m !== null) return m[1] ?? ''
-
-  errors.push(meldung('transform.badDate', { wert: v }))
-  return ''
-}
+/*
+ * Datum nach ISO steht seit dem 12.11.2026 in isodate.ts, gemeinsam mit der
+ * Zielpruefung (#51). Hier bleibt der Name, unter dem es bisher zu finden war.
+ */
+export { toIsoDate } from './isodate.js'
 
 /**
  * Laufzeit nach ISO 8601. Das AVefi-Schema verlangt genau PT[hh]H[mm]M[ss]S mit

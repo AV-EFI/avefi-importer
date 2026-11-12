@@ -18,11 +18,13 @@ import {
   runRow,
   workKey,
   type AuthorityRequest,
+  type CellResult,
   type MergeConflict,
   type MappingServices,
   type RunTally
 } from '../mapping/runner'
 import { authorityServices } from '../authority/services.js'
+import { meldungstext } from '../mapping/meldungen.js'
 import type { CanonicalRecord } from './types'
 
 export interface RowOutcome {
@@ -75,6 +77,7 @@ export class ProfileRun {
     // Beanstandungen des Mappings sind bereits ValidationIssue; die Zeile wird
     // ergaenzt, damit der Bericht auf die Quellzeile zeigen kann.
     const issues: ValidationIssue[] = result.issues.map((i) => ({ ...i, row: i.row ?? rowNumber }))
+    issues.push(...kettenMeldungen(result.cells, rowNumber))
     return { canonical: result.canonical, issues }
   }
 
@@ -89,6 +92,39 @@ export class ProfileRun {
   report(): RunTally {
     return this.tally
   }
+}
+
+/**
+ * Meldungen der Konverterkette als Beanstandungen des Pruefberichts.
+ *
+ * Bis zum 12.11.2026 kamen sie dort nicht an. Was ein Konverter meldete — „24“
+ * ist kein Datum, „xyz“ steht nicht in der Werteliste, „zwölf“ ist keine Zahl
+ * —, landete nur in einer Zaehlung je Spalte, die keine Oberflaeche zeigte.
+ * Der Wert fiel weg, und der Bericht schwieg (Luca Wollny in #51: „Bei 24
+ * fehlt im Export das has_event ganz, ohne Hinweis“).
+ *
+ * Nur Meldungen der Kette (`transform.*`). Was beim Schreiben ins Ziel
+ * auffaellt (`target.*`), steht schon in `result.issues`. Gleiche Meldungen
+ * einer Spalte fasst der IssueCollector zusammen.
+ */
+export function kettenMeldungen(cells: Record<string, CellResult>, rowNumber: number): ValidationIssue[] {
+  const out: ValidationIssue[] = []
+  for (const [spalte, cell] of Object.entries(cells)) {
+    for (const e of cell.errors) {
+      if (!e.code.startsWith('transform.')) continue
+      const wert = e.params?.['wert']
+      out.push({
+        severity: e.severity ?? 'warning',
+        code: e.code,
+        message: meldungstext(e),
+        sourceField: spalte,
+        row: rowNumber,
+        ...(e.params !== undefined ? { params: e.params } : {}),
+        ...(wert !== undefined ? { value: String(wert).slice(0, 120) } : {})
+      })
+    }
+  }
+  return out
 }
 
 /**

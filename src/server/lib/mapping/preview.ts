@@ -23,6 +23,7 @@ import type { AvefiRecord } from './builder.js'
 import type { CellResult, MappingCheck, MappingFixPart, MappingServices } from './runner.js'
 import { canonicalOp, runChain } from './transform.js'
 import { getTarget } from './targets.js'
+import { isIsoDate } from './isodate.js'
 import { runRow, staticCheck } from './runner.js'
 
 /** Obergrenze gerechneter Zeilen. */
@@ -279,7 +280,7 @@ export function buildPreview(
     .slice(0, MAX_SCHEMA_ISSUES)
 
   const checks = [
-    ...staticCheck(mapping, options.schema),
+    ...ohneUnnoetigenDatumsvorschlag(staticCheck(mapping, options.schema), out),
     ...dedupeChecks(runtimeChecks),
     ...dataChecks(mapping, out),
     ...bracketTitleChecks(mapping, out),
@@ -287,6 +288,23 @@ export function buildPreview(
   ]
 
   return { columns: out, canonical, schema, evaluatedRows: indices.length, checks, coverage }
+}
+
+/**
+ * Der Vorschlag „Datum nach ISO einfuegen“ entfaellt, wenn jedes betrachtete
+ * Beispiel der Spalte schon ein gueltiges ISODate ist (`1976/1977`, `2024~`).
+ * Die statische Pruefung kennt die Werte nicht und schlug ihn bis zum
+ * 12.11.2026 auch dann vor (#51).
+ */
+function ohneUnnoetigenDatumsvorschlag(
+  checks: readonly MappingCheck[],
+  columns: Record<string, PreviewColumn>
+): MappingCheck[] {
+  return checks.filter((c) => {
+    if (c.code !== 'chain.date' || c.sourceField === undefined) return true
+    const beispiele = (columns[c.sourceField]?.examples ?? []).filter((e) => e.raw.trim() !== '')
+    return beispiele.length === 0 || !beispiele.every((e) => isIsoDate(e.raw.trim()))
+  })
 }
 
 /** Gleiche Beanstandung aus mehreren Zeilen nur einmal zeigen. */

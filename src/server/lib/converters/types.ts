@@ -130,6 +130,10 @@ export class IssueCollector {
       this.group(issue)
       return
     }
+    if (String(issue.code ?? '').startsWith('transform.')) {
+      this.kette(issue)
+      return
+    }
     if (this.items.length < this.limit) this.items.push(issue)
     else this.dropped++
   }
@@ -137,6 +141,27 @@ export class IssueCollector {
   addAll(issues: readonly ValidationIssue[] | undefined): void {
     if (!issues) return
     for (const i of issues) this.add(i)
+  }
+
+  /**
+   * Meldungen der Konverterkette (#51): je Spalte, Code und Gewicht einmal,
+   * mit Zahl und bis zu drei Beispielwerten. Ein Datum, das in fuenftausend
+   * Zeilen gleich falsch geschrieben ist, ist ein Befund, nicht fuenftausend.
+   * Die Zeile des ersten Vorkommens bleibt stehen, damit man hinspringen kann.
+   */
+  private readonly ketten = new Map<string, { issue: ValidationIssue; count: number; samples: string[] }>()
+
+  private kette(issue: ValidationIssue): void {
+    const key = `${issue.severity}|${issue.code ?? ''}|${issue.sourceField ?? ''}`
+    const found = this.ketten.get(key)
+    if (found === undefined) {
+      this.ketten.set(key, { issue, count: 1, samples: issue.value ? [issue.value] : [] })
+      return
+    }
+    found.count++
+    if (issue.value && found.samples.length < 3 && !found.samples.includes(issue.value)) {
+      found.samples.push(issue.value)
+    }
   }
 
   private group(issue: ValidationIssue): void {
@@ -155,6 +180,18 @@ export class IssueCollector {
   /** Die gesammelten Meldungen, gebuendelte zuletzt. */
   all(): ValidationIssue[] {
     const out = [...this.items]
+    for (const { issue, count, samples } of this.ketten.values()) {
+      if (count === 1) {
+        out.push(issue)
+        continue
+      }
+      const examples = samples.length > 0 ? ` Beispiele: ${samples.join(', ')}.` : ''
+      out.push({
+        ...issue,
+        params: { ...(issue.params ?? {}), count, beispiele: samples.join(', ') },
+        message: `${issue.message} Betrifft ${count} Zeilen.${examples}`
+      })
+    }
     if (this.dropped > 0) {
       out.push({
         severity: 'info',
@@ -182,11 +219,14 @@ export class IssueCollector {
   get count(): number {
     let grouped = 0
     for (const g of this.grouped.values()) grouped += g.count
+    for (const g of this.ketten.values()) grouped += g.count
     return this.items.length + this.dropped + grouped
   }
 
   countBySeverity(severity: ValidationIssue['severity']): number {
     if (severity === 'info') return this.count - this.countBySeverity('error') - this.countBySeverity('warning')
-    return this.items.filter((i) => i.severity === severity).length
+    let n = this.items.filter((i) => i.severity === severity).length
+    for (const g of this.ketten.values()) if (g.issue.severity === severity) n += g.count
+    return n
   }
 }

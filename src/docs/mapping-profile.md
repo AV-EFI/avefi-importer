@@ -422,15 +422,41 @@ als Nein. Ein leerer Wert bleibt leer, alles andere wird beanstandet.
 |---|---|---|
 | `date` | text → text | `from` (optional) |
 
-Ergebnis ist ISO: `JJJJ`, `JJJJ-MM` oder `JJJJ-MM-TT` — zugleich EDTF-konform.
-Ohne `from` werden der Reihe nach erkannt: bereits ISO, `T.M.JJJJ`, `M.JJJJ`,
-`M/T/JJJJ` und zuletzt eine vierstellige Jahreszahl irgendwo im Text. Mit `from`
-wird ein festes Quellformat gelesen; die Buchstaben folgen der PHP-Schreibweise
-und sind `d`, `j`, `m`, `n`, `Y`, `y`.
+Ergebnis ist ein `ISODate` des AVefi-Schemas: `JJJJ`, `JJJJ-MM` oder
+`JJJJ-MM-TT`, jeweils mit `~` (ungefähr) oder `?` (unsicher), auch als Zeitraum
+mit `/`. Konverter und Zielprüfung benutzen dasselbe Muster wie das Schema
+(`server/lib/mapping/isodate.ts`, seit #51).
+
+Ohne `from` gilt der Reihe nach:
+
+| Quelle | Ergebnis | Meldung |
+|---|---|---|
+| schon schemakonform (`2024~`, `2023/2024`, `2023-11-01/2024-02-15`) | unverändert | – |
+| `2023 / 2024` | `2023/2024` | – |
+| `1976 - 1977`, `1976-1977`, `1976–1977` | `1976/1977` | – |
+| `2023-11-01 - 2024-02-15` (Strich mit Leerraum) | `2023-11-01/2024-02-15` | – |
+| `1962-65` (Endjahr nach dem Anfang, kein Monat) | `1962/1965` | – |
+| `2024-4`, `2024-4-5` | `2024-04`, `2024-04-05` | – |
+| `ca. 1970`, `circa 1970`, `um 1970` | `1970~` | – |
+| `T.M.JJJJ`, `M.JJJJ`, `M/T/JJJJ` | ISO | – |
+| `2024-04-24T10:00` | `2024-04-24` | Hinweis: Uhrzeit abgeschnitten |
+| genau eine Jahreszahl im Text, sonst keine Ziffern (`gedreht 1953`) | `1953` | Hinweis: nur die Jahreszahl |
+| alles andere (`24`, `12024`, `2024-13`, `2024-02-30`, `2024/`, `1950er`) | entfällt | Warnung |
+
+Bis zum 12.11.2026 nahm der Konverter bei allem, was nicht genau
+`JJJJ(-MM(-TT))` war, still die ersten vier Ziffern: `2024~` wurde `2024`,
+`2023/2024` wurde `2023`, `12024` wurde `1202`. Ein verworfenes Datum erscheint
+jetzt im Prüfbericht als Warnung, mit Zeile, Spalte und Rohwert; gleiche
+Meldungen einer Spalte stehen dort einmal, mit Zahl und Beispielen. Der
+Datensatz bleibt exportierbar, denn ein Datum am Ereignis ist keine Pflicht.
+
+Mit `from` wird ein festes Quellformat gelesen; die Buchstaben folgen der
+PHP-Schreibweise und sind `d`, `j`, `m`, `n`, `Y`, `y`. Ein Tag, den es im Monat
+nicht gibt, wird dabei abgelehnt.
 
 ```jsonc
 { "op": "date" }                      // "14.03.1935" -> "1935-03-14"
-                                      // "um 1935"    -> "1935"
+                                      // "um 1935"    -> "1935~"
 { "op": "date", "from": "d.m.Y" }     // "03.14.1935" wird NICHT gelesen
 { "op": "date", "from": "m/d/Y" }     // "03/14/1935" -> "1935-03-14"
 ```

@@ -14,6 +14,7 @@
  */
 
 import type { TargetEntry, TargetLevel, TargetType } from '#shared/types/domain'
+import { isIsoDate } from './isodate.js'
 import { meldung } from './meldungen.js'
 import type { MappingMessage } from '#shared/types/domain'
 import type { SchemaModel } from './schema-model.js'
@@ -462,7 +463,9 @@ export function validateTargetValue(
   }
 
   if (type === 'date') {
-    if (!/^-?\d{4}(-\d{2}(-\d{2})?)?[?~]?$/.test(v)) {
+    // Dieselbe Regel wie der Konverter und das Schema (#51). Bis zum 12.11.2026
+    // stand hier ein eigenes Muster ohne Zeitraeume und ohne Monatspruefung.
+    if (!isIsoDate(v)) {
       return [meldung('target.badDate', { wert: v })]
     }
     return []
