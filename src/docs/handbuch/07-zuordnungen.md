@@ -169,6 +169,15 @@ Zuordnung (je Zweig).
 | Typen | Zahl, Jahreszahl, Datum nach ISO, Laufzeit nach ISO 8601 |
 | Vokabular | Werteliste zuordnen, Normdaten nachschlagen (GND/Wikidata/VIAF) |
 
+**Daten** verlangt das AVefi-Schema als `JJJJ`, `JJJJ-MM` oder `JJJJ-MM-TT`, gern mit
+`~` für „ungefähr“ oder `?` für „unsicher“, und als Zeitraum mit `/` (`1976/1977`).
+Was schon so in der Quelle steht, übernimmt der Konverter „Datum nach ISO“ unverändert.
+Er wandelt außerdem um, was eindeutig ist: Spannen wie „1976 - 1977“ oder „1962-65“,
+„ca. 1970“ zu `1970~`, „24.04.2024“ zu `2024-04-24`. Eine Uhrzeit schneidet er ab und
+sagt es. Was sich nicht eindeutig lesen lässt — „24“, „2024-13“, „1950er“ —, übernimmt
+er nicht und meldet es im Prüfbericht als Warnung, statt eine Jahreszahl zu raten. In der
+Vorschau steht bei solchen Werten ⚠ statt ✓.
+
 **Laufzeiten** verlangt das AVefi-Schema als `PT01H30M00S` — mindestens zweistellig.
 Der Konverter „Laufzeit nach ISO 8601" erzeugt genau dieses Format, egal ob die Quelle
 „90", „1:30:00" oder „PT1H30M" liefert.

@@ -30,6 +30,76 @@ GitHub weiter.
 
 ---
 
+## 2026-11-12 — „Datum nach ISO“ nach dem Muster des Schemas (#51)
+
+Anlass: Meldung von Luca (#51, 12.11.2026) mit einer Testdatei, die die
+Beispiele des Typs `ISODate` abdeckt, dazu Sonderfälle und ungültige Werte.
+Gewährleistung, auf dem Branch `fix/datum-nach-iso`.
+
+**Gemeldet:**
+
+* Qualifier und Zeiträume wurden auf das Anfangsjahr gekürzt: `2024~` → `2024`,
+  `2023/2024` → `2023`, `2023-11-01/2024-02-15` → `2023`.
+* `2024-13`, `2024-00`, `2024-04-32` mit grünem Haken in der Vorschau, mit und
+  ohne Konverter; erst efi-conv lehnte sie ab.
+* `24`: `has_event` fehlte im Export, ohne Hinweis.
+* `2024-4`, `2024/`, `2023 / 2024`, `2024-04-24T10:00`, `ca. 1970` wurden still
+  zu einem Jahr; `12024` zu `1202`.
+* Die Anwendung lehnte das gültige `1976/1977` ab.
+
+**Ursachen:** Drei Stellen beantworteten dieselbe Frage verschieden. Der
+Konverter liess nur `JJJJ(-MM(-TT))` durch und nahm sonst die ersten vier
+Ziffern. Die Zielprüfung hatte ein eigenes Muster, mit Qualifiern, ohne
+Zeiträume, ohne Prüfung von Monat und Tag. Das Schema erlaubt alles drei. Dazu
+kam ein allgemeiner Fehler: **Meldungen der Konverterkette erreichten den
+Prüfbericht nie.** Sie landeten nur in einer Zählung je Spalte, die keine
+Oberfläche zeigte. Das betraf nicht nur Daten, sondern jede Meldung eines
+Konverters (keine Zahl, nicht in der Werteliste, unbekanntes Land bei
+„beanstanden“).
+
+**Was daraus wurde** (Entscheidungen mit Andreas am 12.11.):
+
+* Neue Datei `server/lib/mapping/isodate.ts` mit dem Muster aus dem Schema.
+  Konverter und Zielprüfung benutzen es. `tests/mapping/isodate.test.ts` hält
+  es gegen `public/schema/avefi/model.schema.json`.
+* Schemakonformes bleibt unverändert. Umgewandelt wird nur Eindeutiges ohne
+  Verlust: Leerraum um `/`; Strich zwischen zwei vierstelligen Jahren; zwei
+  volle Daten mit „ - “; `1962-65` → `1962/1965` (nur wenn das Ende nach dem
+  Anfang liegt und es kein Monat sein kann); Monat und Tag auffüllen;
+  `ca./circa/um 1970` → `1970~`; die bisherigen Schreibweisen `T.M.JJJJ`,
+  `M.JJJJ`, `M/T/JJJJ`.
+* Uhrzeit wird abgeschnitten, mit **Hinweis**. Eine einzelne Jahreszahl in einem
+  Text ohne weitere Ziffern („gedreht 1953“) wird wie bisher übernommen, jetzt
+  ebenfalls mit Hinweis.
+* Alles andere **entfällt mit Warnung**: `24`, `12024`, `2024-13`, `2024-02-30`,
+  `2024/`, `1950er`, `50er Jahre`, `1953 (Fassung 1960)`. Der Datensatz bleibt
+  exportierbar. Strenger als das Schema sind dabei zwei Fälle: Jahre über 9999
+  und Tage, die es im Monat nicht gibt.
+* **Meldungen der Kette stehen im Prüfbericht** (`mappingBridge.ts`,
+  `kettenMeldungen`), mit Zeile, Spalte und Rohwert. Gleiche Meldungen einer
+  Spalte fasst der `IssueCollector` zusammen: einmal, mit Zahl, drei Beispielen
+  und der ersten Zeile.
+* **Vorschau:** Ein übernommener Wert mit Meldung bekommt ⚠ statt ✓, die Meldung
+  steht im Tooltip und für Screenreader im Text. Der Vorschlag „Datum nach ISO
+  einfügen“ entfällt, wenn alle Beispiele der Spalte schon schemakonform sind.
+* `MappingMessage` hat ein optionales `severity` (`info`/`warning`).
+* Texte de/en: `transform.badDate` neu gefasst, `transform.dateTimeDropped`,
+  `transform.dateYearExtracted` neu, `target.badDate` nennt Qualifier und Zeiträume.
+* Handbuch Kapitel 3 und 7, `mapping-profile.md`.
+
+### Geprüft
+
+* 786 Tests in 65 Dateien grün (vorher 768), `nuxt typecheck` ohne Befund.
+  Neu `tests/mapping/isodate.test.ts` mit allen Fällen aus Lucas Datei.
+* Nach dem Zusammenführen von `origin/main` (Stand #50): 804 Tests in 66
+  Dateien grün.
+* efi-conv (Modell und Zusatzregeln) nimmt die Ergebnisse an: `1976/1977`,
+  `2024~`, `1970~`, `2023-11-01/2024-02-15`, `2024-04~`, `1962/1965`.
+* Offen: Sichtprüfung im Browser und Barrierefreiheitslauf (Farbe `--warn` am
+  neuen ⚠-Wert). Dafür braucht es eine Anmeldung auf der Demo.
+
+---
+
 ## 2026-11-10 — Normdaten: Wikidata-Artprüfung, Fehlerantworten, Bilanz (#38)
 
 Anlass: Lucas Nachtest zu #38 (06.11.2026) nach dem Ausrollen von #41.

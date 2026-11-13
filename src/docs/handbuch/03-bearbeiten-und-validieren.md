@@ -227,7 +227,7 @@ einige Regeln an, und der Importer wendet dieselben an:
 
 | Regel | Was zu tun ist |
 |---|---|
-| Ein Datum hat keine gültige Form | Konverter `date` in die Kette, er bringt Angaben wie „1962“ oder „März 1962“ in die Form JJJJ, JJJJ-MM, JJJJ-MM-TT |
+| Ein Datum hat keine gültige Form | Konverter `date` in die Kette, er bringt Angaben wie „24.04.1962“ oder „1962 - 1965“ in die Form JJJJ, JJJJ-MM, JJJJ-MM-TT, auch als Zeitraum mit „/“. Was er nicht eindeutig lesen kann, meldet er als Warnung „kein eindeutiges Datum“ |
 | Ein Zeitraum endet vor seinem Beginn | Die Quelldaten prüfen, meist sind Anfang und Ende vertauscht |
 | Ein Titel oder eine Anmerkung ist zu lang | Die Quelle kürzen oder die Spalte einem anderen Ziel zuordnen |
 | Ein Name ist leer | Leere Zellen bei Personen, Orten, Genres oder Schlagwörtern prüfen |

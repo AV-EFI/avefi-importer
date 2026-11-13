@@ -672,6 +672,8 @@ button.ui-menu-item{width:100%;text-align:left;border:0;background:none;cursor:p
    zusammengelegte Ansicht und Verzweigung. */
 .okval{color:var(--ok);font-weight:600;font-size:12.5px}
 .errval{color:var(--danger);font-size:12.5px}
+/* #51: Wert uebernommen, aber mit Meldung (abgeschnittene Uhrzeit, nur Jahreszahl) */
+.hintval{color:var(--warn);font-weight:600;font-size:12.5px}
 
 .chip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 10px;
   font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)}
@@ -771,8 +773,8 @@ ul.tight li{margin-bottom:3px;font-size:13px}
 .exarrow{color:var(--faint);font-size:11px;flex:none}
 /* Zwischenstufe der Herkunft: Originalwert → normalisiert → AVefi-Ziel. */
 .exmid{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-dim);flex:0 1 auto;font-style:italic}
-.exline .okval,.exline .errval{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
-.exline .okval i,.exline .errval i{flex:none;margin-right:3px}
+.exline .okval,.exline .errval,.exline .hintval{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+.exline .okval i,.exline .errval i,.exline .hintval i{flex:none;margin-right:3px}
 .mapresult .exline{justify-content:flex-start}
 .fillhint{color:var(--warn)}
 .branch-result .exline{min-height:22px;line-height:22px}

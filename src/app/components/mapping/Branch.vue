@@ -299,8 +299,13 @@ function authorityOpen(i: number): number {
                 <span class="exmid" :title="t('mapping.branch.preValue')">{{ example.pre }}</span>
                 <i class="exarrow" aria-hidden="true">→</i>
               </template>
-              <span v-if="outputsFor(example, binding.target).length" class="okval">
-                <i aria-hidden="true">✓</i>{{ outputsFor(example, binding.target).map((o) => o.value).join(' · ') }}
+              <!-- #51: Ein Wert mit Meldung (etwa abgeschnittene Uhrzeit) bekommt
+                   keinen gruenen Haken, sondern den Hinweis samt Meldung. -->
+              <span v-if="outputsFor(example, binding.target).length"
+                    :class="example.errors.length ? 'hintval' : 'okval'"
+                    :title="example.errors.length ? example.errors.map(meldung).join(' · ') : undefined">
+                <i aria-hidden="true">{{ example.errors.length ? '⚠' : '✓' }}</i>{{ outputsFor(example, binding.target).map((o) => o.value).join(' · ') }}
+                <span v-if="example.errors.length" class="sr-only">{{ meldung(example.errors[0]!) }}</span>
               </span>
               <span v-else-if="example.errors.length" class="errval" :title="example.errors.map(meldung).join(' · ')">
                 <i aria-hidden="true">⚠</i>{{ meldung(example.errors[0]!) }}
