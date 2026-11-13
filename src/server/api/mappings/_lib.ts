@@ -93,14 +93,10 @@ const VERSION_TTL_MS = 10 * 60 * 1000
  * Profil und in den Export, damit spaeter nachvollziehbar bleibt, welche
  * Wertelisten galten.
  *
- * Das lokale Schemadokument fuehrt kein version-Feld; uebernommen wird die
- * Angabe aus der Gesundheitsauskunft des Pruefdienstes. Bis zum 10.11.2026 war
- * das nur die `$id` des Schemas, also bei jedem Stand dieselbe Adresse (hier
- * stand faelschlich, es sei die Pruefsumme). Seither haengt der Commit von
- * av-efi-schema daran, gegen den der Dienst gebaut wurde
- * (`…/model@0123456789ab`); ein Profil von einem anderen Stand faellt dann
- * mit `profile.schema-version-mismatch` auf. Faellt der Dienst aus, bleibt
- * null — ein erfundener Wert waere schlimmer als keiner.
+ * Das lokale Schemadokument fuehrt kein version-Feld; efi-conv nennt in seiner
+ * Gesundheitsauskunft die Pruefsumme der benutzten Version. Die ist als
+ * Kennung brauchbar und wird bevorzugt. Faellt der Dienst aus, bleibt null —
+ * ein erfundener Wert waere schlimmer als keiner.
  */
 export async function avefiSchemaVersion(): Promise<string | null> {
   const model = await schemaModel()

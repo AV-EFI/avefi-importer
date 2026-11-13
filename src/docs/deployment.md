@@ -134,55 +134,23 @@ installiert das echte Paket per pip aus dem Git-Repository, `efi-conv/service.py
 laedt mit `get_schema_validator()` denselben Validator, den `efi-conv check`
 benutzt. Nichts davon ist nachgebaut.
 
-Drei Bauargumente steuern, welcher Stand installiert wird:
+Zwei Bauargumente steuern, welcher Stand installiert wird:
 
 ```bash
 docker compose -f docker-compose.dev.yml build \
   --build-arg EFI_CONV_REPO=github.com/AV-EFI/efi-conv.git \
   --build-arg EFI_CONV_REF=main \
-  --build-arg AVEFI_SCHEMA_REF=main \
   efi-conv
 ```
 
-`EFI_CONV_REPO` und `EFI_CONV_REF` zeigen auf den Stand von efi-conv, etwa den
-aus Leistungspaket A oder einen festen Commit, sodass Konverter und Importer
-dieselbe Pruefung benutzen. `AVEFI_SCHEMA_REF` waehlt den Stand des
-AVefi-JSON-Schemas in `github.com/AV-EFI/av-efi-schema`: einen Zweig, ein Tag
-oder einen Commit. In Compose kommen alle drei aus gleichnamigen
-Umgebungsvariablen.
+Damit laesst sich auf den Stand aus Leistungspaket A oder auf einen festen
+Commit zeigen, sodass Konverter und Importer dieselbe Pruefung benutzen.
 
-Das Schema wird beim Bauen einmal geholt und im Image eingefroren
-(`/root/.cache/efi_conv/`, erledigt `efi-conv/schema_holen.py`). Ohne das laedt
-efi-conv es zur Laufzeit vom main-Branch, und keine Konvertierung waere
-reproduzierbar, weil sich das Schema unter der laufenden Anwendung aendern
-kann. Dabei wird `AVEFI_SCHEMA_REF` auf einen Commit aufgeloest und das Schema
-von genau diesem Commit geholt. Welcher Stand das war, sagt `GET /health`
-(`schema.ref`, `schema.commit`), und die Schemaversion im Pruefbericht und in
-der Herkunftsangabe jedes Imports traegt den Commit
-(`https://www.av-efi.net/av-efi-schema/model@8c4eef72e6da`). Bis zum 10.11.2026
-stand dort nur die Adresse, die bei jedem Stand gleich lautet.
-
-Achtung beim Neubauen: Docker verwendet die Schicht mit dem Schema wieder,
-solange sich weder `AVEFI_SCHEMA_REF` noch `schema_holen.py` geaendert haben.
-Wer mit `main` den neuesten Stand haben will, baut mit `--no-cache`. Welcher
-Stand tatsaechlich darin steckt, steht in `/health`.
-
-**Referenzprobe.** Beim ersten Aufruf prueft der Dienst drei bekannt gueltige
-Saetze (Werk, Manifestation, Exemplar; `REFERENZ` in `service.py`) gegen das
-eingefrorene Schema. Lehnt es schon diese ab, ist das Schema unbrauchbar und
-nicht die Daten. Dann setzt der Dienst den JSON-Schema-Schritt aus und meldet
-das je Lauf genau einmal als Warnung `schema_unusable`, statt jeden Satz zu
-beanstanden. Das Laden als Modell und die Zusatzregeln laufen weiter. `/health`
-traegt das Ergebnis unter `schema.probe`, und der Worker schreibt beim Start
-eine Warnung ins Log.
-
-Anlass war #45 (Luca Wollny, 05.11.2026): Mit LinkML 1.12 (av-efi-schema
-`5970e32`/`d709e35`, 26.10.2026) beschreibt die Wurzel von
-`model.schema.json` auf main `MovingImageRecord` mit
-`additionalProperties: false`. Ein am 04.11. gebautes Abbild beanstandete
-deshalb jeden Satz zweimal, ein aelteres gar nicht. Wer bis zur Klaerung
-upstream ohne Aussetzung pruefen will, baut mit `AVEFI_SCHEMA_REF=5970e32`,
-dem letzten Stand davor.
+Das AVefi-Schema wird beim Bauen einmal geholt und im Image eingefroren
+(`/root/.cache/efi_conv/`). Ohne das laedt efi-conv es zur Laufzeit vom
+main-Branch, und keine Konvertierung waere reproduzierbar, weil sich das Schema
+unter der laufenden Anwendung aendern kann. Welches Schema geladen wurde, sagt
+`GET /health`; die Angabe wandert in den Pruefbericht jedes Imports.
 
 Der Dienst hat zwei Endpunkte:
 
@@ -212,12 +180,6 @@ und `params`.
 
 Bis zu diesem Stand liefen die Regeln nie: Sie bekamen ein `dict` statt eines
 Modells, warfen bei jedem Satz, und das wurde stillschweigend uebergangen.
-
-Stand 10.11.2026: Mit dem Schema auf main legt die Wurzel wieder etwas fest,
-aber das Falsche — sie lehnt jeden Werk-, Manifestations- und Exemplarsatz ab,
-auch in `efi-conv check` selbst (#45). Das faengt die Referenzprobe oben ab.
-`/check-cli` fuehrt die Kommandozeile dagegen unveraendert aus und scheitert
-mit diesem Schema an jeder Datei.
 
 Tests des Dienstes laufen im Container, ohne etwas nachzuinstallieren:
 
@@ -449,7 +411,6 @@ Falle: Der Worker las damals nur die Namen ohne Praefix und fiel bei reiner
 | `AUTHORITY_LIMIT` | nein | `500` | Obergrenze der frischen Nachschlagevorgaenge je Konvertierung. Unbrauchbare Angaben fallen auf 500 zurueck. Ebenfalls in beiden Containern gleich setzen. |
 | `EFI_CONV_REPO` | nein (Bauzeit) | `github.com/AV-EFI/efi-conv.git` | Herkunft von efi-conv beim Bauen des Sidecars. |
 | `EFI_CONV_REF` | nein (Bauzeit) | `main` | Zweig oder Commit von efi-conv. Fuer reproduzierbare Ergebnisse einen Commit eintragen. |
-| `AVEFI_SCHEMA_REF` | nein (Bauzeit) | `main` | Zweig, Tag oder Commit von `AV-EFI/av-efi-schema`, dessen JSON-Schema ins Abbild kommt. Wird beim Bauen auf einen Commit aufgeloest; der steht in `/health` und in jedem Pruefbericht. Bis #45 upstream geklaert ist, prueft `5970e32` ohne Aussetzung. |
 | `APP_DOMAIN` | nein | `localhost` | Nur fuer die Traefik-Regel in `docker-compose.dev.yml`. Die Anwendung selbst kennt keine feste Domain. |
 | `DB_SCHEMA_AUTO` | nein | an | Beim Start wird `db/schema.sql` angewandt. Mit `0` unterbleibt das; dann ist `npm run migrate` der Weg. Fuer eine fremdverwaltete Datenbank gedacht, in der die Anwendung nichts anlegen darf. |
 | `SEED_EMAIL` | nein (nur `npm run seed`) | `admin@av-efi.net` | Anmeldename des ersten Kontos. |

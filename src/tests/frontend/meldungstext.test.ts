@@ -105,14 +105,6 @@ describe('befund', () => {
     expect(fuer('de').befund(ganz('additionalProperties', { field: 'has_event.0', extra: 'x' }))).toBe(
       'has_event.0 enthält Angaben, die das Schema dort nicht vorsieht: x.')
   })
-
-  it('meldet ein unbrauchbares Schema in der Sprache der Oberflaeche', () => {
-    const issue: ValidationIssue = {
-      severity: 'warning', code: 'schema_unusable', message: 'Das geladene AVefi-Schema …',
-      params: { stand: '8c4eef72e6da' }
-    }
-    expect(fuer('en').befund(issue)).toMatch(/^The loaded AVefi schema already rejects a record known to be valid\./)
-  })
 })
 
 describe('diagnose', () => {

@@ -391,8 +391,7 @@
       "authority_disabled": "Die Konverter „Normdaten nachschlagen“ fragen nur, wenn der Betreiber AUTHORITY_ENABLED in der Weboberfläche und im Worker einschaltet. Bis dahin lassen sich Treffer im Zuordnungseditor von Hand suchen und bestätigen; bestätigte Zuordnungen greifen auch ohne den Schalter.",
       "schema": "Der Wert passt nicht zu dem, was das AVefi-Schema an dieser Stelle erlaubt. Oft hilft ein Konverter in der Zuordnung: „date“ für Datumsangaben, „duration“ für Laufzeiten, „number“ für Zahlen.",
       "missing_identifier": "Der Satz hat keine Kennung. Ohne has_identifier lässt sich später kein PID vergeben. In der Zuordnung muss eine Spalte auf eine Kennung zeigen, oder ein Festwert muss sie liefern.",
-      "validation_unavailable": "Der Prüfdienst war nicht erreichbar. Die Datei wurde erzeugt, aber nicht geprüft — über die Schemakonformität sagt dieser Bericht also nichts. „Neu konvertieren“ startet die Prüfung erneut.",
-      "schema_unusable": "Das liegt nicht an den Daten: Die Schemadatei, mit der der Prüfdienst gebaut wurde, lehnt auch einen Datensatz ab, der nachweislich gültig ist. Der Betreiber kann den Prüfdienst mit AVEFI_SCHEMA_REF auf einem früheren Stand bauen; danach „Neu konvertieren“."
+      "validation_unavailable": "Der Prüfdienst war nicht erreichbar. Die Datei wurde erzeugt, aber nicht geprüft — über die Schemakonformität sagt dieser Bericht also nichts. „Neu konvertieren“ startet die Prüfung erneut."
     },
     "fieldHelp": {
       "lead": "Zum Feld",
@@ -474,7 +473,6 @@
       "no_items_associated": "Zu {category} {key} gehört kein Exemplar.",
       "validation_unavailable__schema": "Die Prüfung gegen das AVefi-Schema war nicht möglich. Die Datei wurde erzeugt, aber nicht geprüft. Die Ursache steht unter „Wortlaut des Prüfwerkzeugs“.",
       "validation_unavailable__crossref": "Die satzübergreifende Prüfung war nicht möglich. Kennungen und Verweise wurden nicht geprüft. Die Ursache steht unter „Wortlaut des Prüfwerkzeugs“.",
-      "schema_unusable": "Das geladene AVefi-Schema lehnt schon einen bekannt gültigen Referenzdatensatz ab. Die Prüfung gegen das JSON-Schema ist deshalb ausgesetzt; geprüft wurden das Laden als AVefi-Modell und die Regeln von efi-conv check.",
       "missing_title": "Der Datensatz hat keinen Titel. AVefi verlangt einen Haupttitel.",
       "item_without_manifestation": "Zu diesem Exemplar gibt es keine Manifestation; die Zuordnung is_item_of bleibt leer.",
       "mapping_failed": "Die Zeile konnte nicht nach AVefi umgesetzt werden.",

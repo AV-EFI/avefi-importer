@@ -113,28 +113,6 @@ describe('checkRecords', () => {
     expect(ergebnis.valid).toBe(2)
     expect(ergebnis.ok).toBe(false)
   })
-
-  it('meldet ein unbrauchbares Schema einmal, nicht je Buendel (#45)', async () => {
-    const aussetzung = {
-      severity: 'warning', code: 'schema_unusable', message: 'Das geladene AVefi-Schema …',
-      detail: "avefi:WorkVariant: Additional properties are not allowed ('type' was unexpected)"
-    }
-    vi.stubGlobal('fetch', async (url: string, init: { body: string }) => {
-      const body = JSON.parse(init.body) as { records: unknown[] }
-      const quer = new URL(url).pathname === '/crossref'
-      return {
-        ok: true,
-        json: async () => quer
-          ? { checked: body.records.length, issues: [] }
-          : { ok: true, checked: body.records.length, valid: body.records.length, issues: [aussetzung] }
-      }
-    })
-    // 1.200 Saetze, drei Buendel, drei gleiche Meldungen vom Dienst
-    const ergebnis = await checkRecords(lieferung(400), {}, 5_000)
-    expect(ergebnis.issues.filter((i) => i.code === 'schema_unusable')).toHaveLength(1)
-    expect(ergebnis.ok).toBe(true)
-    expect(ergebnis.valid).toBe(1200)
-  })
 })
 
 describe('checkCrossref', () => {

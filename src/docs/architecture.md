@@ -331,13 +331,6 @@ ausdruecklich, dass nicht geprueft wurde
 (`code: validation_unavailable`, Schweregrad Warnung). Ein „validiert", das
 niemand geprueft hat, waere schlimmer als ein offener Befund.
 
-Dasselbe gilt in der Gegenrichtung: Lehnt das Schema des Dienstes schon bekannt
-gueltige Referenzsaetze ab, ist jede Schemabeanstandung eine Scheinbeanstandung.
-Der Dienst setzt den Schemaschritt dann aus und sagt es einmal je Lauf
-(`code: schema_unusable`, Warnung); Modell und Zusatzregeln pruefen weiter
-(#45). Ein Pruefwerkzeug, das alles ablehnt, sagt so wenig wie eines, das
-alles durchlaesst.
-
 Beanstandungen tragen Schweregrad, Meldung und — soweit zuordenbar — Zeile,
 Datensatznummer, Quellfeld, AVefi-Feld und den gekuerzten Wert. Manche tragen
 zusaetzlich einen Vorschlag zur Behebung (`fix`), etwa „Konverter `duration`

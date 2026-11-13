@@ -16,15 +16,6 @@ AVefi-JSON-Schemas legt fuer einen einzelnen Satz nichts fest, iter_errors
 findet dort also nichts — hier wie upstream. Die eigentliche Pruefung ist, dass
 efi-conv die Datei als Pydantic-Modell laedt (`avefi.load`), und danach
 `has_invalid_value`. Beides spiegelt `_zusatzregeln`.
-
-Seit LinkML 1.12 (av-efi-schema, 26.10.2026) ist es umgekehrt: Die Wurzel auf
-main beschreibt `MovingImageRecord` mit `additionalProperties: false` und
-lehnt damit jeden Werk-, Manifestations- und Exemplarsatz ab, auch in
-`efi-conv check` selbst (#45). Deshalb prueft `schemaprobe()` beim ersten
-Aufruf drei bekannt gueltige Saetze. Fallen sie durch, ist die Schemadatei
-unbrauchbar und nicht die Daten: Der JSON-Schema-Schritt wird ausgesetzt und
-einmal als `schema_unusable` gemeldet; Laden als Modell und Zusatzregeln laufen
-weiter.
 """
 from __future__ import annotations
 
@@ -37,7 +28,6 @@ from collections import defaultdict
 from typing import Any
 
 from fastapi import FastAPI
-from jsonschema.exceptions import best_match
 from pydantic import BaseModel, ValidationError
 
 from efi_conv.core import check as efi_check
@@ -55,38 +45,13 @@ def validator():
     return _validator
 
 
-#: Neben dem Schema abgelegt von schema_holen.py beim Bauen: Zweig und Commit.
-HERKUNFT = pathlib.Path(str(getattr(efi_check, "SCHEMA_FILE", "avefi_schema.json"))).with_name(
-    "avefi_schema.herkunft.json"
-)
-
-
-def _herkunft() -> dict[str, Any]:
-    """Von welchem Stand des av-efi-schema das eingefrorene Schema stammt."""
-    try:
-        doc = json.loads(HERKUNFT.read_text(encoding="utf-8"))
-        return doc if isinstance(doc, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
 def schema_info() -> dict[str, Any]:
-    """
-    Welches Schema wurde geladen — fuer Reproduzierbarkeit im Pruefbericht.
-
-    `version` war bis zum 10.11.2026 nur die `$id` des Dokuments, also eine
-    Adresse, die bei jedem Stand gleich lautet. Ist der Commit bekannt, haengt
-    er jetzt daran (`…/model@0123456789ab`). Damit unterscheidet sich die
-    Angabe, sobald sich das Schema unterscheidet — auch im Zuordnungsprofil.
-    """
-    herkunft = _herkunft()
+    """Welches Schema wurde geladen — fuer Reproduzierbarkeit im Pruefbericht."""
     info: dict[str, Any] = {
-        "source": herkunft.get("quelle") or getattr(efi_check, "SCHEMA_SOURCE", None),
+        "source": getattr(efi_check, "SCHEMA_SOURCE", None),
         "file": str(getattr(efi_check, "SCHEMA_FILE", "")),
         "version": None,
         "sha256": None,
-        "ref": herkunft.get("ref"),
-        "commit": herkunft.get("commit"),
     }
     try:
         p = pathlib.Path(str(efi_check.SCHEMA_FILE))
@@ -99,72 +64,7 @@ def schema_info() -> dict[str, Any]:
             info["version"] = doc.get("version") or doc.get("$id")
     except Exception as e:  # pragma: no cover
         log.warning("Schemainfo nicht lesbar: %s", e)
-    commit = info["commit"]
-    if isinstance(commit, str) and commit and info["version"]:
-        info["version"] = f"{info['version']}@{commit[:12]}"
-    info["probe"] = schemaprobe()
     return info
-
-
-# Drei Saetze, die jedes brauchbare AVefi-Schema annehmen muss: ein Werk, eine
-# Manifestation dazu und ein Exemplar dazu, jeweils mit den Pflichtangaben.
-# test_service.py stellt sicher, dass sie auch als Modell laden, die
-# Zusatzregeln bestehen und satzuebergreifend zusammenpassen.
-REFERENZ: tuple[dict[str, Any], ...] = (
-    {
-        "category": "avefi:WorkVariant",
-        "type": "Monographic",
-        "has_primary_title": {"has_name": "Referenzwerk", "type": "PreferredTitle"},
-        "has_identifier": [{"category": "avefi:LocalResource", "id": "referenz-werk"}],
-    },
-    {
-        "category": "avefi:Manifestation",
-        "is_manifestation_of": [{"category": "avefi:LocalResource", "id": "referenz-werk"}],
-        "has_identifier": [{"category": "avefi:LocalResource", "id": "referenz-manifestation"}],
-    },
-    {
-        "category": "avefi:Item",
-        "is_item_of": {"category": "avefi:LocalResource", "id": "referenz-manifestation"},
-        "has_identifier": [{"category": "avefi:LocalResource", "id": "referenz-exemplar"}],
-    },
-)
-
-_probe: dict[str, Any] | None = None
-
-
-def _stand() -> str:
-    """Kurzangabe des Schemastands fuer Meldungen: Commit, sonst Zweig, sonst leer."""
-    h = _herkunft()
-    commit = h.get("commit")
-    if isinstance(commit, str) and commit:
-        return commit[:12]
-    return str(h.get("ref") or "")
-
-
-def schemaprobe() -> dict[str, Any]:
-    """
-    Nimmt das geladene Schema die Referenzsaetze an?
-
-    Wenn nicht, liegt der Fehler im Schema und nicht in den Daten. Dann waere
-    jede Beanstandung des JSON-Schema-Schritts eine Scheinbeanstandung, und
-    zwar an jeder Zeile (#45: zwei je Satz, bei jedem Import). Das Ergebnis
-    gilt fuer die Lebensdauer des Prozesses, so lange wie der Validator.
-    """
-    global _probe
-    if _probe is None:
-        v = validator()
-        gruende = []
-        for rec in REFERENZ:
-            err = best_match(v.iter_errors(rec))
-            if err is not None:
-                gruende.append(f"{rec['category']}: {err.message}")
-        _probe = {"ok": not gruende, "detail": " | ".join(gruende)[:600] or None}
-        if gruende:
-            log.warning(
-                "Das AVefi-Schema lehnt die Referenzsaetze ab, die Schemapruefung ist ausgesetzt: %s",
-                _probe["detail"],
-            )
-    return _probe
 
 
 class CheckRequest(BaseModel):
@@ -314,6 +214,11 @@ _REGELARTEN: tuple[tuple[str, str], ...] = (
     ("has_access_status=Removed", "rule_removed_without_pid"),
 )
 
+# Die Regeln loggen bis efi-conv 2b1eb48 unter "efi_conv", seither unter
+# "avefi_validate". Beide Quellen mitschreiben, sonst geht der Grund verloren
+# und der Code faellt auf rule_invalid_value zurueck.
+_REGEL_LOGGER = ("efi_conv", "avefi_validate")
+
 
 def _ohne_zweige(loc: tuple[Any, ...]) -> tuple[str, list[str]]:
     """
@@ -409,8 +314,9 @@ def _zusatzregeln(rec: dict[str, Any]) -> list[dict[str, Any]]:
         }]
 
     mitschrift = _Mitschrift()
-    efi_logger = logging.getLogger("efi_conv")
-    efi_logger.addHandler(mitschrift)
+    quellen = [logging.getLogger(name) for name in _REGEL_LOGGER]
+    for quelle in quellen:
+        quelle.addHandler(mitschrift)
     try:
         verletzt = efi_check.has_invalid_value(model)
     except Exception as e:
@@ -421,7 +327,8 @@ def _zusatzregeln(rec: dict[str, Any]) -> list[dict[str, Any]]:
             "detail": f"{type(e).__name__}: {e}"[:300],
         }]
     finally:
-        efi_logger.removeHandler(mitschrift)
+        for quelle in quellen:
+            quelle.removeHandler(mitschrift)
 
     if not verletzt:
         return []
@@ -587,33 +494,13 @@ def check(req: CheckRequest):
     row_map = req.row_map or {}
     valid_count = 0
 
-    probe = schemaprobe()
-    if not probe["ok"]:
-        # Einmal je Anfrage und ohne Satzbezug. Der Worker fasst die Meldungen
-        # seiner Buendel zu einer zusammen.
-        issues.append(
-            {
-                "severity": "warning",
-                "code": "schema_unusable",
-                "message": (
-                    "Das geladene AVefi-Schema lehnt schon einen bekannt gueltigen "
-                    "Referenzdatensatz ab. Die Pruefung gegen das JSON-Schema ist "
-                    "ausgesetzt; geprueft wurden das Laden als AVefi-Modell und die "
-                    "Regeln von efi-conv check."
-                ),
-                "detail": probe["detail"],
-                "params": {"stand": _stand()},
-            }
-        )
-
     for i, rec in enumerate(req.records):
         n = i + 1
         row = _stelle(row_map, i)
         had_error = False
 
-        # 1. Schemapruefung — derselbe Validator, den efi-conv check benutzt.
-        # Ausgesetzt, wenn das Schema schon die Referenzsaetze ablehnt.
-        for err in (v.iter_errors(rec) if probe["ok"] else ()):
+        # 1. Schemapruefung — derselbe Validator, den efi-conv check benutzt
+        for err in v.iter_errors(rec):
             had_error = True
             params = _schema_params(err)
             issues.append(

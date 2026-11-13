@@ -30,79 +30,39 @@ GitHub weiter.
 
 ---
 
-## 2026-11-10 — Schemaprüfung beanstandet jeden Datensatz (#45)
+## 2026-11-10 — Satzbau bei Befunden ohne Feld (#45)
 
-Anlass: Meldung von Luca (#45, 05.11.2026) vom Test auf `import.av-efi.net`,
-nachdem #39 behoben war. Gewährleistung, auf dem Branch
-`fix/pruefdienst-schemawurzel`.
+Anlass: Meldung von Luca (#45, 05.11.2026): „den Datensatz enthält Angaben …“.
 
-**Gemeldet:** Jeder Satz bekam zwei Schemafehler, unabhängig von Inhalt und
-Zuordnung: `category` nur `avefi:MovingImageRecord` zulässig, und die Felder
-der jeweiligen Klasse (`type`, `is_manifestation_of`, `is_item_of` …) als
-unzulässig abgelehnt. Dazu ein Grammatikfehler: „den Datensatz enthält
-Angaben …“.
-
-**Ursache:** Nicht in dieser Anwendung, sondern im Schema. Mit LinkML 1.12
-(av-efi-schema `5970e32`/`d709e35`, 26.10.2026) beschreibt die Wurzel von
-`model.schema.json` auf main `MovingImageRecord` mit
-`additionalProperties: false`; vorher legte sie für einen Satz nichts fest.
-`efi-conv check` prüft jeden Satz gegen diese Wurzel und lehnt damit **jede**
-Lieferung ab, auch die eigenen Testdaten von efi-conv
-(`tests/avportal/efi_records.json`, nachgestellt). In efi-conv fällt es nicht
-auf, weil dessen Tests das Schema aus einer Kopie mit der alten Wurzel lesen.
-Ob die neue Wurzel beabsichtigt ist, ist in #45 bei Elias Oltmanns angefragt.
-
-Betroffen war nur die Produktion, weil der Prüfdienst das Schema beim Bauen
-einfriert: am 04.11. gebaut, mit der neuen Wurzel. Die Demo war älter.
+**Ursache:** Betrifft ein Befund den ganzen Datensatz, ist `params.field` leer.
+Die Oberfläche setzte dann „den Datensatz“ an die Stelle von `{field}`. Der
+Akkusativ passt nur in „Das AVefi-Schema beanstandet {field}“.
 
 **Was daraus wurde:**
 
-* **Referenzprobe im Prüfdienst.** Beim ersten Aufruf prüft `service.py` ein
-  bekannt gültiges Werk, eine Manifestation und ein Exemplar (`REFERENZ`)
-  gegen das geladene Schema. Lehnt es schon diese ab, setzt der Dienst den
-  JSON-Schema-Schritt aus und meldet das einmal als Warnung `schema_unusable`
-  statt zweimal je Satz. Laden als Modell und Zusatzregeln laufen weiter — das
-  ist die Prüfung, an der efi-conv tatsächlich hängt. `/health` trägt das
-  Ergebnis (`schema.probe`), der Worker schreibt beim Start eine Warnung ins
-  Log, der Worker fasst die Meldungen seiner Bündel zu einer zusammen.
-* **Schemastand festhalten.** Neues Bauargument `AVEFI_SCHEMA_REF`
-  (Voreinstellung `main`, in Compose aus der gleichnamigen Variablen).
-  `efi-conv/schema_holen.py` löst es beim Bauen auf einen Commit auf und holt
-  das Schema von genau diesem Commit. Die Schemaversion in Prüfbericht,
-  Herkunftsangabe und Zuordnungsprofil trägt jetzt den Commit
-  (`…/model@8c4eef72e6da`); bis dahin war sie nur die Adresse, bei jedem Stand
-  gleich. Folge: Ein Profil, das gegen einen anderen Stand gebaut wurde, meldet
-  beim Laden einmal `profile.schema-version-mismatch` — das ist der Zweck der
-  Angabe. Mit `AVEFI_SCHEMA_REF=5970e32` prüft der Dienst wie bis zum 26.10.
-* **Satzbau bei Befunden ohne Feld.** Betrifft ein Befund den ganzen Datensatz,
-  setzte die Oberfläche „den Datensatz“ (en: „the record“) an die Stelle von
-  `{field}`. Das passt nur in „Das AVefi-Schema beanstandet {field}“. Jetzt gibt
-  es zu jedem Satz mit `{field}` eine eigene Fassung `…__record` (de/en, 18
-  Sätze), die `useMeldungstext` bei leerem Feld zuerst sucht.
-  `tests/pruefung/ganzer-datensatz.test.ts` verlangt sie für jeden heutigen und
+* `useMeldungstext` sucht bei leerem Feld vor jedem Schlüssel seine Variante
+  `…__record`.
+* 18 Sätze de/en mit eigener Fassung für den ganzen Datensatz.
+* `tests/pruefung/ganzer-datensatz.test.ts` verlangt sie für jeden heutigen und
   künftigen Satz mit `{field}`.
-* Handbuch Kapitel 3: neuer Abschnitt „Die Schemaprüfung ist ausgesetzt“, mit
-  Sprungziel aus dem Prüfbericht. `deployment.md`, `architecture.md`,
-  `abnahme.md`, `.env.example` und README beschreiben Bauargument und Probe.
-* Nebenbei korrigiert: Der Kommentar zu `avefiSchemaVersion()` behauptete, der
-  Prüfdienst liefere eine Prüfsumme; es war die `$id`.
+* Tests zu Modell und Regeln prüfen mit einer neutralen Wurzel, unabhängig von
+  der `anyOf`-Wurzel des Schemas.
 
-**Abnahme:** Mit dem Schema auf main kann keine Lieferung das Kriterium
-„besteht `efi-conv check`“ erfüllen, weder aus Paket A noch aus Paket B.
-`/check-cli` führt die Kommandozeile unverändert aus und scheitert daran
-ebenso. Das ist in `docs/abnahme.md` festgehalten.
+**Nachtrag 13.11.2026:** Der erste Entwurf reagierte auf Massenbeanstandungen,
+weil die Wurzel des JSON-Schemas seit LinkML 1.12 jeden Datensatz ablehnte.
+`av-efi-schema` hat das mit `4e9058b` behoben. Die Referenzprobe, die Aussetzung
+des Schemaschritts und `AVEFI_SCHEMA_REF` aus dem ersten Entwurf sind deshalb
+entfallen; geblieben ist der Satzbau.
+
+Mit `efi-conv` 2b1eb48 loggen die Zusatzregeln unter `avefi_validate` statt
+`efi_conv`. Der Prüfdienst liest jetzt beide Quellen mit; `rule_period` und
+`rule_removed_without_pid` bleiben damit erhalten. Geändert hat sich die
+Log-Quelle, nicht die Regel.
 
 ### Geprüft
 
-* 783 Tests in 65 Dateien grün (vorher 768), `nuxt typecheck` ohne Befund.
-* Tests des Prüfdienstes: 17 (vorher 12), grün in zwei Abbildern — mit dem
-  Schema von main (Probe schlägt an) und mit `AVEFI_SCHEMA_REF=5970e32` (Probe
-  besteht). Die Tests zu Modell und Regeln laufen jetzt mit einer festen,
-  neutralen Wurzel und hängen nicht mehr davon ab, wann das Abbild gebaut wurde.
-* Auf der Demo, Prüfdienst aus main neu gebaut: vorher 2 Schemafehler je Satz;
-  mit der Änderung bei 1.200 Sätzen in drei Bündeln genau eine Warnung
-  `schema_unusable`, und ein absichtlich falscher Werktyp wird weiterhin als
-  `model_invalid` gefunden. Worker-Log beim Start mit Warnung.
+* 780 Tests in 65 Dateien grün, `nuxt typecheck` ohne Befund.
+* Prüfdienst: 11 Tests grün.
 
 ---
 

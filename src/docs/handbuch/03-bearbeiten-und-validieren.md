@@ -263,20 +263,6 @@ Bericht sagt in diesem Fall nichts über die Schemakonformität aus, auch wenn e
 leer aussieht. Der Container `avefi_efi_conv` muss laufen; danach setzt
 **Neu konvertieren** die Prüfung erneut an.
 
-### Die Schemaprüfung ist ausgesetzt
-
-Der Prüfdienst ist erreichbar, aber das AVefi-Schema, mit dem er gebaut wurde, lehnt
-schon einen Datensatz ab, der nachweislich gültig ist. Jede Schemabeanstandung wäre
-dann eine Scheinbeanstandung, an jeder Zeile. Der Importer setzt deshalb nur diesen
-einen Schritt aus und sagt es einmal im Bericht. Ob sich die Datensätze als
-AVefi-Modell laden lassen und die Regeln von `efi-conv check` einhalten, wird
-weiterhin geprüft.
-
-Das liegt nicht an den Daten. Abhilfe schafft der Betreiber: den Prüfdienst mit dem
-Bauargument `AVEFI_SCHEMA_REF` auf einem früheren Stand des Schemas bauen (siehe
-`deployment.md`) und danach **Neu konvertieren**. Unter „Wortlaut des Prüfwerkzeugs“
-steht, was das Schema an den Referenzsätzen beanstandet hat.
-
 ## AVefi-Ausgabe & natives AVefi
 
 - Für CSV/TSV/JSON/MARC-XML/EAD wird intern gemappt und `avefi.v1.json` als echtes

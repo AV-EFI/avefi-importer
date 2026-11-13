@@ -391,8 +391,7 @@
       "authority_disabled": "The “Look up authority data” converters only query when the operator switches on AUTHORITY_ENABLED in both the web interface and the worker. Until then, matches can be searched for and confirmed by hand in the mapping editor; confirmed matches apply even without the switch.",
       "schema": "The value does not match what the AVefi schema allows here. A converter in the mapping often helps: “date” for dates, “duration” for running times, “number” for numbers.",
       "missing_identifier": "The record has no identifier. Without has_identifier no PID can be assigned later. In the mapping a column has to point at an identifier, or a fixed value has to supply one.",
-      "validation_unavailable": "The validation service could not be reached. The file was produced but not checked — this report says nothing about schema conformance. “Reconvert” starts the check again.",
-      "schema_unusable": "This is not caused by the data: the schema file the validation service was built with also rejects a record that is known to be valid. The operator can build the validation service with AVEFI_SCHEMA_REF set to an earlier state; then use “Reconvert”."
+      "validation_unavailable": "The validation service could not be reached. The file was produced but not checked — this report says nothing about schema conformance. “Reconvert” starts the check again."
     },
     "fieldHelp": {
       "lead": "About the field",
@@ -474,7 +473,6 @@
       "no_items_associated": "No item belongs to {category} {key}.",
       "validation_unavailable__schema": "The check against the AVefi schema was not possible. The file was produced but not checked. The cause is listed under “Wording of the checking tool”.",
       "validation_unavailable__crossref": "The cross-record check was not possible. Identifiers and references were not checked. The cause is listed under “Wording of the checking tool”.",
-      "schema_unusable": "The loaded AVefi schema already rejects a record known to be valid. The check against the JSON schema has therefore been suspended; loading as an AVefi model and the efi-conv check rules were still applied.",
       "missing_title": "The record has no title. AVefi requires a main title.",
       "item_without_manifestation": "There is no manifestation for this item; is_item_of remains empty.",
       "mapping_failed": "The row could not be converted to AVefi.",
