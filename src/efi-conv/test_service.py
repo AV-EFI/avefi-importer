@@ -152,6 +152,16 @@ class Modell(MitNeutralerWurzel):
         self.assertNotIn("rules_unavailable", codes)
 
 
+class Schemainfo(unittest.TestCase):
+    """Der Bericht nennt Quelle und Pruefsumme des geladenen Schemas."""
+
+    def test_nennt_quelle_und_pruefsumme(self):
+        service.validator()
+        info = service.schema_info()
+        self.assertTrue(info["source"])
+        self.assertTrue(info["sha256"])
+
+
 class Querlauf(unittest.TestCase):
     def test_doppelte_kennung_nennt_zeilen_als_bausteine(self):
         a, b = werk(), werk()

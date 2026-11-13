@@ -53,6 +53,20 @@ def schema_info() -> dict[str, Any]:
         "version": None,
         "sha256": None,
     }
+    # Seit efi-conv 2b1eb48 liegen Schema und Pruefsumme als Paketdaten bei
+    # avefi-schema; SCHEMA_FILE gibt es nicht mehr. schema_fingerprint()
+    # nennt beides. Aeltere efi-conv-Staende kennen nur die Datei.
+    fingerprint = getattr(efi_check, "schema_fingerprint", None)
+    if callable(fingerprint):
+        try:
+            fp = fingerprint()
+        except Exception as e:  # pragma: no cover
+            log.warning("Schemainfo nicht lesbar: %s", e)
+        else:
+            info["source"] = fp.get("source")
+            info["sha256"] = (fp.get("sha256") or "")[:16] or None
+            info["version"] = fp.get("version") or fp.get("id")
+            return info
     try:
         p = pathlib.Path(str(efi_check.SCHEMA_FILE))
         if p.exists():

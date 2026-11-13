@@ -59,6 +59,11 @@ Mit `efi-conv` 2b1eb48 loggen die Zusatzregeln unter `avefi_validate` statt
 `rule_removed_without_pid` bleiben damit erhalten. Geändert hat sich die
 Log-Quelle, nicht die Regel.
 
+**Nachtrag 13.11.2026 (Schemaherkunft):** Seit `efi-conv` 2b1eb48 kommt das
+AVefi-Schema als Paketdaten mit `avefi-schema`; der Benutzer-Cache entfällt.
+Der Bau prüft weiter, dass sich das Schema laden lässt; `/health` nennt Quelle
+und Prüfsumme aus `schema_fingerprint()`.
+
 ### Geprüft
 
 * 780 Tests in 65 Dateien grün, `nuxt typecheck` ohne Befund.

@@ -16,11 +16,11 @@ ARG EFI_CONV_REPO=github.com/AV-EFI/efi-conv.git
 ARG EFI_CONV_REF=main
 RUN pip install --no-cache-dir "efi-conv @ git+https://${EFI_CONV_REPO}@${EFI_CONV_REF}" \
  && python -c "import importlib.metadata as m; print('efi-conv', m.version('efi-conv'))"
-# Schema einmal beim Bauen holen und im Image einfrieren. Ohne das laedt
-# efi-conv es zur Laufzeit vom main-Branch — dann ist keine Konvertierung
-# reproduzierbar, weil sich das Schema unter der laufenden Anwendung aendert.
-RUN python -c "from efi_conv.core import check; check.get_schema_validator()" \
- && ls -l /root/.cache/efi_conv/
+# Schema laden. Bis efi-conv 2b1eb48 legt dieser Aufruf es in den
+# Benutzer-Cache; seither kommt es als Paketdaten mit avefi-schema und der
+# Aufruf prueft nur, dass es sich laden laesst. Im laufenden Betrieb braucht
+# der Dienst kein Netz.
+RUN python -c "from efi_conv.core import check; check.get_schema_validator()"
 
 WORKDIR /app
 COPY service.py test_service.py /app/
