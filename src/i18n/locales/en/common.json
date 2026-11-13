@@ -22,6 +22,10 @@
     "switch": "Switch theme",
     "label": "Theme"
   },
+  "language": {
+    "switch": "Switch language to {name}",
+    "label": "Language"
+  },
   "action": {
     "save": "Save",
     "cancel": "Cancel",
