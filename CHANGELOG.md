@@ -30,6 +30,43 @@ GitHub weiter.
 
 ---
 
+## 2026-11-13 — Stefan Stretz: Sprachumschalter neben dem Theme-Umschalter (#10)
+
+Anlass: #10 verlangt Deutsch und Englisch im Kernablauf (B.8). Der Prüfbericht
+war seit `e157c7e` zweisprachig; die Oberfläche ließ sich aber nur über die
+Browsersprache umstellen. Der Theme-Wechsel lag als eigene Logik in beiden
+Layouts und war nur über ein Symbol erreichbar.
+
+**Was daraus wurde:**
+
+* `components/common/LanguageSwitch.vue` wechselt zur nächsten in
+  `nuxt.config.ts` eingetragenen Sprache — derzeit Deutsch und Englisch — und
+  ruft `setLocale()` auf. Die Wahl bleibt über das Cookie `avefi_lang`
+  erhalten, das `detectBrowserLanguage` anlegt. Die Schaltfläche nennt die
+  Zielsprache auch als `aria-label`.
+* `components/common/ThemeSwitch.vue` ersetzt die doppelte Theme-Logik in
+  `layouts/default.vue` und `layouts/auth.vue`. Das Symbol zeigt das Ziel:
+  Mond im hellen, Sonne im dunklen Schema. Die Wahl liegt weiterhin in
+  `localStorage` (`avefi-theme`); ohne gespeicherte Wahl gilt die
+  Systemeinstellung.
+* Beide Schalter stehen in der Kopfzeile des Standardlayouts und oben rechts
+  auf der Anmeldeseite.
+* Die Tabler-Symbole (MIT) sind eingebettet, weil die Anwendung keine
+  Icon-Bibliothek mitbringt. `.ghost.with-icon` hält Symbol und Text
+  nebeneinander.
+* Texte `language.switch` und `language.label` auf Deutsch und Englisch.
+
+Commit `e5d1171` (10.11.), gemergt mit PR #48 (13.11.).
+
+### Geprüft
+
+* 816 Tests in 67 Dateien grün, `nuxt typecheck` ohne Befund.
+* Prüfdienst: 12 Tests grün.
+* Offen: Sichtprüfung im Browser und Barrierefreiheitslauf; dafür braucht es
+  eine Anmeldung auf der Demo.
+
+---
+
 ## 2026-11-12 — „Datum nach ISO“ nach dem Muster des Schemas (#51)
 
 Anlass: Meldung von Luca (#51, 12.11.2026) mit einer Testdatei, die die

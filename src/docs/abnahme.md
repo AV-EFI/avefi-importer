@@ -4,7 +4,7 @@ Diese Seite sagt zu jedem Punkt der Abnahme-Checkliste, wo er liegt, wie er
 sich prüfen lässt und wer als Nächstes dran ist. Sie folgt der Gliederung der
 Checkliste im Pad vom 01.09.2026 und enthält selbst nichts Neues.
 
-**Stand: 28.10.2026**, `main` auf dem Stand dieses Tages oder später, live auf
+**Stand: 13.11.2026**, `main` auf dem Stand dieses Tages oder später, live auf
 `https://avefiimporter.goo1.de`. Wer eine Angabe hier nicht bestätigt findet,
 hat einen Fehler in dieser Seite gefunden und nicht in der Anwendung. Bitte
 melden.
@@ -70,7 +70,7 @@ in [`deployment.md`](deployment.md), Abschnitt „Vor dem ersten Produktivstart�
 | Konfiguration, spätere Integration | erfüllt | API-Basis über `runtimeConfig.public.apiBase`, jetzt auch im Zuordnungseditor |
 | Austauschbarkeit, CSS, Theme, Doku | erfüllt | #8, #13, [`architecture.md`](architecture.md), [`frontend-pruefen.md`](frontend-pruefen.md) |
 | Upload und Mapping, Feldsuche, Mappingprofil, Werk → Manifestation → Exemplar, Validität, Beanstandungen, Terminologie | erfüllt | im Pad abgehakt |
-| Deutsch und Englisch im Kernablauf (B.8) | umgesetzt, **Nachprüfung durch Stefan offen** | #10: alle vier Punkte vom 29.09. in `e157c7e`; Wächter `tests/pruefung/berichtscodes.test.ts` und `tests/frontend/meldungstext.test.ts` |
+| Deutsch und Englisch im Kernablauf (B.8) | umgesetzt, **Nachprüfung durch Stefan offen** | #10: alle vier Punkte vom 29.09. in `e157c7e`, Sprachumschalter in `e5d1171` (PR #48); Wächter `tests/pruefung/berichtscodes.test.ts` und `tests/frontend/meldungstext.test.ts` |
 | Barrierefreiheit (WCAG 2.2 AA) | automatisiert bestanden, **menschlicher Nachtest offen** | #11; Lauf vom 23.09. in beiden Farbschemata, `383fd35` |
 
 Zu Mattis Frage im Pad unter Test 2 („schon übertragbar in Abhak-Liste?“): Ja.
