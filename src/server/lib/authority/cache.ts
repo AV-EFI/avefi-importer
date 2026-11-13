@@ -38,18 +38,40 @@ export function cacheKey(source: string, kind: string, queryNorm: string): strin
 }
 
 /**
- * Stand der Aufloesungslogik. Wird die Vergleichsregel geaendert, zaehlt sie
- * hoch, und alte Ergebnisse werden nicht mehr gelesen.
+ * Stand der Aufloesungslogik, je Quelle. Wird die Vergleichsregel einer Quelle
+ * geaendert, zaehlt ihre Generation hoch, und ihre alten Ergebnisse werden
+ * nicht mehr gelesen. Die anderen Quellen behalten ihre.
  *   1 — PHP-Stand: reiner Zeichenvergleich, GND-Personen trafen nie.
  *   2 — Abgleich mit umgedrehter Namensform.
  *   3 — Lebensdaten ohne zweites Komma (VIAF), Wikidata-Personen ohne
  *       gleichnamige Nicht-Menschen (#38, 03.11.2026). Unter 2 liegen fuer
  *       genau diese Faelle Nicht-Treffer und „mehrdeutig“.
+ *   4 — nur Wikidata: Art der gleichnamigen Kandidaten ueber P31 statt ueber
+ *       den Suchindex, und Fehlerantworten mit HTTP 200 als Fehlschlag statt
+ *       als Nicht-Treffer (#38, 10.11.2026). Unter 3 liegt etwa „Gorch Fock“
+ *       als mehrdeutig. GND und VIAF sind davon nicht betroffen und bleiben
+ *       auf 3, damit ihre gueltigen Ergebnisse nicht ohne Grund neu
+ *       abgefragt werden.
+ *
+ * Bis zum 10.11.2026 gab es eine Generation fuer alle Quellen; jede
+ * Korrektur an einer Quelle verwarf die Ergebnisse aller.
  */
-export const AUTHORITY_CACHE_GENERATION = 3
+export const AUTHORITY_CACHE_GENERATIONEN: Readonly<Record<string, number>> = {
+  gnd: 3,
+  viaf: 3,
+  wikidata: 4
+}
+
+/** Rueckfall fuer eine Quelle ohne eigenen Eintrag: die hoechste Generation. */
+export const AUTHORITY_CACHE_GENERATION = Math.max(...Object.values(AUTHORITY_CACHE_GENERATIONEN))
+
+/** Aktuelle Generation einer Quelle. */
+export function cacheGeneration(source: string): number {
+  return AUTHORITY_CACHE_GENERATIONEN[source] ?? AUTHORITY_CACHE_GENERATION
+}
 
 /** Wert der Spalte source: "gnd" in Generation 1, sonst "gnd/v2". */
-export function cacheSourceColumn(source: string, generation = AUTHORITY_CACHE_GENERATION): string {
+export function cacheSourceColumn(source: string, generation = cacheGeneration(source)): string {
   return generation <= 1 ? source : `${source}/v${generation}`
 }
 
@@ -101,18 +123,18 @@ export function memoryAuthorityCache(
  */
 export interface DbCacheOptions {
   onWarn?: (message: string) => void
-  /** Nur setzen, um bewusst eine aeltere Generation zu lesen. */
+  /** Nur setzen, um bewusst eine aeltere Generation zu lesen (fuer alle Quellen). */
   generation?: number
 }
 
 export function dbAuthorityCache(sql: Sql, options: DbCacheOptions = {}): AuthorityCache {
   const onWarn = options.onWarn ?? ((m: string) => console.warn(`[Normdaten] ${m}`))
-  const gen = options.generation ?? AUTHORITY_CACHE_GENERATION
+  const gen = (source: string): number => options.generation ?? cacheGeneration(source)
 
   return {
     async get(source, kind, queryNorm) {
       try {
-        const col = cacheSourceColumn(source, gen)
+        const col = cacheSourceColumn(source, gen(source))
         const rows = await sql<Array<{ result_json: unknown }>>`
           SELECT result_json
             FROM authority_cache
@@ -130,7 +152,7 @@ export function dbAuthorityCache(sql: Sql, options: DbCacheOptions = {}): Author
       try {
         await sql`
           INSERT INTO authority_cache (source, kind, query_norm, result_json)
-          VALUES (${cacheSourceColumn(source, gen)}, ${kind}, ${queryNorm}, ${sql.json(value as never)})
+          VALUES (${cacheSourceColumn(source, gen(source))}, ${kind}, ${queryNorm}, ${sql.json(value as never)})
           ON CONFLICT (source, kind, query_norm)
           DO UPDATE SET result_json = EXCLUDED.result_json`
       } catch (e) {
@@ -174,7 +196,7 @@ export async function purgeAuthorityCache(
   source: string,
   kind: string,
   queryNorm: string,
-  generation = AUTHORITY_CACHE_GENERATION
+  generation = cacheGeneration(source)
 ): Promise<number> {
   const rows = await sql<Array<{ id: number }>>`
     DELETE FROM authority_cache

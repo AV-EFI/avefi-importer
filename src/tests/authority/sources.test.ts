@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { SOURCE_NAME_FORM } from '../../server/lib/authority/types.js'
 import { gndCategory, gndSearchUrl, parseGnd, searchGnd } from '../../server/lib/authority/gnd.js'
 import {
-  parseWikidata, parseWikidataTreffer, searchWikidata, wikidataNichtMenschenUrl, wikidataSearchUrl
+  keinMensch, parseWikidata, parseWikidataArten, searchWikidata, wikidataArtUrl, wikidataSearchUrl
 } from '../../server/lib/authority/wikidata.js'
 import { parseViaf, searchViaf, viafSearchUrl } from '../../server/lib/authority/viaf.js'
 import { gndAntwort, stubFetch, viafAntwort, wikidataAntwort } from './fixtures.js'
@@ -87,62 +87,108 @@ describe('Wikidata', () => {
     expect(wikidataSearchUrl('Sielmann')).toContain('language=de')
   })
 
-  // #38 (03.11.2026), Antworten vom selben Tag nachgebildet: Zu "Rainer Werner
-  // Fassbinder" fuehrt Wikidata auch einen gleichnamigen Film.
+  /** Antwort von wbgetclaims mit den angegebenen P31-Zielen. */
+  const arten = (...ids: string[]) => ({
+    claims: {
+      P31: ids.map((id) => ({ mainsnak: { snaktype: 'value', datavalue: { value: { 'entity-type': 'item', id } } } }))
+    }
+  })
+  const artAnfrage = (url: string): string | null =>
+    url.includes('action=wbgetclaims') ? new URL(url).searchParams.get('entity') : null
+
+  // #38: Antworten nachgebildet. Zu "Rainer Werner Fassbinder" fuehrt Wikidata
+  // auch einen gleichnamigen Film (03.11.), zu "Gorch Fock" eine
+  // Begriffsklaerungsseite, die der fruehere Index-Filter uebersah (10.11.).
   describe('Personen ohne gleichnamige Nicht-Menschen', () => {
-    const suche = wikidataAntwort([
+    const fassbinder = wikidataAntwort([
       { id: 'Q44426', label: 'Rainer Werner Fassbinder', description: 'deutscher Filmregisseur' },
-      { id: 'Q33561976', label: 'Rainer Werner Fassbinder', description: 'Film von Christian Braad Thomsen (1975)' }
+      { id: 'Q33561976', label: 'Rainer Werner Fassbinder', description: 'Film von Christian Braad Thomsen (1975)' },
+      { id: 'Q125960580', label: 'Rainer Werner Fassbinder Foundation' }
     ])
-    const keineMenschen = { query: { search: [{ title: 'Q33561976' }, { title: 'Q125960580' }] } }
-    const zweiQuellen = () => stubFetch((url) => (url.includes('list=search') ? keineMenschen : suche))
+    const artVon: Record<string, string[]> = {
+      Q44426: ['Q5'], Q33561976: ['Q11424'], Q69087: ['Q5'], Q298350: ['Q22808320'],
+      Q777321: ['Q2389789'], Q15812590: ['Q1428357']
+    }
+    const dienst = (suche: unknown) => stubFetch((url) => {
+      const id = artAnfrage(url)
+      return id === null ? suche : arten(...(artVon[id] ?? []))
+    })
 
-    it('streicht, was der Suchindex als Nicht-Menschen kennt', async () => {
-      const fetchJson = zweiQuellen()
+    it('streicht gleichnamige Eintraege, die sicher keine Menschen sind', async () => {
+      const fetchJson = dienst(fassbinder)
       const treffer = await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)
-      expect(treffer.map((c) => c.id)).toEqual(['Q44426'])
-      expect(fetchJson.calls).toHaveLength(2)
+      expect(treffer.map((c) => c.id)).toEqual(['Q44426', 'Q125960580'])
     })
 
-    it('fragt die Nicht-Menschen ab, nicht die Menschen', () => {
-      expect(new URL(wikidataNichtMenschenUrl('Rainer Werner Fassbinder')).searchParams.get('srsearch'))
-        .toBe('-haswbstatement:P31=Q5 inlabel:"Rainer Werner Fassbinder"')
+    it('fragt nur die exakt passenden Kandidaten, nicht die uebrigen', async () => {
+      const fetchJson = dienst(fassbinder)
+      await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)
+      expect(fetchJson.calls.map(artAnfrage).filter((x) => x !== null)).toEqual(['Q44426', 'Q33561976'])
     })
 
-    it('laesst stehen, was der Suchindex nicht kennt — lieber mehrdeutig als falsch eindeutig', async () => {
-      const fetchJson = stubFetch((url) => (url.includes('list=search') ? { query: { search: [] } } : suche))
+    it('streicht die Begriffsklaerungsseite zu Gorch Fock, gleich wie viele Namensvettern es gibt', async () => {
+      // Der fruehere Filter holte hoechstens 50 von 107 Index-Treffern und
+      // verpasste Q298350. Hier wird jeder exakte Kandidat selbst gefragt.
+      const gorch = wikidataAntwort([
+        { id: 'Q69087', label: 'Gorch Fock', description: 'niederdeutscher Dichter und Erzähler' },
+        { id: 'Q777321', label: 'Gorch Fock', description: 'Segelschulschiff der deutschen Marine' },
+        { id: 'Q557286', label: 'Gorch Fock I' },
+        { id: 'Q15812590', label: 'Gorch Fock', description: 'Vorpostenboot von 1917' },
+        { id: 'Q298350', label: 'Gorch Fock', description: 'Wikimedia-Begriffsklärungsseite' }
+      ])
+      const treffer = await searchWikidata('Gorch Fock', 'person', dienst(gorch))
+      expect(treffer.map((c) => c.id)).toEqual(['Q69087', 'Q557286'])
+    })
+
+    it('laesst Kandidaten ohne Artangabe stehen — lieber mehrdeutig als falsch eindeutig', async () => {
+      const fetchJson = stubFetch((url) => (artAnfrage(url) !== null ? { claims: {} } : fassbinder))
       expect((await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)).map((c) => c.id))
-        .toEqual(['Q44426', 'Q33561976'])
+        .toEqual(['Q44426', 'Q33561976', 'Q125960580'])
     })
 
-    it('behaelt das ungefilterte Ergebnis, wenn der Suchindex ausfaellt', async () => {
+    it('scheitert, wenn eine Nachfrage scheitert — damit nichts Ungefiltertes gespeichert wird', async () => {
       const fetchJson = stubFetch((url) => {
-        if (url.includes('list=search')) throw new Error('Wikidata nicht erreichbar')
-        return suche
+        if (artAnfrage(url) !== null) throw new Error('Wikidata nicht erreichbar')
+        return fassbinder
       })
-      expect(await searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)).toHaveLength(2)
+      await expect(searchWikidata('Rainer Werner Fassbinder', 'person', fetchJson)).rejects.toThrow('nicht erreichbar')
+    })
+
+    it('fragt nicht nach, wenn nur ein Kandidat exakt passt', async () => {
+      const fetchJson = dienst(wikidataAntwort([
+        { id: 'Q55411', label: 'Wim Wenders' }, { id: 'Q97291198', label: 'Wim Wenders – Desperado' }
+      ]))
+      expect((await searchWikidata('Wim Wenders', 'person', fetchJson)).map((c) => c.id)).toEqual(['Q55411', 'Q97291198'])
+      expect(fetchJson.calls).toHaveLength(1)
     })
 
     it('filtert nur bei Personen — bei Orten hilft der Filter nicht', async () => {
-      const fetchJson = zweiQuellen()
-      expect(await searchWikidata('Rainer Werner Fassbinder', 'place', fetchJson)).toHaveLength(2)
+      const fetchJson = dienst(fassbinder)
+      expect(await searchWikidata('Rainer Werner Fassbinder', 'place', fetchJson)).toHaveLength(3)
       expect(fetchJson.calls).toHaveLength(1)
     })
 
     it('fragt nicht nach, wenn es nichts zu filtern gibt', async () => {
-      const fetchJson = stubFetch((url) => (url.includes('list=search') ? keineMenschen : { search: [] }))
+      const fetchJson = dienst({ search: [] })
       expect(await searchWikidata('Niemand', 'person', fetchJson)).toEqual([])
       expect(fetchJson.calls).toHaveLength(1)
     })
 
-    it('liest nur gueltige Kennungen aus der Trefferliste', () => {
-      expect([...parseWikidataTreffer({ query: { search: [{ title: 'Q1' }, { title: 'Property:P31' }, {}] } })])
-        .toEqual(['Q1'])
+    it('fragt nur die Aussage P31 ab, nicht den ganzen Eintrag', () => {
+      const p = new URL(wikidataArtUrl('Q298350')).searchParams
+      expect([p.get('action'), p.get('entity'), p.get('property')]).toEqual(['wbgetclaims', 'Q298350', 'P31'])
     })
 
-    it('nimmt Anfuehrungszeichen aus der Anfrage, damit die Suchsyntax heil bleibt', () => {
-      expect(new URL(wikidataNichtMenschenUrl('Der "Kaiser" Beckenbauer')).searchParams.get('srsearch'))
-        .toBe('-haswbstatement:P31=Q5 inlabel:"Der Kaiser Beckenbauer"')
+    it('liest nur gueltige Kennungen aus den Aussagen', () => {
+      expect(parseWikidataArten(arten('Q5', 'kaputt', 'Q215627'))).toEqual(['Q5', 'Q215627'])
+      expect(parseWikidataArten({})).toEqual([])
+      expect(parseWikidataArten({ claims: { P31: [{ mainsnak: { snaktype: 'novalue' } }] } })).toEqual([])
+    })
+
+    it('haelt nur fuer sicher, was Arten hat und keine davon Mensch ist', () => {
+      expect(keinMensch(['Q22808320'])).toBe(true)
+      expect(keinMensch(['Q5', 'Q22808320'])).toBe(false)
+      expect(keinMensch([])).toBe(false)
     })
   })
 })

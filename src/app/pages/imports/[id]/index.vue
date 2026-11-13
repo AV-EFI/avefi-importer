@@ -37,6 +37,25 @@ const diagnostics = computed(() => data.value?.diagnostics ?? null)
  */
 const herkunft = computed(() => data.value?.herkunft ?? null)
 
+/**
+ * Bilanz der Normdaten dieses Laufs in Saetzen (#38): was zugeordnet wurde,
+ * woher die Antworten kamen, und ob die Obergrenze griff.
+ */
+const bilanzZeilen = computed((): string[] => {
+  const b = herkunft.value?.normdaten?.bilanz ?? null
+  if (b === null) return []
+  const zeilen = [t('imports.detail.origin.authorityRun', {
+    n: b.werte, eindeutig: b.eindeutig, mehrdeutig: b.mehrdeutig, ohne: b.ohneTreffer
+  }, b.werte)]
+  if (b.werte > 0) {
+    zeilen.push(t('imports.detail.origin.authorityRunSource', {
+      cache: b.ausZwischenspeicher, frisch: b.nachgeschlagen, fehl: b.gescheitert, skip: b.uebersprungen
+    }))
+  }
+  if (b.obergrenzeErreicht) zeilen.push(t('imports.detail.origin.authorityRunLimit'))
+  return zeilen
+})
+
 /** Trennzeichen lesbar machen. Ein Tabulator sieht sonst aus wie nichts. */
 const trennzeichenLabel = computed(() => {
   const z = herkunft.value?.trennzeichen ?? null
@@ -335,11 +354,14 @@ const formatLabel = computed(() => {
         <div class="frow" style="grid-template-columns:200px 1fr;padding:7px 0">
           <span>{{ t('imports.detail.origin.authority') }}</span>
           <span v-if="herkunft.normdaten === null" class="fval dim">{{ t('imports.detail.origin.unknown') }}</span>
-          <span v-else-if="!herkunft.normdaten.aktiv" class="fval">{{ t('imports.detail.origin.authorityOff') }}</span>
-          <span v-else-if="herkunft.normdaten.obergrenze === null" class="fval">
-            {{ t('imports.detail.origin.authorityOnNoLimit') }}</span>
           <span v-else class="fval">
-            {{ t('imports.detail.origin.authorityOn', { limit: herkunft.normdaten.obergrenze }) }}</span>
+            <template v-if="!herkunft.normdaten.aktiv">{{ t('imports.detail.origin.authorityOff') }}</template>
+            <template v-else-if="herkunft.normdaten.obergrenze === null">
+              {{ t('imports.detail.origin.authorityOnNoLimit') }}</template>
+            <template v-else>
+              {{ t('imports.detail.origin.authorityOn', { limit: herkunft.normdaten.obergrenze }) }}</template>
+            <span v-for="(zeile, i) in bilanzZeilen" :key="i" class="small dim" style="display:block">{{ zeile }}</span>
+          </span>
         </div>
 
         <div class="frow" style="grid-template-columns:200px 1fr;padding:7px 0;border-bottom:0">

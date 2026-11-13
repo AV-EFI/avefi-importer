@@ -40,7 +40,7 @@ export {
 /* ------------------------------------------------------------------- HTTP */
 export type { FetchJson, HttpOptions } from './http.js'
 export {
-  AUTHORITY_USER_AGENT, AuthorityHttpError, DEFAULT_RETRIES, DEFAULT_TIMEOUT_MS,
+  AUTHORITY_USER_AGENT, AuthorityHttpError, authorityUserAgent, mediaWikiFehler, DEFAULT_RETRIES, DEFAULT_TIMEOUT_MS,
   createFetchJson, retryAfterMs, statusRetryable
 } from './http.js'
 
@@ -49,13 +49,13 @@ export { comparableForms, compareForm, foldUmlauts, invertName, nameMatches, ohn
 
 /* ----------------------------------------------------------------- Quellen */
 export { GND_SEARCH_URL, gndSearchUrl, parseGnd, searchGnd } from './gnd.js'
-export { WIKIDATA_API, parseWikidata, searchWikidata, wikidataSearchUrl } from './wikidata.js'
+export { WIKIDATA_API, keinMensch, parseWikidata, parseWikidataArten, searchWikidata, wikidataArtUrl, wikidataSearchUrl } from './wikidata.js'
 export { VIAF_AUTOSUGGEST, parseViaf, searchViaf, viafNeedsInvertedQuery, viafSearchUrl } from './viaf.js'
 
 /* ----------------------------------------------------------- Zwischenspeicher */
 export type { AuthorityCache, DbCacheOptions, MemoryAuthorityCache } from './cache.js'
 export {
-  AUTHORITY_CACHE_GENERATION, cacheKey, cacheSourceColumn, countAuthorityCache,
+  AUTHORITY_CACHE_GENERATION, AUTHORITY_CACHE_GENERATIONEN, cacheGeneration, cacheKey, cacheSourceColumn, countAuthorityCache,
   dbAuthorityCache, dropAuthorityCacheGeneration, layeredAuthorityCache,
   memoryAuthorityCache, noAuthorityCache, purgeAuthorityCache
 } from './cache.js'

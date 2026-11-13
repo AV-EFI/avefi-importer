@@ -91,10 +91,81 @@ Konverters (keine Zahl, nicht in der Werteliste, unbekanntes Land bei
 
 * 786 Tests in 65 Dateien grün (vorher 768), `nuxt typecheck` ohne Befund.
   Neu `tests/mapping/isodate.test.ts` mit allen Fällen aus Lucas Datei.
+* Nach dem Zusammenführen von `origin/main` (Stand #50): 804 Tests in 66
+  Dateien grün.
 * efi-conv (Modell und Zusatzregeln) nimmt die Ergebnisse an: `1976/1977`,
   `2024~`, `1970~`, `2023-11-01/2024-02-15`, `2024-04~`, `1962/1965`.
 * Offen: Sichtprüfung im Browser und Barrierefreiheitslauf (Farbe `--warn` am
   neuen ⚠-Wert). Dafür braucht es eine Anmeldung auf der Demo.
+
+---
+
+## 2026-11-10 — Normdaten: Wikidata-Artprüfung, Fehlerantworten, Bilanz (#38)
+
+Anlass: Lucas Nachtest zu #38 (06.11.2026) nach dem Ausrollen von #41.
+Normdaten sind nicht Teil des Werkvertrags; kostenlose Erweiterung, auf dem
+Branch `fix/normdaten-wikidata-bilanz`.
+
+**Gemeldet:**
+
+* „Gorch Fock“ wird von Wikidata in keinem Lauf zugeordnet; die Suche zeigt
+  den Dichter (Q69087) und eine Begriffsklärungsseite (Q298350), obwohl
+  Nicht-Personen seit #41 gestrichen werden sollten.
+* Die Ergebnisse schwanken: GND fand Wenders und Gorch Fock erst in einem
+  späteren Lauf, Wikidata Wenders ebenso.
+
+**Ursachen:**
+
+* **Gorch Fock:** Der Filter aus #41 fragte den Wikidata-Suchindex nach
+  gleichnamigen Nicht-Menschen und holte höchstens 50. Zu „Gorch Fock“ gibt
+  es 107 (Schiffe, Schulen, Straßen); Q298350 lag jenseits der 50.
+* **Schwankungen:** Von der Demo aus nicht nachzustellen — sieben Namen, drei
+  Quellen, vier Durchläufe ohne Zwischenspeicher, jedes Mal dasselbe, keine
+  Abfrage gescheitert. Ein späterer Lauf, der mehr findet, passt zu
+  gescheiterten Abfragen (werden bewusst nicht gespeichert), zu einem
+  Schalter, der im Worker später an war als in der Weboberfläche, oder zu
+  einer erreichten Obergrenze. Die Zahlen dafür standen in jedem Bericht,
+  gezeigt wurden sie nicht. Die Frage an Luca und Elias steht in #38.
+* **Nebenbefund:** Wikidata meldet Fehler wie Überlast mit HTTP 200 und
+  `{"error": …}` im Rumpf (nachgestellt mit `maxlag`). Daraus wurde „kein
+  Treffer“ — und der wurde zwischengespeichert.
+
+**Was daraus wurde:**
+
+* **Artprüfung über P31** (`wikidata.ts`). Passen bei einer Person mehrere
+  Kandidaten exakt, wird jeder mit `wbgetclaims` nach seiner Art gefragt;
+  gestrichen wird, wer eine Art hat und kein Mensch (Q5) ist. Ohne Artangabe
+  bleibt ein Kandidat stehen. Passt nur einer, entfällt die Nachfrage.
+  Scheitert eine Nachfrage, scheitert die Suche — damit wird kein
+  ungefiltertes „mehrdeutig“ gespeichert. Der Index-Filter ist entfernt.
+* **Fehlerantworten mit HTTP 200** (`http.ts`, `mediaWikiFehler`) gelten als
+  Fehlschlag: wiederholt, notfalls „nicht erreichbar“, nicht gespeichert.
+* **Generation des Zwischenspeichers je Quelle.** Wikidata auf 4, GND und
+  VIAF bleiben auf 3. Bis dahin verwarf jede Korrektur an einer Quelle die
+  gültigen Ergebnisse aller.
+* **Bilanz in der Herkunftsangabe** der Importseite: Zahl der Werte,
+  zugeordnet / mehrdeutig / ohne Treffer, und woher die Antworten kamen (aus
+  dem Zwischenspeicher, frisch, nicht erreichbar, nicht nachgeschlagen), dazu
+  ein Hinweis bei erreichter Obergrenze. Gelesen aus `report_json.authority`,
+  gilt also auch für bestehende Importe.
+* **`AUTHORITY_USER_AGENT`**: Der User-Agent ist einstellbar. Ohne Angabe
+  nennt er das Repository statt der Adresse der Demo, mit der sich bis dahin
+  auch die Produktion bei lobid und Wikidata meldete.
+* Handbuch Kapitel 2 (Bilanz) und 7 (Artprüfung), `deployment.md`,
+  `.env.example`, Compose-Dateien.
+
+### Geprüft
+
+* 786 Tests in 65 Dateien grün (vorher 768), `nuxt typecheck` ohne Befund.
+  Neu unter anderem: Gorch Fock mit fünf gleichnamigen Kandidaten, Kandidaten
+  ohne Artangabe, gescheiterte Nachfrage, Fehlerantwort mit HTTP 200 bis in
+  die Auflösung (kein Eintrag im Zwischenspeicher), Generation je Quelle,
+  Summe der Bilanz.
+* Gegen die echten Dienste von der Demo aus, sieben Namen: Wikidata löst
+  „Gorch Fock“ jetzt zu Q69087 auf (vorher mehrdeutig mit Q298350), sonst
+  unverändert; GND und VIAF unverändert.
+* Offen: Sichtprüfung der Herkunftsangabe im Browser, Barrierefreiheitslauf
+  und neue Seitenbeschreibungen. Dafür braucht es eine Anmeldung auf der Demo.
 
 ---
 

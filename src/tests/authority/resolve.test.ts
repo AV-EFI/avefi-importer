@@ -15,6 +15,7 @@ import {
   resolveAuthorities, sourceAllowed
 } from '../../server/lib/authority/resolve.js'
 import { parseGnd } from '../../server/lib/authority/gnd.js'
+import { createFetchJson } from '../../server/lib/authority/http.js'
 import { gndAntwort, stubFetch, testSchema, verbotenerNetzzugriff } from './fixtures.js'
 
 function bedarf(column: string, values: string[], source = 'gnd', kind = 'person'): AuthorityRequest[] {
@@ -227,6 +228,23 @@ describe('Zwischenspeicher', () => {
 
     expect(r.stats.failed).toBe(1)
     expect(cache.size()).toBe(0)
+  })
+
+  it('merkt sich auch eine Fehlerantwort mit HTTP 200 nicht (#38, 10.11.2026)', async () => {
+    // Wikidata bei Ueberlast: Status 200, Fehler im Rumpf. Vorher wurde das
+    // als leere Trefferliste gelesen und als Nicht-Treffer gespeichert.
+    const cache = memoryAuthorityCache()
+    const fetchImpl = (async () => ({
+      ok: true, status: 200, headers: { get: () => null },
+      json: async () => ({ error: { code: 'maxlag', info: 'lagged' } })
+    })) as unknown as typeof fetch
+    const fetchJson = createFetchJson({ fetchImpl, sleep: async () => {}, retries: 1 })
+    const r = await resolveAuthorities(bedarf('Regie', ['Gorch Fock'], 'wikidata'), { ...an, cache, fetchJson })
+
+    expect(r.stats.failed).toBe(1)
+    expect(r.stats.misses).toBe(0)
+    expect(cache.size()).toBe(0)
+    expect(r.issues.some((i) => i.code === 'authority.unreachable')).toBe(true)
   })
 })
 
