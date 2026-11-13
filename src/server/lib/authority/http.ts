@@ -14,7 +14,19 @@
 /** Holt eine JSON-Antwort. Wirft bei Misserfolg. */
 export type FetchJson = (url: string) => Promise<unknown>
 
-export const AUTHORITY_USER_AGENT = 'AVefiImporter/2.0 (+https://avefiimporter.goo1.de)'
+/**
+ * Voreinstellung des User-Agents. Bis zum 10.11.2026 stand hier die Adresse
+ * der Demo (avefiimporter.goo1.de), auch in der Produktion der TIB. Jetzt das
+ * Repository; der Betreiber setzt mit AUTHORITY_USER_AGENT seine eigene
+ * Kontaktangabe, wie es lobid und die Wikimedia-Richtlinie erbitten.
+ */
+export const AUTHORITY_USER_AGENT = 'AVefiImporter/2.0 (+https://github.com/AV-EFI/avefi-importer)'
+
+/** User-Agent aus der Umgebung, sonst die Voreinstellung. */
+export function authorityUserAgent(env: Record<string, string | undefined> = process.env): string {
+  const wert = (env['AUTHORITY_USER_AGENT'] ?? '').trim()
+  return wert === '' ? AUTHORITY_USER_AGENT : wert
+}
 
 /** Voreinstellungen; bewusst knapp, es haengt ein Worker-Job daran. */
 export const DEFAULT_TIMEOUT_MS = 6000
@@ -76,7 +88,7 @@ export function createFetchJson(options: HttpOptions = {}): FetchJson {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const retries = options.retries ?? DEFAULT_RETRIES
   const backoffMs = options.backoffMs ?? DEFAULT_BACKOFF_MS
-  const userAgent = options.userAgent ?? AUTHORITY_USER_AGENT
+  const userAgent = options.userAgent ?? authorityUserAgent()
   const doFetch = options.fetchImpl ?? fetch
   const sleep = options.sleep ?? wait
 
@@ -105,7 +117,22 @@ export function createFetchJson(options: HttpOptions = {}): FetchJson {
           await sleep(hinted ?? Math.min(backoffMs * 2 ** attempt, MAX_BACKOFF_MS))
           continue
         }
-        return await res.json()
+        const body: unknown = await res.json()
+        // MediaWiki meldet Fehler mit HTTP 200 und `{"error": {"code": …}}`
+        // im Rumpf (Ueberlast `maxlag`, Drosselung). Bis zum 10.11.2026 las
+        // der Aufrufer daraus eine leere Trefferliste, also „kein Treffer“ —
+        // und das wurde zwischengespeichert. Eine Stoerung wurde so zur
+        // dauerhaften Aussage (#38). Jetzt ist es ein Fehlschlag wie ein 5xx.
+        const apiFehler = mediaWikiFehler(body)
+        if (apiFehler !== null) {
+          const err = new AuthorityHttpError(`API-Fehler „${apiFehler}“ bei ${url}`, res.status, true)
+          if (attempt === retries) throw err
+          lastError = err
+          const hinted = retryAfterMs(res.headers.get('retry-after'))
+          await sleep(hinted ?? Math.min(backoffMs * 2 ** attempt, MAX_BACKOFF_MS))
+          continue
+        }
+        return body
       } catch (e) {
         // Ein 4xx kommt hier als AuthorityHttpError wieder an und wird durchgereicht.
         if (e instanceof AuthorityHttpError && !e.retryable) throw e
@@ -118,6 +145,17 @@ export function createFetchJson(options: HttpOptions = {}): FetchJson {
     if (lastError instanceof Error) throw lastError
     throw new AuthorityHttpError(`Keine Antwort von ${url}`, 0, true)
   }
+}
+
+/**
+ * Fehlercode einer MediaWiki-Antwort (`{"error": {"code": "maxlag", …}}`),
+ * sonst null. lobid und VIAF liefern diese Form nicht; fuer sie aendert sich
+ * nichts.
+ */
+export function mediaWikiFehler(body: unknown): string | null {
+  const fehler = asRecord(asRecord(body)['error'])
+  const code = fehler['code']
+  return typeof code === 'string' && code !== '' ? code : null
 }
 
 /* ------------------------------------------------------- Lesehilfen fuer JSON */

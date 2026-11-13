@@ -5,7 +5,8 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import {
-  AUTHORITY_USER_AGENT, AuthorityHttpError, createFetchJson, retryAfterMs, statusRetryable
+  AUTHORITY_USER_AGENT, AuthorityHttpError, authorityUserAgent, createFetchJson, mediaWikiFehler, retryAfterMs,
+  statusRetryable
 } from '../../server/lib/authority/http.js'
 
 function antwort(status: number, body: unknown = {}, headers: Record<string, string> = {}): Response {
@@ -64,6 +65,35 @@ describe('Wiederholung', () => {
   })
 })
 
+// #38 (10.11.2026): Wikidata antwortet bei Ueberlast mit HTTP 200 und einem
+// Fehler im Rumpf. Bis dahin wurde daraus „kein Treffer“ und gespeichert.
+describe('Fehlerantworten mit HTTP 200', () => {
+  const maxlag = { error: { code: 'maxlag', info: 'Waiting for 10.64.16.215: 0.52 seconds lagged.' } }
+
+  it('erkennt den Fehler im Rumpf', () => {
+    expect(mediaWikiFehler(maxlag)).toBe('maxlag')
+    expect(mediaWikiFehler({ search: [] })).toBeNull()
+    expect(mediaWikiFehler({ error: 'nur ein Text' })).toBeNull()
+    expect(mediaWikiFehler(null)).toBeNull()
+  })
+
+  it('wiederholt und liefert dann das Ergebnis', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(antwort(200, maxlag, { 'retry-after': '1' }))
+      .mockResolvedValueOnce(antwort(200, { search: [] }))
+    const get = createFetchJson({ fetchImpl: fetchImpl as unknown as typeof fetch, sleep: sofort })
+    expect(await get('https://www.wikidata.org/w/api.php')).toEqual({ search: [] })
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+  })
+
+  it('wirft, statt eine leere Antwort zu liefern, wenn der Fehler bleibt', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(antwort(200, maxlag))
+    const get = createFetchJson({ fetchImpl: fetchImpl as unknown as typeof fetch, sleep: sofort, retries: 2 })
+    await expect(get('https://www.wikidata.org/w/api.php')).rejects.toThrow('maxlag')
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
+  })
+})
+
 describe('Hoeflichkeit', () => {
   it('schickt User-Agent und Accept mit', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(antwort(200, {}))
@@ -79,6 +109,18 @@ describe('Hoeflichkeit', () => {
   it('der User-Agent nennt einen Kontaktweg', () => {
     expect(AUTHORITY_USER_AGENT).toMatch(/^AVefiImporter\/\d/)
     expect(AUTHORITY_USER_AGENT).toContain('+http')
+  })
+
+  it('verweist nicht mehr auf die Demo, sondern auf das Repository', () => {
+    expect(AUTHORITY_USER_AGENT).not.toContain('goo1.de')
+    expect(AUTHORITY_USER_AGENT).toContain('github.com/AV-EFI/avefi-importer')
+  })
+
+  it('nimmt den User-Agent des Betreibers aus AUTHORITY_USER_AGENT', () => {
+    expect(authorityUserAgent({ AUTHORITY_USER_AGENT: 'AVefiImporter/2.0 (+mailto:betrieb@example.org)' }))
+      .toBe('AVefiImporter/2.0 (+mailto:betrieb@example.org)')
+    expect(authorityUserAgent({ AUTHORITY_USER_AGENT: '  ' })).toBe(AUTHORITY_USER_AGENT)
+    expect(authorityUserAgent({})).toBe(AUTHORITY_USER_AGENT)
   })
 
   it('haengt jeder Anfrage ein Zeitlimit an', async () => {

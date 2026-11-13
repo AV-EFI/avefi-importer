@@ -61,7 +61,16 @@ describe('herkunft', () => {
     expect(h.aufgezeichnet).toBe(true)
     expect(h.formatProfil).toEqual({ label: 'MARC-XML', converterKey: 'marcxml_v1' })
     expect(h.zuordnungsProfil).toBeNull()
-    expect(h.normdaten).toEqual({ aktiv: true, obergrenze: 500 })
+    expect(h.normdaten).toEqual({ aktiv: true, obergrenze: 500, bilanz: null })
+  })
+
+  it('reicht die Bilanz der Normdaten aus dem Bericht weiter (#38)', async () => {
+    const report_json = {
+      authority: { requested: 7, resolved: 4, ambiguous: 1, misses: 0, failed: 2, skipped: 0, fromCache: 3, fetched: 4, limitReached: false }
+    }
+    const zeile = { ...ZEILE, run_config: LAUF, report_json } as never
+    const h = await herkunft(sqlStub([]), zeile)
+    expect(h.normdaten?.bilanz).toMatchObject({ werte: 7, eindeutig: 4, gescheitert: 2, ausZwischenspeicher: 3 })
   })
 
   it('stellt die verwendete Profilversion neben die heutige', async () => {

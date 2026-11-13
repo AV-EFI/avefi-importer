@@ -409,6 +409,7 @@ Falle: Der Worker las damals nur die Namen ohne Praefix und fiel bei reiner
 | `WORKER_MAX_UPTIME` | nein | `600`, im Abbild `worker` `0` | Sekunden bis zur Selbstbeendigung des Workers; `0` heisst keine Hoechstlaufzeit. Unbrauchbare Angaben fallen mit Warnung auf 600 zurueck. Nur im `worker`-Container sinnvoll. |
 | `AUTHORITY_ENABLED` | nein | aus | Normdatenanreicherung. Wahr bei `1`, `true`, `ja`, `on`. Vertraglich nicht geschuldet. **In `web` UND `worker` gleich setzen** — siehe unten. |
 | `AUTHORITY_LIMIT` | nein | `500` | Obergrenze der frischen Nachschlagevorgaenge je Konvertierung. Unbrauchbare Angaben fallen auf 500 zurueck. Ebenfalls in beiden Containern gleich setzen. |
+| `AUTHORITY_USER_AGENT` | nein | `AVefiImporter/2.0 (+https://github.com/AV-EFI/avefi-importer)` | Kennung gegenueber lobid, VIAF und Wikidata. Die Dienste bitten um eine Kontaktangabe des Betreibers, etwa Adresse der Instanz und eine E-Mail. Bis zum 10.11.2026 stand hier fest die Adresse der Demo. In beiden Containern gleich setzen. |
 | `EFI_CONV_REPO` | nein (Bauzeit) | `github.com/AV-EFI/efi-conv.git` | Herkunft von efi-conv beim Bauen des Sidecars. |
 | `EFI_CONV_REF` | nein (Bauzeit) | `main` | Zweig oder Commit von efi-conv. Fuer reproduzierbare Ergebnisse einen Commit eintragen. |
 | `APP_DOMAIN` | nein | `localhost` | Nur fuer die Traefik-Regel in `docker-compose.dev.yml`. Die Anwendung selbst kennt keine feste Domain. |

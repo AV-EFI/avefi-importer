@@ -154,7 +154,20 @@ export interface Herkunft {
   } | null
   schemaVersion: string | null
   trennzeichen: string | null
-  normdaten: { aktiv: boolean; obergrenze: number | null } | null
+  normdaten: { aktiv: boolean; obergrenze: number | null; bilanz: NormdatenBilanz | null } | null
+}
+
+/** Ergebnis des Nachschlagens in einem Lauf; spiegelt `NormdatenBilanz` in _herkunft.ts. */
+export interface NormdatenBilanz {
+  werte: number
+  eindeutig: number
+  mehrdeutig: number
+  ohneTreffer: number
+  gescheitert: number
+  uebersprungen: number
+  ausZwischenspeicher: number
+  nachgeschlagen: number
+  obergrenzeErreicht: boolean
 }
 
 export interface ImportDetailResponse {
