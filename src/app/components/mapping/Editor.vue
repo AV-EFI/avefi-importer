@@ -904,8 +904,11 @@ const canonicalJson = computed(() => {
                         <span v-if="example.count > 1" class="dim excount">{{ example.count }}×</span>
                         <template v-if="merged">
                           <i class="exarrow" aria-hidden="true">→</i>
-                          <span v-if="valuesOf(example).length" class="okval">
-                            <i aria-hidden="true">✓</i>{{ valuesOf(example).join(' · ') }}
+                          <span v-if="valuesOf(example).length"
+                                :class="example.errors.length ? 'hintval' : 'okval'"
+                                :title="example.errors.length ? example.errors.map(meldung).join(' · ') : undefined">
+                            <i aria-hidden="true">{{ example.errors.length ? '⚠' : '✓' }}</i>{{ valuesOf(example).join(' · ') }}
+                            <span v-if="example.errors.length" class="sr-only">{{ meldung(example.errors[0]!) }}</span>
                           </span>
                           <span v-else-if="example.errors.length" class="errval" :title="example.errors.map(meldung).join(' · ')">
                             <i aria-hidden="true">⚠</i>{{ meldung(example.errors[0]!) }}
@@ -975,8 +978,11 @@ const canonicalJson = computed(() => {
                   <td v-if="!merged" class="mapresult">
                     <template v-if="examplesOf(column).length">
                       <div v-for="(example, i) in examplesOf(column)" :key="i" class="exline">
-                        <span v-if="valuesOf(example).length" class="okval">
-                          <i aria-hidden="true">✓</i>{{ valuesOf(example).join(' · ') }}
+                        <span v-if="valuesOf(example).length"
+                              :class="example.errors.length ? 'hintval' : 'okval'"
+                              :title="example.errors.length ? example.errors.map(meldung).join(' · ') : undefined">
+                          <i aria-hidden="true">{{ example.errors.length ? '⚠' : '✓' }}</i>{{ valuesOf(example).join(' · ') }}
+                          <span v-if="example.errors.length" class="sr-only">{{ meldung(example.errors[0]!) }}</span>
                           <span v-for="entry in idsOf(example)" :key="entry.id" class="idchip"
                                 :class="entry.origin === 'land' ? 'idchip-land' : ''"
                                 :title="idTitle(entry)" :aria-label="idTitle(entry)">{{ entry.id }}</span>

@@ -30,6 +30,145 @@ GitHub weiter.
 
 ---
 
+## 2026-11-12 — „Datum nach ISO“ nach dem Muster des Schemas (#51)
+
+Anlass: Meldung von Luca (#51, 12.11.2026) mit einer Testdatei, die die
+Beispiele des Typs `ISODate` abdeckt, dazu Sonderfälle und ungültige Werte.
+Gewährleistung, auf dem Branch `fix/datum-nach-iso`.
+
+**Gemeldet:**
+
+* Qualifier und Zeiträume wurden auf das Anfangsjahr gekürzt: `2024~` → `2024`,
+  `2023/2024` → `2023`, `2023-11-01/2024-02-15` → `2023`.
+* `2024-13`, `2024-00`, `2024-04-32` mit grünem Haken in der Vorschau, mit und
+  ohne Konverter; erst efi-conv lehnte sie ab.
+* `24`: `has_event` fehlte im Export, ohne Hinweis.
+* `2024-4`, `2024/`, `2023 / 2024`, `2024-04-24T10:00`, `ca. 1970` wurden still
+  zu einem Jahr; `12024` zu `1202`.
+* Die Anwendung lehnte das gültige `1976/1977` ab.
+
+**Ursachen:** Drei Stellen beantworteten dieselbe Frage verschieden. Der
+Konverter liess nur `JJJJ(-MM(-TT))` durch und nahm sonst die ersten vier
+Ziffern. Die Zielprüfung hatte ein eigenes Muster, mit Qualifiern, ohne
+Zeiträume, ohne Prüfung von Monat und Tag. Das Schema erlaubt alles drei. Dazu
+kam ein allgemeiner Fehler: **Meldungen der Konverterkette erreichten den
+Prüfbericht nie.** Sie landeten nur in einer Zählung je Spalte, die keine
+Oberfläche zeigte. Das betraf nicht nur Daten, sondern jede Meldung eines
+Konverters (keine Zahl, nicht in der Werteliste, unbekanntes Land bei
+„beanstanden“).
+
+**Was daraus wurde** (Entscheidungen mit Andreas am 12.11.):
+
+* Neue Datei `server/lib/mapping/isodate.ts` mit dem Muster aus dem Schema.
+  Konverter und Zielprüfung benutzen es. `tests/mapping/isodate.test.ts` hält
+  es gegen `public/schema/avefi/model.schema.json`.
+* Schemakonformes bleibt unverändert. Umgewandelt wird nur Eindeutiges ohne
+  Verlust: Leerraum um `/`; Strich zwischen zwei vierstelligen Jahren; zwei
+  volle Daten mit „ - “; `1962-65` → `1962/1965` (nur wenn das Ende nach dem
+  Anfang liegt und es kein Monat sein kann); Monat und Tag auffüllen;
+  `ca./circa/um 1970` → `1970~`; die bisherigen Schreibweisen `T.M.JJJJ`,
+  `M.JJJJ`, `M/T/JJJJ`.
+* Uhrzeit wird abgeschnitten, mit **Hinweis**. Eine einzelne Jahreszahl in einem
+  Text ohne weitere Ziffern („gedreht 1953“) wird wie bisher übernommen, jetzt
+  ebenfalls mit Hinweis.
+* Alles andere **entfällt mit Warnung**: `24`, `12024`, `2024-13`, `2024-02-30`,
+  `2024/`, `1950er`, `50er Jahre`, `1953 (Fassung 1960)`. Der Datensatz bleibt
+  exportierbar. Strenger als das Schema sind dabei zwei Fälle: Jahre über 9999
+  und Tage, die es im Monat nicht gibt.
+* **Meldungen der Kette stehen im Prüfbericht** (`mappingBridge.ts`,
+  `kettenMeldungen`), mit Zeile, Spalte und Rohwert. Gleiche Meldungen einer
+  Spalte fasst der `IssueCollector` zusammen: einmal, mit Zahl, drei Beispielen
+  und der ersten Zeile.
+* **Vorschau:** Ein übernommener Wert mit Meldung bekommt ⚠ statt ✓, die Meldung
+  steht im Tooltip und für Screenreader im Text. Der Vorschlag „Datum nach ISO
+  einfügen“ entfällt, wenn alle Beispiele der Spalte schon schemakonform sind.
+* `MappingMessage` hat ein optionales `severity` (`info`/`warning`).
+* Texte de/en: `transform.badDate` neu gefasst, `transform.dateTimeDropped`,
+  `transform.dateYearExtracted` neu, `target.badDate` nennt Qualifier und Zeiträume.
+* Handbuch Kapitel 3 und 7, `mapping-profile.md`.
+
+### Geprüft
+
+* 786 Tests in 65 Dateien grün (vorher 768), `nuxt typecheck` ohne Befund.
+  Neu `tests/mapping/isodate.test.ts` mit allen Fällen aus Lucas Datei.
+* Nach dem Zusammenführen von `origin/main` (Stand #50): 804 Tests in 66
+  Dateien grün.
+* efi-conv (Modell und Zusatzregeln) nimmt die Ergebnisse an: `1976/1977`,
+  `2024~`, `1970~`, `2023-11-01/2024-02-15`, `2024-04~`, `1962/1965`.
+* Offen: Sichtprüfung im Browser und Barrierefreiheitslauf (Farbe `--warn` am
+  neuen ⚠-Wert). Dafür braucht es eine Anmeldung auf der Demo.
+
+---
+
+## 2026-11-10 — Normdaten: Wikidata-Artprüfung, Fehlerantworten, Bilanz (#38)
+
+Anlass: Lucas Nachtest zu #38 (06.11.2026) nach dem Ausrollen von #41.
+Normdaten sind nicht Teil des Werkvertrags; kostenlose Erweiterung, auf dem
+Branch `fix/normdaten-wikidata-bilanz`.
+
+**Gemeldet:**
+
+* „Gorch Fock“ wird von Wikidata in keinem Lauf zugeordnet; die Suche zeigt
+  den Dichter (Q69087) und eine Begriffsklärungsseite (Q298350), obwohl
+  Nicht-Personen seit #41 gestrichen werden sollten.
+* Die Ergebnisse schwanken: GND fand Wenders und Gorch Fock erst in einem
+  späteren Lauf, Wikidata Wenders ebenso.
+
+**Ursachen:**
+
+* **Gorch Fock:** Der Filter aus #41 fragte den Wikidata-Suchindex nach
+  gleichnamigen Nicht-Menschen und holte höchstens 50. Zu „Gorch Fock“ gibt
+  es 107 (Schiffe, Schulen, Straßen); Q298350 lag jenseits der 50.
+* **Schwankungen:** Von der Demo aus nicht nachzustellen — sieben Namen, drei
+  Quellen, vier Durchläufe ohne Zwischenspeicher, jedes Mal dasselbe, keine
+  Abfrage gescheitert. Ein späterer Lauf, der mehr findet, passt zu
+  gescheiterten Abfragen (werden bewusst nicht gespeichert), zu einem
+  Schalter, der im Worker später an war als in der Weboberfläche, oder zu
+  einer erreichten Obergrenze. Die Zahlen dafür standen in jedem Bericht,
+  gezeigt wurden sie nicht. Die Frage an Luca und Elias steht in #38.
+* **Nebenbefund:** Wikidata meldet Fehler wie Überlast mit HTTP 200 und
+  `{"error": …}` im Rumpf (nachgestellt mit `maxlag`). Daraus wurde „kein
+  Treffer“ — und der wurde zwischengespeichert.
+
+**Was daraus wurde:**
+
+* **Artprüfung über P31** (`wikidata.ts`). Passen bei einer Person mehrere
+  Kandidaten exakt, wird jeder mit `wbgetclaims` nach seiner Art gefragt;
+  gestrichen wird, wer eine Art hat und kein Mensch (Q5) ist. Ohne Artangabe
+  bleibt ein Kandidat stehen. Passt nur einer, entfällt die Nachfrage.
+  Scheitert eine Nachfrage, scheitert die Suche — damit wird kein
+  ungefiltertes „mehrdeutig“ gespeichert. Der Index-Filter ist entfernt.
+* **Fehlerantworten mit HTTP 200** (`http.ts`, `mediaWikiFehler`) gelten als
+  Fehlschlag: wiederholt, notfalls „nicht erreichbar“, nicht gespeichert.
+* **Generation des Zwischenspeichers je Quelle.** Wikidata auf 4, GND und
+  VIAF bleiben auf 3. Bis dahin verwarf jede Korrektur an einer Quelle die
+  gültigen Ergebnisse aller.
+* **Bilanz in der Herkunftsangabe** der Importseite: Zahl der Werte,
+  zugeordnet / mehrdeutig / ohne Treffer, und woher die Antworten kamen (aus
+  dem Zwischenspeicher, frisch, nicht erreichbar, nicht nachgeschlagen), dazu
+  ein Hinweis bei erreichter Obergrenze. Gelesen aus `report_json.authority`,
+  gilt also auch für bestehende Importe.
+* **`AUTHORITY_USER_AGENT`**: Der User-Agent ist einstellbar. Ohne Angabe
+  nennt er das Repository statt der Adresse der Demo, mit der sich bis dahin
+  auch die Produktion bei lobid und Wikidata meldete.
+* Handbuch Kapitel 2 (Bilanz) und 7 (Artprüfung), `deployment.md`,
+  `.env.example`, Compose-Dateien.
+
+### Geprüft
+
+* 786 Tests in 65 Dateien grün (vorher 768), `nuxt typecheck` ohne Befund.
+  Neu unter anderem: Gorch Fock mit fünf gleichnamigen Kandidaten, Kandidaten
+  ohne Artangabe, gescheiterte Nachfrage, Fehlerantwort mit HTTP 200 bis in
+  die Auflösung (kein Eintrag im Zwischenspeicher), Generation je Quelle,
+  Summe der Bilanz.
+* Gegen die echten Dienste von der Demo aus, sieben Namen: Wikidata löst
+  „Gorch Fock“ jetzt zu Q69087 auf (vorher mehrdeutig mit Q298350), sonst
+  unverändert; GND und VIAF unverändert.
+* Offen: Sichtprüfung der Herkunftsangabe im Browser, Barrierefreiheitslauf
+  und neue Seitenbeschreibungen. Dafür braucht es eine Anmeldung auf der Demo.
+
+---
+
 ## 2026-11-10 — Satzbau bei Befunden ohne Feld (#45)
 
 Anlass: Meldung von Luca (#45, 05.11.2026): „den Datensatz enthält Angaben …“.
@@ -67,7 +206,9 @@ und Prüfsumme aus `schema_fingerprint()`.
 ### Geprüft
 
 * 780 Tests in 65 Dateien grün, `nuxt typecheck` ohne Befund.
-* Prüfdienst: 11 Tests grün.
+* Nach dem Zusammenführen von `origin/main` (Stand #52): 816 Tests in 67
+  Dateien grün, `nuxt typecheck` ohne Befund.
+* Prüfdienst: 12 Tests grün.
 
 ---
 

@@ -45,6 +45,7 @@ services:
       # der Anwender gemeldet hat.
       - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-0}
       - AUTHORITY_LIMIT=${AUTHORITY_LIMIT:-500}
+      - AUTHORITY_USER_AGENT=${AUTHORITY_USER_AGENT:-}
     # Ohne Reverse Proxy stehen die Marken auf false und richten nichts an;
     # Traefik liest sie dann gar nicht erst.
     labels:
@@ -90,6 +91,7 @@ services:
       - WORKER_MAX_UPTIME=600
       - AUTHORITY_ENABLED=${AUTHORITY_ENABLED:-0}
       - AUTHORITY_LIMIT=${AUTHORITY_LIMIT:-500}
+      - AUTHORITY_USER_AGENT=${AUTHORITY_USER_AGENT:-}
     volumes:
       - ./:/app:rw
       # Abhaengigkeiten und erzeugte Typen kommen aus dem Abbild. Ohne diese

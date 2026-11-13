@@ -1,7 +1,7 @@
 /* Konverter — jede Operation des Verzeichnisses einmal. */
 
 import { describe, expect, it } from 'vitest'
-import type { TransformStep } from '#shared/types/domain'
+import type { MappingMessage, TransformStep } from '#shared/types/domain'
 import {
   chainOrderIssues, chainType, runChain, secondsToIso, toIsoDate, toIsoDuration,
   TRANSFORM_CATALOG, transformCatalogForEditor, canonicalOp, compareForm
@@ -134,13 +134,15 @@ describe('Typen', () => {
   })
 
   it('date normalisiert die ueblichen Schreibweisen', () => {
-    const e: string[] = []
+    const e: MappingMessage[] = []
     expect(toIsoDate('12.05.2003', '', e)).toBe('2003-05-12')
     expect(toIsoDate('5.2003', '', e)).toBe('2003-05')
     expect(toIsoDate('2003', '', e)).toBe('2003')
     expect(toIsoDate('05/12/2003', '', e)).toBe('2003-05-12')
-    expect(toIsoDate('gedreht 1953', '', e)).toBe('1953')
     expect(e).toEqual([])
+    // Das Jahr aus einem Text: wie bisher, aber nicht mehr still (#51).
+    expect(toIsoDate('gedreht 1953', '', e)).toBe('1953')
+    expect(e.map((m) => m.code)).toEqual(['transform.dateYearExtracted'])
   })
 
   it('date kann ein vorgegebenes Quellformat lesen', () => {

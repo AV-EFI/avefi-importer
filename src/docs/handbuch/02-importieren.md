@@ -128,7 +128,13 @@ Der Abschnitt nennt:
   Angabe von „leer" nicht zu unterscheiden.
 * **Normdaten** — ob die Anreicherung bei diesem Lauf eingeschaltet war und mit
   welcher Obergrenze. Ein Ergebnis mit und eines ohne Anreicherung sehen
-  verschieden aus, ohne dass sich Datei oder Profil geändert haben.
+  verschieden aus, ohne dass sich Datei oder Profil geändert haben. Darunter
+  die Bilanz des Laufs: wie viele Werte nachzuschlagen waren, wie viele davon
+  zugeordnet, mehrdeutig oder ohne Treffer blieben, und woher die Antworten
+  kamen — aus dem Zwischenspeicher, frisch nachgeschlagen, nicht erreichbar
+  oder gar nicht nachgeschlagen (Schalter aus oder Obergrenze erreicht). Findet
+  ein späterer Lauf mehr als ein früherer, steht hier der Grund: Was nicht
+  erreichbar war, wird nicht gespeichert und beim nächsten Lauf neu gefragt.
 * **Konvertiert am**.
 
 Bei Importen, die vor Einführung dieser Aufzeichnung liefen, steht in den Zeilen

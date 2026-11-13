@@ -399,6 +399,12 @@ export interface MappingMessage {
   code: string
   params?: Record<string, string | number>
   /**
+   * Gewicht im Pruefbericht. Ohne Angabe gilt eine Meldung aus der Kette als
+   * Warnung. „info“ steht fuer verlustarme Umwandlungen, die man wissen soll,
+   * etwa eine abgeschnittene Uhrzeit (#51).
+   */
+  severity?: 'info' | 'warning'
+  /**
    * Der deutsche Satz, am Rand der API eingesetzt. Rueckfallebene fuer den
    * Fall, dass zu einem Code keine Uebersetzung vorliegt — dann steht dort
    * ein Satz und nicht der Code.
