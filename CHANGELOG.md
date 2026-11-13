@@ -169,6 +169,49 @@ Branch `fix/normdaten-wikidata-bilanz`.
 
 ---
 
+## 2026-11-10 — Satzbau bei Befunden ohne Feld (#45)
+
+Anlass: Meldung von Luca (#45, 05.11.2026): „den Datensatz enthält Angaben …“.
+
+**Ursache:** Betrifft ein Befund den ganzen Datensatz, ist `params.field` leer.
+Die Oberfläche setzte dann „den Datensatz“ an die Stelle von `{field}`. Der
+Akkusativ passt nur in „Das AVefi-Schema beanstandet {field}“.
+
+**Was daraus wurde:**
+
+* `useMeldungstext` sucht bei leerem Feld vor jedem Schlüssel seine Variante
+  `…__record`.
+* 18 Sätze de/en mit eigener Fassung für den ganzen Datensatz.
+* `tests/pruefung/ganzer-datensatz.test.ts` verlangt sie für jeden heutigen und
+  künftigen Satz mit `{field}`.
+* Tests zu Modell und Regeln prüfen mit einer neutralen Wurzel, unabhängig von
+  der `anyOf`-Wurzel des Schemas.
+
+**Nachtrag 13.11.2026:** Der erste Entwurf reagierte auf Massenbeanstandungen,
+weil die Wurzel des JSON-Schemas seit LinkML 1.12 jeden Datensatz ablehnte.
+`av-efi-schema` hat das mit `4e9058b` behoben. Die Referenzprobe, die Aussetzung
+des Schemaschritts und `AVEFI_SCHEMA_REF` aus dem ersten Entwurf sind deshalb
+entfallen; geblieben ist der Satzbau.
+
+Mit `efi-conv` 2b1eb48 loggen die Zusatzregeln unter `avefi_validate` statt
+`efi_conv`. Der Prüfdienst liest jetzt beide Quellen mit; `rule_period` und
+`rule_removed_without_pid` bleiben damit erhalten. Geändert hat sich die
+Log-Quelle, nicht die Regel.
+
+**Nachtrag 13.11.2026 (Schemaherkunft):** Seit `efi-conv` 2b1eb48 kommt das
+AVefi-Schema als Paketdaten mit `avefi-schema`; der Benutzer-Cache entfällt.
+Der Bau prüft weiter, dass sich das Schema laden lässt; `/health` nennt Quelle
+und Prüfsumme aus `schema_fingerprint()`.
+
+### Geprüft
+
+* 780 Tests in 65 Dateien grün, `nuxt typecheck` ohne Befund.
+* Nach dem Zusammenführen von `origin/main` (Stand #52): 816 Tests in 67
+  Dateien grün, `nuxt typecheck` ohne Befund.
+* Prüfdienst: 12 Tests grün.
+
+---
+
 ## 2026-11-04 — Institutionen in der Nutzerverwaltung (#43)
 
 Anlass: Wunsch von Jasper Stratil (#43): Administratorinnen sollen neue

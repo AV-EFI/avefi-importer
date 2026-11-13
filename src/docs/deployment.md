@@ -51,9 +51,9 @@ Vorgabewerten. Deshalb steht es jetzt zusaetzlich im Programm.
 * Docker mit Compose-Plugin. Ohne Docker: Node ab 22.19.0 (`package.json`,
   Feld `engines`; die Images benutzen Node 24) und PostgreSQL 16.
 * Ausgehende HTTPS-Verbindungen beim **Bauen** des efi-conv-Sidecars: das
-  echte `efi-conv` wird per pip aus dem Git-Repository geholt und das
-  AVefi-Schema einmalig ins Image geschrieben. Im laufenden Betrieb braucht der
-  Dienst kein Netz mehr.
+  echte `efi-conv` wird per pip aus dem Git-Repository geholt; das AVefi-Schema
+  kommt als Paketdaten von `avefi-schema` mit ins Image. Im laufenden Betrieb
+  braucht der Dienst kein Netz mehr.
 * Ausgehende HTTPS-Verbindungen zur Laufzeit nur, wenn `AUTHORITY_ENABLED`
   eingeschaltet wird. Standard ist aus.
 
@@ -146,11 +146,12 @@ docker compose -f docker-compose.dev.yml build \
 Damit laesst sich auf den Stand aus Leistungspaket A oder auf einen festen
 Commit zeigen, sodass Konverter und Importer dieselbe Pruefung benutzen.
 
-Das AVefi-Schema wird beim Bauen einmal geholt und im Image eingefroren
-(`/root/.cache/efi_conv/`). Ohne das laedt efi-conv es zur Laufzeit vom
-main-Branch, und keine Konvertierung waere reproduzierbar, weil sich das Schema
-unter der laufenden Anwendung aendern kann. Welches Schema geladen wurde, sagt
-`GET /health`; die Angabe wandert in den Pruefbericht jedes Imports.
+Das AVefi-Schema kommt seit `efi-conv` 2b1eb48 als Paketdaten mit
+`avefi-schema` ins Image; es wird nicht mehr beim Bauen in einen Benutzer-Cache
+geladen. Der beim Bauen aufgeloeste Stand steckt im Abbild und aendert sich im
+Betrieb nicht; ein Neubau kann jedoch einen neueren Stand ziehen, solange
+`avefi-schema` nicht auf einen Commit festgelegt ist. Welches Schema geladen
+wurde, sagt `GET /health`; die Angabe wandert in den Pruefbericht jedes Imports.
 
 Der Dienst hat zwei Endpunkte:
 

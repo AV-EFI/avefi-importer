@@ -53,6 +53,20 @@ def schema_info() -> dict[str, Any]:
         "version": None,
         "sha256": None,
     }
+    # Seit efi-conv 2b1eb48 liegen Schema und Pruefsumme als Paketdaten bei
+    # avefi-schema; SCHEMA_FILE gibt es nicht mehr. schema_fingerprint()
+    # nennt beides. Aeltere efi-conv-Staende kennen nur die Datei.
+    fingerprint = getattr(efi_check, "schema_fingerprint", None)
+    if callable(fingerprint):
+        try:
+            fp = fingerprint()
+        except Exception as e:  # pragma: no cover
+            log.warning("Schemainfo nicht lesbar: %s", e)
+        else:
+            info["source"] = fp.get("source")
+            info["sha256"] = (fp.get("sha256") or "")[:16] or None
+            info["version"] = fp.get("version") or fp.get("id")
+            return info
     try:
         p = pathlib.Path(str(efi_check.SCHEMA_FILE))
         if p.exists():
@@ -214,6 +228,11 @@ _REGELARTEN: tuple[tuple[str, str], ...] = (
     ("has_access_status=Removed", "rule_removed_without_pid"),
 )
 
+# Die Regeln loggen bis efi-conv 2b1eb48 unter "efi_conv", seither unter
+# "avefi_validate". Beide Quellen mitschreiben, sonst geht der Grund verloren
+# und der Code faellt auf rule_invalid_value zurueck.
+_REGEL_LOGGER = ("efi_conv", "avefi_validate")
+
 
 def _ohne_zweige(loc: tuple[Any, ...]) -> tuple[str, list[str]]:
     """
@@ -309,8 +328,9 @@ def _zusatzregeln(rec: dict[str, Any]) -> list[dict[str, Any]]:
         }]
 
     mitschrift = _Mitschrift()
-    efi_logger = logging.getLogger("efi_conv")
-    efi_logger.addHandler(mitschrift)
+    quellen = [logging.getLogger(name) for name in _REGEL_LOGGER]
+    for quelle in quellen:
+        quelle.addHandler(mitschrift)
     try:
         verletzt = efi_check.has_invalid_value(model)
     except Exception as e:
@@ -321,7 +341,8 @@ def _zusatzregeln(rec: dict[str, Any]) -> list[dict[str, Any]]:
             "detail": f"{type(e).__name__}: {e}"[:300],
         }]
     finally:
-        efi_logger.removeHandler(mitschrift)
+        for quelle in quellen:
+            quelle.removeHandler(mitschrift)
 
     if not verletzt:
         return []

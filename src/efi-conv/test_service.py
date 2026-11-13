@@ -13,7 +13,32 @@ from __future__ import annotations
 
 import unittest
 
+import service
 from service import CheckRequest, CrossRequest, check, crossref
+
+
+def _validator_mit_wurzel(wurzel):
+    """Validator aus den $defs des eingefrorenen Schemas mit einer eigenen Wurzel."""
+    v = service.validator()
+    return type(v)({**wurzel, "$defs": v.schema["$defs"]})
+
+
+class MitNeutralerWurzel(unittest.TestCase):
+    """
+    Tests, die vom Modell und den Regeln handeln, nicht von der Wurzel.
+
+    Die Wurzel des Schemas beschreibt seit LinkML 1.12 die Datensaetze ueber
+    `anyOf` und prueft damit auch die Struktur. Damit diese Tests in jedem
+    Abbild dasselbe pruefen, bekommen sie eine neutrale Wurzel
+    (`{type: object}`), die fuer einen Satz nichts festlegt.
+    """
+
+    def setUp(self):
+        self._alt = service._validator
+        service._validator = _validator_mit_wurzel({"type": "object"})
+
+    def tearDown(self):
+        service._validator = self._alt
 
 
 def werk(**extra):
@@ -31,7 +56,7 @@ def pruefe(*records):
     return check(CheckRequest(records=list(records), row_map={"1": 7}))
 
 
-class Zusatzregeln(unittest.TestCase):
+class Zusatzregeln(MitNeutralerWurzel):
     def test_umgekehrter_zeitraum_wird_beanstandet(self):
         rec = werk(has_event=[{"category": "avefi:ProductionEvent", "has_date": "1990/1980"}])
         res = pruefe(rec)
@@ -63,23 +88,16 @@ class Schemafehler(unittest.TestCase):
     """
     Die Bausteine eines jsonschema-Fehlers.
 
-    Ueber /check laesst sich das nicht ausloesen: Die Wurzel des AVefi-Schemas
-    legt fuer einen Satz nichts fest (siehe _modellfehler). Geprueft wird
-    deshalb gegen den Teil des Schemas, der zur Kategorie gehoert.
+    Ueber /check laesst sich das nicht verlaesslich ausloesen: Die Wurzel des
+    AVefi-Schemas beschreibt seit LinkML 1.12 die Datensaetze ueber `anyOf`
+    und prueft damit auch die Struktur. Geprueft wird deshalb gegen den Teil
+    des Schemas, der zur Kategorie gehoert.
     """
 
     def fehler(self, rec):
-        from service import validator
-        v = validator()
-        teil = dict(v.schema)
-        teil["$ref"] = "#/$defs/WorkVariant"
-        return list(type(v)(teil).iter_errors(rec))
-
-    def test_wurzel_des_schemas_legt_nichts_fest(self):
-        # Wird das je anders, soll dieser Test es sagen: Dann prueft /check
-        # wieder etwas, und die Uebersetzung der Schemafehler wird sichtbar.
-        from service import validator
-        self.assertEqual(list(validator().iter_errors({"foo": 1})), [])
+        # Nur die $defs, nicht die Wurzel: Die Wurzel prueft seit LinkML 1.12
+        # die Struktur ueber `anyOf` mit.
+        return list(_validator_mit_wurzel({"$ref": "#/$defs/WorkVariant"}).iter_errors(rec))
 
     def test_bausteine_eines_wertefehlers(self):
         from service import _schema_params
@@ -96,7 +114,7 @@ class Schemafehler(unittest.TestCase):
         self.assertEqual(p["missing"], "type")
 
 
-class Modell(unittest.TestCase):
+class Modell(MitNeutralerWurzel):
     """Was efi-conv check beim Laden ablehnt."""
 
     def modellfehler(self, rec):
@@ -132,6 +150,16 @@ class Modell(unittest.TestCase):
     def test_ungueltiger_satz_bekommt_keine_regelwarnung(self):
         codes = [i["code"] for i in pruefe(werk(type="Gibtsnicht"))["issues"]]
         self.assertNotIn("rules_unavailable", codes)
+
+
+class Schemainfo(unittest.TestCase):
+    """Der Bericht nennt Quelle und Pruefsumme des geladenen Schemas."""
+
+    def test_nennt_quelle_und_pruefsumme(self):
+        service.validator()
+        info = service.schema_info()
+        self.assertTrue(info["source"])
+        self.assertTrue(info["sha256"])
 
 
 class Querlauf(unittest.TestCase):

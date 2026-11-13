@@ -81,6 +81,30 @@ describe('befund', () => {
     const issue: ValidationIssue = { severity: 'info', code: 'gibt_es_nicht', message: 'alter Satz' }
     expect(fuer('en').befund(issue)).toBe('alter Satz')
   })
+
+  // #45: „den Datensatz enthält Angaben …“ — ein Satz fuer den ganzen Datensatz
+  const ganz = (kind: string, extra: Record<string, string> = {}): ValidationIssue => ({
+    severity: 'error', code: 'schema', message: 'Das AVefi-Schema beanstandet den Datensatz.',
+    params: { kind, field: '', ...extra }
+  })
+
+  it('bildet fuer den ganzen Datensatz einen eigenen Satz', () => {
+    expect(fuer('de').befund(ganz('additionalProperties', { extra: 'type' }))).toBe(
+      'Der Datensatz enthält Angaben, die das Schema nicht vorsieht: type.')
+    expect(fuer('de').befund(ganz('required', { missing: 'category' }))).toBe(
+      'Dem Datensatz fehlt die Pflichtangabe category.')
+    expect(fuer('en').befund(ganz('additionalProperties', { extra: 'type' }))).toBe(
+      'The record contains properties the schema does not provide: type.')
+  })
+
+  it('behaelt den Akkusativ, wo er passt', () => {
+    expect(fuer('de').befund(ganz('unbekannt'))).toBe('Das AVefi-Schema beanstandet den Datensatz.')
+  })
+
+  it('nimmt mit Feld weiter den Satz mit Feld', () => {
+    expect(fuer('de').befund(ganz('additionalProperties', { field: 'has_event.0', extra: 'x' }))).toBe(
+      'has_event.0 enthält Angaben, die das Schema dort nicht vorsieht: x.')
+  })
 })
 
 describe('diagnose', () => {
