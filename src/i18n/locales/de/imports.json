@@ -390,7 +390,7 @@
       "identifier_not_unique": "Zwei Sätze tragen dieselbe Kennung; die Schemaprüfung lässt das nicht durch. Entweder beschreiben die Zeilen dasselbe Objekt — dann gehört die Werkbildung darauf eingestellt — oder die zugeordnete Spalte taugt nicht als Kennung.",
       "identifier_duplicate": "Die Quelldatei vergibt dieselbe Exemplarkennung zweimal. Sind es zwei Exemplare, braucht jedes eine eigene Kennung; ist es eines, gehören die Zeilen zusammengefasst.",
       "dangling_reference": "Ein Satz verweist auf einen anderen, den die Lieferung nicht enthält. Meist fehlt das Werk zur Manifestation oder das Exemplar zum Werk, etwa weil die zugeordnete Spalte in dieser Zeile leer war.",
-      "no_items_associated": "Zu dieser Manifestation gehört kein Exemplar. AVefi verlangt zu jeder Manifestation mindestens eines; ohne Exemplar wird die Lieferung abgelehnt.",
+      "no_items_associated": "Auf ein Werk muss mindestens eine Manifestation verweisen, auf eine Manifestation mindestens ein Exemplar. Fehlt das, lehnt AVefi die Lieferung ab. Meist fehlt in der Zuordnung das Ziel für die Exemplarkennung, oder die Datei enthält gar keine Angaben zu Manifestation und Exemplar.",
       "authority_ambiguous": "Der Name passt auf mehrere Normdatensätze. Der Importer trägt bewusst keine ID ein. Über die Spalte lässt sich die Normdatenquelle einschränken; welcher Satz gemeint ist, wählst du im Datensatz-Editor unter „same_as“.",
       "authority_disabled": "Die Konverter „Normdaten nachschlagen“ fragen nur, wenn der Betreiber AUTHORITY_ENABLED in der Weboberfläche und im Worker einschaltet. Bis dahin lassen sich Treffer im Zuordnungseditor von Hand suchen und bestätigen; bestätigte Zuordnungen greifen auch ohne den Schalter.",
       "schema": "Der Wert passt nicht zu dem, was das AVefi-Schema an dieser Stelle erlaubt. Oft hilft ein Konverter in der Zuordnung: „date“ für Datumsangaben, „duration“ für Laufzeiten, „number“ für Zahlen.",
@@ -475,6 +475,7 @@
       "identifier_not_unique__records": "Die Kennung {key} ist nicht eindeutig, sie kommt auch in Prüfsatz {stellen} vor. | Die Kennung {key} ist nicht eindeutig, sie kommt auch in den Prüfsätzen {stellen} vor.",
       "dangling_reference": "Der Verweis {ref} zeigt auf keinen Datensatz dieser Lieferung.",
       "no_items_associated": "Zu {category} {key} gehört kein Exemplar.",
+      "no_items_associated__sammel": "Zu einem Datensatz der Art {category} gehört kein Exemplar. | Zu {n} Datensätzen der Art {category} gehört kein Exemplar.",
       "validation_unavailable__schema": "Die Prüfung gegen das AVefi-Schema war nicht möglich. Die Datei wurde erzeugt, aber nicht geprüft. Die Ursache steht unter „Wortlaut des Prüfwerkzeugs“.",
       "validation_unavailable__crossref": "Die satzübergreifende Prüfung war nicht möglich. Kennungen und Verweise wurden nicht geprüft. Die Ursache steht unter „Wortlaut des Prüfwerkzeugs“.",
       "missing_title": "Der Datensatz hat keinen Titel. AVefi verlangt einen Haupttitel.",
@@ -495,7 +496,8 @@
       "hint_noPrimaryTitle": "Der Datensatz hat keinen Haupttitel. Das AVefi-Schema verlangt ihn am WorkVariant, und ohne Titel ist ein Werk im Verbund weder auffindbar noch mit einem Bestand abzugleichen. Entweder führt keine Spalte auf einen Titel, oder die Zelle dieser Zeile ist leer.",
       "hint_noWorkType": "Der Datensatz hat keine Werkart. Das AVefi-Schema verlangt sie am WorkVariant. Entweder führt keine Spalte auf „Werk › Werkart“, oder die Zelle dieser Zeile ist leer; ein Festwert trägt die Angabe für den ganzen Bestand.",
       "betrifft": "Betrifft {count} Datensatz. | Betrifft {count} Datensätze.",
-      "beispiele": "Beispiele: {beispiele}."
+      "beispiele": "Beispiele: {beispiele}.",
+      "zeilen": "Zeilen: {zeilen}."
     },
     "issueField": {
       "has_primary_title": "Haupttitel",

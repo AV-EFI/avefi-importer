@@ -126,9 +126,13 @@ export function meldungstexte(tRoh: Uebersetzer, te: (key: string) => boolean): 
     const count = issue.params?.['count']
     if (s === issue.message || typeof count !== 'number') return s
     const beispiele = String(issue.params?.['beispiele'] ?? '')
+    const zeilen = String(issue.params?.['zeilen'] ?? '')
+    // Ein Sammelsatz (`kind: 'sammel'`) nennt die Zahl schon selbst.
+    const sammel = issue.params?.['kind'] === 'sammel'
     return [
       s,
-      t('imports.issueText.betrifft', { count }, count),
+      ...(sammel ? [] : [t('imports.issueText.betrifft', { count }, count)]),
+      ...(zeilen !== '' ? [t('imports.issueText.zeilen', { zeilen })] : []),
       ...(beispiele !== '' ? [t('imports.issueText.beispiele', { beispiele })] : [])
     ].join(' ')
   }

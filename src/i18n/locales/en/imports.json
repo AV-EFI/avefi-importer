@@ -390,7 +390,7 @@
       "identifier_not_unique": "Two records carry the same identifier, and the schema check will not pass that. Either the rows describe the same object — then adjust how works are formed — or the mapped column is not suitable as an identifier.",
       "identifier_duplicate": "The source file assigns the same item identifier twice. If these are two items, each needs its own identifier; if it is one, the rows belong together.",
       "dangling_reference": "A record points to another one that the delivery does not contain. Usually the work is missing for a manifestation, or the item for a work, because the mapped column was empty in that row.",
-      "no_items_associated": "This manifestation has no item. AVefi requires at least one item per manifestation; without it the delivery is rejected.",
+      "no_items_associated": "At least one manifestation must point to a work, and at least one item to a manifestation. Otherwise AVefi rejects the delivery. Usually the mapping lacks a target for the item identifier, or the file has no manifestation and item data at all.",
       "authority_ambiguous": "The name matches several authority records. The importer deliberately fills in no ID. The column lets you narrow the authority source; which record is meant you choose in the record editor under “same_as”.",
       "authority_disabled": "The “Look up authority data” converters only query when the operator switches on AUTHORITY_ENABLED in both the web interface and the worker. Until then, matches can be searched for and confirmed by hand in the mapping editor; confirmed matches apply even without the switch.",
       "schema": "The value does not match what the AVefi schema allows here. A converter in the mapping often helps: “date” for dates, “duration” for running times, “number” for numbers.",
@@ -475,6 +475,7 @@
       "identifier_not_unique__records": "The identifier {key} is not unique; it also appears in checked record {stellen}. | The identifier {key} is not unique; it also appears in checked records {stellen}.",
       "dangling_reference": "The reference {ref} points to no record in this delivery.",
       "no_items_associated": "No item belongs to {category} {key}.",
+      "no_items_associated__sammel": "No item belongs to one record of type {category}. | No item belongs to {n} records of type {category}.",
       "validation_unavailable__schema": "The check against the AVefi schema was not possible. The file was produced but not checked. The cause is listed under “Wording of the checking tool”.",
       "validation_unavailable__crossref": "The cross-record check was not possible. Identifiers and references were not checked. The cause is listed under “Wording of the checking tool”.",
       "missing_title": "The record has no title. AVefi requires a main title.",
@@ -495,7 +496,8 @@
       "hint_noPrimaryTitle": "The record has no main title. The AVefi schema requires it on the WorkVariant, and without a title a work can neither be found in the network nor matched with holdings. Either no column leads to a title, or the cell in this row is empty.",
       "hint_noWorkType": "The record has no work type. The AVefi schema requires it on the WorkVariant. Either no column leads to “Work › Work type”, or the cell in this row is empty; a fixed value supplies it for the whole holding.",
       "betrifft": "Affects {count} record. | Affects {count} records.",
-      "beispiele": "Examples: {beispiele}."
+      "beispiele": "Examples: {beispiele}.",
+      "zeilen": "Rows: {zeilen}."
     },
     "issueField": {
       "has_primary_title": "Main title",

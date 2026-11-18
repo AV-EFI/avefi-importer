@@ -8,13 +8,13 @@
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import type { MappingJson, MappingMessage } from '#shared/types/domain'
+import type { MappingJson, MappingMessage, ValidationIssue } from '#shared/types/domain'
 import { ISO_DATE_PATTERN, isIsoDate, toIsoDate } from '../../server/lib/mapping/isodate.js'
 import { getTarget, validateTargetValue } from '../../server/lib/mapping/targets.js'
 import { buildPreview } from '../../server/lib/mapping/preview.js'
 import { emptyMapping } from '../../server/lib/mapping/profile.js'
 import { ProfileRun, kettenMeldungen } from '../../server/lib/converters/mappingBridge.js'
-import { IssueCollector } from '../../server/lib/converters/types.js'
+import { IssueCollector, zeilenSpannen } from '../../server/lib/converters/types.js'
 import { testSchema } from './fixtures.js'
 
 function wandle(v: string, from = ''): { wert: string; meldungen: MappingMessage[] } {
@@ -215,6 +215,33 @@ describe('Pruefbericht', () => {
     expect(hinweise[0]!.params?.['count']).toBe(5)
     // Gezaehlt wird weiter jede Zeile.
     expect(c.countBySeverity('info')).toBeGreaterThanOrEqual(5)
+  })
+
+  it('fasst „kein Exemplar“ je Art zusammen, mit Zeilen und ohne den Wert des ersten (#53)', () => {
+    const c = new IssueCollector()
+    const kein = (n: number, category: string): ValidationIssue => ({
+      severity: 'error', source: 'crossref', code: 'no_items_associated', row: n, record: n,
+      targetField: 'has_identifier', value: `r${n}_work`,
+      message: `Zu ${category} r${n}_work gehoert kein Exemplar.`, params: { category, key: `r${n}_work` }
+    })
+    for (const n of [1, 2, 3, 5, 6, 9]) c.add(kein(n, 'avefi:WorkVariant'))
+    c.add(kein(4, 'avefi:Manifestation'))
+    const alle = c.all().filter((i) => i.code === 'no_items_associated')
+    expect(alle).toHaveLength(2)
+    const werke = alle.find((i) => i.params?.['category'] === 'avefi:WorkVariant')!
+    expect(werke.params).toMatchObject({ count: 6, n: 6, kind: 'sammel', zeilen: '1–3, 5–6, 9' })
+    expect(werke.params?.['key']).toBeUndefined()
+    expect(werke.value).toBeUndefined()
+    expect(werke.row).toBe(1)
+    // Einzeln bleibt einzeln, mit Kennung.
+    expect(alle.find((i) => i.params?.['category'] === 'avefi:Manifestation')!.value).toBe('r4_work')
+    // Gezaehlt wird weiter jedes Vorkommen.
+    expect(c.countBySeverity('error')).toBe(7)
+  })
+
+  it('schreibt Zeilen als Spannen', () => {
+    expect(zeilenSpannen([5, 1, 2, 3, 3, 9, 10])).toBe('1–3, 5, 9–10')
+    expect(zeilenSpannen([])).toBe('')
   })
 
   it('nimmt nur Meldungen der Kette, nicht die des Ziels doppelt', () => {

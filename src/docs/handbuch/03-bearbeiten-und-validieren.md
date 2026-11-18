@@ -175,10 +175,12 @@ auch leere Zellen eine Kennung ergeben.
 
 ### Kein Exemplar zur Manifestation
 
-Zu einer Manifestation gehört kein Exemplar. AVefi verlangt zu jeder Manifestation
-mindestens eines, sonst wird die Lieferung abgelehnt. Meist fehlt in der Zuordnung das
-Ziel für die Exemplarkennung, oder die Werkbildung fasst Zeilen so zusammen, dass die
-Exemplare verlorengehen.
+Zu einer Manifestation gehört kein Exemplar, oder auf ein Werk verweist keine
+Manifestation. AVefi verlangt beides, sonst wird die Lieferung abgelehnt. Meist fehlt in
+der Zuordnung das Ziel für die Exemplarkennung, die Datei enthält gar keine Angaben zu
+Manifestation und Exemplar, oder die Werkbildung fasst Zeilen so zusammen, dass die
+Exemplare verlorengehen. Betrifft es viele Datensätze, steht die Meldung im Prüfbericht
+einmal, mit der Zahl und den betroffenen Zeilen.
 
 ### Normdatentreffer ist mehrdeutig
 

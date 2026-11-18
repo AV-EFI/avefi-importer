@@ -30,7 +30,7 @@ GitHub weiter.
 
 ---
 
-## 2026-11-18 — Nachtest #51 auf import.av-efi.net: drei Fehler in der Meldung (#54)
+## 2026-11-18 — Luca Wollny (#53) und Nachtest #51: Sammelmeldungen, offene Zeitangaben, Überschrift im Prüfbericht (#54)
 
 Anlass: Andreas' Zugang zur Produktion; dort lagen die Nachtestdateien vom
 18.11. (`isodate_schematest_2.csv`, `Datumstest_PR52.xlsx`). Gewährleistung zu
@@ -50,14 +50,28 @@ Anlass: Andreas' Zugang zur Produktion; dort lagen die Nachtestdateien vom
   entsprechen dem Schema. Unten steht noch eine Meldung, die einen Blick lohnt.“
   Das Abzeichen der Importliste nennt Warnungen „Warnung(en)“ statt „Hinweis“,
   wie der Prüfbericht.
-- **Der Hinweis zur vorbelegten Werkart steht einmal da**, mit „Betrifft n
-  Datensätze“, wie die Meldungen der Konverterkette seit #52. Vorher stand er je
-  Zeile und verdrängte in einer Datei mit 52 Zeilen alle anderen Meldungen aus
-  den ersten hundert.
+- **Sammelmeldungen für „Werkart nicht belegt“ und „kein Exemplar“** (#53,
+  Luca am 18.11.). Beide standen je Datensatz einzeln, bei 52 Zeilen 104
+  Einträge. Jetzt je eine Zeile mit Zahl und den betroffenen Zeilen als Spannen
+  („Zeilen: 1–52“); das gilt auch für die gebündelten Meldungen der
+  Konverterkette. „Kein Exemplar“ wird je Art gebündelt (Werke und
+  Manifestationen getrennt) und nennt nicht mehr die Kennung des ersten Satzes
+  für alle. Das Abzeichen der Importliste zählt einen Sammeleintrag so oft, wie
+  er Vorkommen bündelt: 52 Beanstandungen bleiben 52.
+- **„Was zu tun ist“ bei „kein Exemplar“** sprach nur von der Manifestation,
+  auch wenn der Satz ein Werk war (#53). Der Text nennt jetzt beide Fälle; das
+  Handbuch (Kapitel 3) ebenso.
 
-Nachweis: drei neue Fälle in `tests/mapping/isodate.test.ts`; auf der Demo ein
-Import mit 450 gültigen Datensätzen neu konvertiert: Überschrift wie oben,
-Werkart-Hinweis einmal mit „Betrifft 150 Datensätze“.
+Nachweis: neue Fälle in `tests/mapping/isodate.test.ts` und
+`tests/frontend/meldungstext.test.ts`. Auf der Demo zwei Importe neu
+konvertiert: 450 gültige Datensätze mit 259 Warnungen (Überschrift wie oben,
+Werkart einmal mit „Betrifft 150 Datensätze“) und 44 Werke ohne Exemplar
+(„Zu 44 Datensätzen der Art avefi:WorkVariant gehört kein Exemplar. Zeilen:
+1–44.“, Abzeichen weiter „132 Beanstandungen“).
+
+Offen geblieben: „kein Haupttitel“ und die allgemeine Schemabeanstandung stehen
+weiter je Datensatz. Sie betreffen dasselbe Muster; bündeln lassen sie sich auf
+dieselbe Weise, wenn das gewünscht ist.
 
 ---
 
