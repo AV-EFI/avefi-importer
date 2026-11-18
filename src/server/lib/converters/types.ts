@@ -118,6 +118,21 @@ export type { AvefiNode }
  * was der Vertrag verlangt — ohne dass fuenfhundert gleichlautende Zeilen die
  * eine Meldung verdecken, auf die es ankommt.
  */
+/**
+ * Welche Meldungen je Spalte, Code und Gewicht zusammengefasst werden: alle
+ * der Konverterkette (#51) und der Hinweis, dass die Werkart vorbelegt wurde.
+ * Der kommt in jeder Zeile ohne Werkart gleich, und 52 gleiche Zeilen im
+ * Bericht verdecken die eine, auf die es ankommt (Nachtest #51, 18.11.2026).
+ * Bewusst nicht `record.titleBorrowed`: Dort ist der Titel je Satz ein
+ * anderer, und ein Sammeleintrag zeigte nur den ersten.
+ */
+const BUENDEL_CODES = new Set(['record.workTypeDefaulted'])
+
+function gebuendelt(code: string | undefined): boolean {
+  const c = String(code ?? '')
+  return c.startsWith('transform.') || BUENDEL_CODES.has(c)
+}
+
 export class IssueCollector {
   private readonly items: ValidationIssue[] = []
   private readonly grouped = new Map<string, { issue: ValidationIssue; count: number; samples: string[] }>()
@@ -130,7 +145,7 @@ export class IssueCollector {
       this.group(issue)
       return
     }
-    if (String(issue.code ?? '').startsWith('transform.')) {
+    if (gebuendelt(issue.code)) {
       this.kette(issue)
       return
     }

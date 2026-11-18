@@ -34,6 +34,7 @@ const fieldHelp = computed(() => data.value?.fieldHelp ?? {})
 useHead({ title: () => (item.value ? `${item.value.filename} · ${t('imports.report.crumb')}` : t('imports.report.crumb')) })
 
 const allGood = computed(() => counts.value.error === 0 && counts.value.warning === 0)
+const findings = computed(() => counts.value.error + counts.value.warning)
 const avefiCount = computed(() => summary.value?.avefiRecords ?? 0)
 const checked = computed(() => (summary.value ? summary.value.valid + summary.value.invalid : 0))
 
@@ -95,7 +96,12 @@ function percent(entry: { filled: number; total: number }): number {
           {{ t('imports.report.allGood', { count: formatNumber(avefiCount, locale) }, avefiCount) }}
         </div>
         <div v-else class="ui-alert" role="status" style="margin-bottom:16px">
-          <template v-if="checked > 0">
+          <!-- Alle schemagueltig, aber Fehler oder Warnungen aus Konvertierung
+               oder Vollstaendigkeit: Das darf nicht wie „0 ungueltig“ klingen. -->
+          <template v-if="checked > 0 && (summary?.invalid ?? 0) === 0">
+            {{ t('imports.report.validWithFindings', { total: checked, n: findings }, findings) }}
+          </template>
+          <template v-else-if="checked > 0">
             {{ t('imports.report.hasIssues', { invalid: summary?.invalid ?? 0, total: checked }) }}
           </template>
           <template v-else>{{ t('imports.report.hasIssuesNoCheck') }}</template>

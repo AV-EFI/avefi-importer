@@ -121,10 +121,20 @@ function nachFormat(v: string, format: string): string | null {
 const UNGEFAEHR = /^(?:ca\.?|circa|um)\s+(.+)$/iu
 
 /**
+ * Offene Zeitangaben: `vor 1970`, `nach 1945`, `bis 1960`, `ab 1950`,
+ * `seit 1990`, `<1970`. Das Schemamuster kennt keinen offenen Zeitraum
+ * (`../1970`), und das Jahr allein waere falsch: `vor 1970` heisst gerade
+ * nicht 1970. Gefunden im Nachtest von #51 am 18.11.2026.
+ */
+const OFFEN = /(?:^|\s)(?:vor|nach|bis|ab|seit|fr(?:ü|ue)hestens|sp(?:ä|ae)testens|before|after|until|till|since|prior to|not before|not after)(?=\s|\d|$)|^\s*[<>≤≥]/iu
+
+/**
  * Datum nach ISO. Liefert den schemakonformen Wert oder '' und haengt an
  * `errors`, was der Nutzer erfahren muss:
  *
  *  - `transform.badDate` (Warnung): nicht eindeutig umzuwandeln, der Wert entfaellt,
+ *  - `transform.dateOpenRange` (Warnung): offener Zeitraum wie `vor 1970`, den
+ *    das Schema nicht abbilden kann; der Wert entfaellt,
  *  - `transform.dateTimeDropped` (Hinweis): Uhrzeit abgeschnitten,
  *  - `transform.dateYearExtracted` (Hinweis): aus einem Text mit genau einer
  *    Jahreszahl und sonst keinen Ziffern wurde das Jahr genommen
@@ -217,6 +227,11 @@ function lies(v: string, from: string, errors: MappingMessage[]): string | null 
   //     `1950er` (Jahrzehnt), nicht `1953 (Fassung 1960)` (zwei Jahre).
   m = /^\D*?\b(\d{4})\b\D*$/u.exec(v)
   if (m !== null && !/[/\-–—.:]/u.test(v.replace(m[1]!, '')) && !/\d{4}\p{L}/u.test(v)) {
+    // Offener Zeitraum: nicht das Jahr nehmen, sondern genau das sagen.
+    if (OFFEN.test(v)) {
+      errors.push({ ...meldung('transform.dateOpenRange', { wert: v }), severity: 'warning' })
+      return ''
+    }
     const jahr = m[1]!
     if (!kalendergueltig(jahr)) return null
     errors.push({ ...meldung('transform.dateYearExtracted', { wert: v, datum: jahr }), severity: 'info' })

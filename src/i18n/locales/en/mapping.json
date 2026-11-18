@@ -978,6 +978,7 @@
       "transform_badDate": "“{wert}” is not an unambiguous date and was not taken over.",
       "transform_dateTimeDropped": "“{wert}”: the date {datum} was taken over, the time was not.",
       "transform_dateYearExtracted": "“{wert}”: only the year {datum} was taken over.",
+      "transform_dateOpenRange": "“{wert}” describes an open-ended period, which the AVefi schema cannot express. The value was not taken over.",
       "transform_badDuration": "“{wert}” could not be read as a duration",
       "transform_badRegex": "Invalid regular expression: {muster}",
       "transform_noMatch": "“{wert}” does not match the pattern {muster}",

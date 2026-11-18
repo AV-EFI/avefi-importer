@@ -236,6 +236,7 @@
       },
       "allGood": "All good — {count} AVefi record matches the AVefi schema. | All good — {count} AVefi records match the AVefi schema.",
       "hasIssues": "There are findings: {invalid} of {total} checked AVefi records do not match the schema yet.",
+      "validWithFindings": "All checked AVefi records ({total}) match the schema. One message below is still worth a look. | All checked AVefi records ({total}) match the schema. {n} messages below are still worth a look.",
       "hasIssuesNoCheck": "There are findings. The details are listed below.",
       "kpi": {
         "records": "Records (works)",
@@ -405,7 +406,7 @@
       "laeuft": "validation running",
       "ungeprueft": "not validated",
       "beanstandet": "{n} finding | {n} findings",
-      "hinweise": "{n} hint | {n} hints",
+      "hinweise": "{n} warning | {n} warnings",
       "validiert": "no findings",
       "gotoReport": "Open validation report for {file} — {state}"
     },

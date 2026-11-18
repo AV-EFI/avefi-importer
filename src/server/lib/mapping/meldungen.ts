@@ -38,6 +38,7 @@ export const MELDUNGEN: Record<string, string> = {
   'transform.badDate': '"{wert}" ist kein eindeutiges Datum und wurde nicht uebernommen',
   'transform.dateTimeDropped': '"{wert}": Uebernommen wurde das Datum {datum}, die Uhrzeit nicht',
   'transform.dateYearExtracted': '"{wert}": Uebernommen wurde nur die Jahreszahl {datum}',
+  'transform.dateOpenRange': '"{wert}" beschreibt einen offenen Zeitraum, den das AVefi-Schema nicht abbilden kann; der Wert wurde nicht uebernommen',
   'transform.badDuration': '"{wert}" konnte nicht als Laufzeit gelesen werden',
   'transform.notInValuemap': 'Wert "{wert}" ist in der Zuordnung nicht enthalten',
   'record.workTypeDefaulted': 'Die Werkart war nicht belegt; eingetragen wurde "{wert}", weil das Schema sie verlangt',

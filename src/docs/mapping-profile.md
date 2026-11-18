@@ -440,6 +440,7 @@ Ohne `from` gilt der Reihe nach:
 | `ca. 1970`, `circa 1970`, `um 1970` | `1970~` | – |
 | `T.M.JJJJ`, `M.JJJJ`, `M/T/JJJJ` | ISO | – |
 | `2024-04-24T10:00` | `2024-04-24` | Hinweis: Uhrzeit abgeschnitten |
+| offene Zeitangabe (`vor 1970`, `nach 1945`, `bis 1960`, `ab 1950`, `seit 1990`, `<1970`) | entfällt | Warnung: offener Zeitraum, den das Schema nicht abbilden kann |
 | genau eine Jahreszahl im Text, sonst keine Ziffern (`gedreht 1953`) | `1953` | Hinweis: nur die Jahreszahl |
 | alles andere (`24`, `12024`, `2024-13`, `2024-02-30`, `2024/`, `1950er`) | entfällt | Warnung |
 

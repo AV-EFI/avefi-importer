@@ -30,6 +30,37 @@ GitHub weiter.
 
 ---
 
+## 2026-11-18 — Nachtest #51 auf import.av-efi.net: drei Fehler in der Meldung (#54)
+
+Anlass: Andreas' Zugang zur Produktion; dort lagen die Nachtestdateien vom
+18.11. (`isodate_schematest_2.csv`, `Datumstest_PR52.xlsx`). Gewährleistung zu
+#51 / #52.
+
+**Was daraus wurde:**
+
+- **„vor 1970“ wird nicht mehr zu 1970.** „Datum nach ISO“ nahm aus einem Text
+  mit genau einer Jahreszahl das Jahr, auch aus offenen Angaben wie „vor 1970“,
+  „nach 1945“, „bis 1960“, „ab 1950“, „seit 1990“ oder „<1970“. Das verfälscht
+  die Bedeutung, und das Schemamuster kennt keinen offenen Zeitraum. Solche
+  Werte entfallen jetzt mit der Warnung `transform.dateOpenRange`. Wörter, die
+  nur so anfangen („Abnahme 1953“, „Vorführung 1953“), bleiben beim Hinweis.
+- **Die Überschrift im Prüfbericht widerspricht sich nicht mehr.** Bei 0
+  ungültigen Datensätzen hieß es „Es gibt Beanstandungen: 0 von 69 … entsprechen
+  noch nicht dem Schema“. Jetzt: „Alle geprüften AVefi-Datensätze (69)
+  entsprechen dem Schema. Unten steht noch eine Meldung, die einen Blick lohnt.“
+  Das Abzeichen der Importliste nennt Warnungen „Warnung(en)“ statt „Hinweis“,
+  wie der Prüfbericht.
+- **Der Hinweis zur vorbelegten Werkart steht einmal da**, mit „Betrifft n
+  Datensätze“, wie die Meldungen der Konverterkette seit #52. Vorher stand er je
+  Zeile und verdrängte in einer Datei mit 52 Zeilen alle anderen Meldungen aus
+  den ersten hundert.
+
+Nachweis: drei neue Fälle in `tests/mapping/isodate.test.ts`; auf der Demo ein
+Import mit 450 gültigen Datensätzen neu konvertiert: Überschrift wie oben,
+Werkart-Hinweis einmal mit „Betrifft 150 Datensätze“.
+
+---
+
 ## 2026-11-13 — Stefan Stretz: Sprachumschalter neben dem Theme-Umschalter (#10)
 
 Anlass: #10 verlangt Deutsch und Englisch im Kernablauf (B.8). Der Prüfbericht

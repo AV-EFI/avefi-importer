@@ -236,6 +236,7 @@
       },
       "allGood": "Alles in Ordnung — {count} AVefi-Datensatz entspricht dem AVefi-Schema. | Alles in Ordnung — {count} AVefi-Datensätze entsprechen dem AVefi-Schema.",
       "hasIssues": "Es gibt Beanstandungen: {invalid} von {total} geprüften AVefi-Datensätzen entsprechen noch nicht dem Schema.",
+      "validWithFindings": "Alle geprüften AVefi-Datensätze ({total}) entsprechen dem Schema. Unten steht noch eine Meldung, die einen Blick lohnt. | Alle geprüften AVefi-Datensätze ({total}) entsprechen dem Schema. Unten stehen noch {n} Meldungen, die einen Blick lohnen.",
       "hasIssuesNoCheck": "Es gibt Beanstandungen. Die Einzelheiten stehen unten.",
       "kpi": {
         "records": "Datensätze (Werke)",
@@ -405,7 +406,7 @@
       "laeuft": "Prüfung läuft",
       "ungeprueft": "ungeprüft",
       "beanstandet": "{n} Beanstandung | {n} Beanstandungen",
-      "hinweise": "{n} Hinweis | {n} Hinweise",
+      "hinweise": "{n} Warnung | {n} Warnungen",
       "validiert": "keine Beanstandungen",
       "gotoReport": "Prüfbericht zu {file} öffnen — {state}"
     },

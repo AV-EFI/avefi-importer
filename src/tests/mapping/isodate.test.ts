@@ -101,6 +101,25 @@ describe('Konverter', () => {
     expect(r.meldungen.map((m) => [m.code, m.severity])).toEqual([['transform.dateYearExtracted', 'info']])
   })
 
+  it('nimmt aus offenen Zeitangaben kein Jahr (Nachtest #51, 18.11.2026)', () => {
+    // `vor 1970` heisst gerade nicht 1970. Das Schema kennt keinen offenen
+    // Zeitraum; also entfaellt der Wert, und die Warnung sagt warum.
+    for (const v of ['vor 1970', 'nach 1945', 'bis 1960', 'ab 1950', 'seit 1990', 'frühestens 1960',
+      'spätestens 1960', 'Before 1970', 'after 1945', 'since 1990', '<1970', '> 1945', '1953 bis heute']) {
+      const r = wandle(v)
+      expect(r.wert, v).toBe('')
+      expect(r.meldungen.map((m) => [m.code, m.severity]), v).toEqual([['transform.dateOpenRange', 'warning']])
+    }
+  })
+
+  it('verwechselt Woerter mit „ab“ oder „vor“ im Inneren nicht mit offenen Zeitangaben', () => {
+    for (const v of ['gedreht 1953', 'Abnahme 1953', 'Vorführung 1953', 'Nachdreh 1953']) {
+      const r = wandle(v)
+      expect(r.wert, v).toBe('1953')
+      expect(r.meldungen.map((m) => m.code), v).toEqual(['transform.dateYearExtracted'])
+    }
+  })
+
   it('kuerzt nie mehr still auf die ersten vier Ziffern', () => {
     // Lucas Spur: `12024` wurde zu `1202`.
     expect(wandle('12024').wert).toBe('')
@@ -184,6 +203,18 @@ describe('Pruefbericht', () => {
     expect(warnung.row).toBe(2)
     expect(c.all().find((i) => i.code === 'transform.dateTimeDropped')?.severity).toBe('info')
     expect(c.countBySeverity('warning')).toBe(4)
+  })
+
+  it('fasst den Hinweis zur vorbelegten Werkart zusammen (Nachtest #51, 18.11.2026)', () => {
+    // Das Profil ordnet keine Werkart zu; jede Zeile bekommt `Monographic`.
+    // Im Bericht soll das einmal stehen, mit Zahl, nicht fuenfmal.
+    const c = lauf(['1950', '1951', '1952', '1953', '1954'])
+    const hinweise = c.all().filter((i) => i.code === 'record.workTypeDefaulted')
+    expect(hinweise).toHaveLength(1)
+    expect(hinweise[0]).toMatchObject({ severity: 'info', row: 2 })
+    expect(hinweise[0]!.params?.['count']).toBe(5)
+    // Gezaehlt wird weiter jede Zeile.
+    expect(c.countBySeverity('info')).toBeGreaterThanOrEqual(5)
   })
 
   it('nimmt nur Meldungen der Kette, nicht die des Ziels doppelt', () => {
