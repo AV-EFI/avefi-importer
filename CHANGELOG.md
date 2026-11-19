@@ -30,6 +30,51 @@ GitHub weiter.
 
 ---
 
+## 2026-11-18 — Luca Wollny (#53) und Nachtest #51: Sammelmeldungen, offene Zeitangaben, Überschrift im Prüfbericht (#54)
+
+Anlass: Andreas' Zugang zur Produktion; dort lagen die Nachtestdateien vom
+18.11. (`isodate_schematest_2.csv`, `Datumstest_PR52.xlsx`). Gewährleistung zu
+#51 / #52.
+
+**Was daraus wurde:**
+
+- **„vor 1970“ wird nicht mehr zu 1970.** „Datum nach ISO“ nahm aus einem Text
+  mit genau einer Jahreszahl das Jahr, auch aus offenen Angaben wie „vor 1970“,
+  „nach 1945“, „bis 1960“, „ab 1950“, „seit 1990“ oder „<1970“. Das verfälscht
+  die Bedeutung, und das Schemamuster kennt keinen offenen Zeitraum. Solche
+  Werte entfallen jetzt mit der Warnung `transform.dateOpenRange`. Wörter, die
+  nur so anfangen („Abnahme 1953“, „Vorführung 1953“), bleiben beim Hinweis.
+- **Die Überschrift im Prüfbericht widerspricht sich nicht mehr.** Bei 0
+  ungültigen Datensätzen hieß es „Es gibt Beanstandungen: 0 von 69 … entsprechen
+  noch nicht dem Schema“. Jetzt: „Alle geprüften AVefi-Datensätze (69)
+  entsprechen dem Schema. Unten steht noch eine Meldung, die einen Blick lohnt.“
+  Das Abzeichen der Importliste nennt Warnungen „Warnung(en)“ statt „Hinweis“,
+  wie der Prüfbericht.
+- **Sammelmeldungen für „Werkart nicht belegt“ und „kein Exemplar“** (#53,
+  Luca am 18.11.). Beide standen je Datensatz einzeln, bei 52 Zeilen 104
+  Einträge. Jetzt je eine Zeile mit Zahl und den betroffenen Zeilen als Spannen
+  („Zeilen: 1–52“); das gilt auch für die gebündelten Meldungen der
+  Konverterkette. „Kein Exemplar“ wird je Art gebündelt (Werke und
+  Manifestationen getrennt) und nennt nicht mehr die Kennung des ersten Satzes
+  für alle. Das Abzeichen der Importliste zählt einen Sammeleintrag so oft, wie
+  er Vorkommen bündelt: 52 Beanstandungen bleiben 52.
+- **„Was zu tun ist“ bei „kein Exemplar“** sprach nur von der Manifestation,
+  auch wenn der Satz ein Werk war (#53). Der Text nennt jetzt beide Fälle; das
+  Handbuch (Kapitel 3) ebenso.
+
+Nachweis: neue Fälle in `tests/mapping/isodate.test.ts` und
+`tests/frontend/meldungstext.test.ts`. Auf der Demo zwei Importe neu
+konvertiert: 450 gültige Datensätze mit 259 Warnungen (Überschrift wie oben,
+Werkart einmal mit „Betrifft 150 Datensätze“) und 44 Werke ohne Exemplar
+(„Zu 44 Datensätzen der Art avefi:WorkVariant gehört kein Exemplar. Zeilen:
+1–44.“, Abzeichen weiter „132 Beanstandungen“).
+
+Offen geblieben: „kein Haupttitel“ und die allgemeine Schemabeanstandung stehen
+weiter je Datensatz. Sie betreffen dasselbe Muster; bündeln lassen sie sich auf
+dieselbe Weise, wenn das gewünscht ist.
+
+---
+
 ## 2026-11-13 — Stefan Stretz: Sprachumschalter neben dem Theme-Umschalter (#10)
 
 Anlass: #10 verlangt Deutsch und Englisch im Kernablauf (B.8). Der Prüfbericht

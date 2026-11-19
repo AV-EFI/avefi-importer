@@ -175,7 +175,9 @@ Was schon so in der Quelle steht, übernimmt der Konverter „Datum nach ISO“ 
 Er wandelt außerdem um, was eindeutig ist: Spannen wie „1976 - 1977“ oder „1962-65“,
 „ca. 1970“ zu `1970~`, „24.04.2024“ zu `2024-04-24`. Eine Uhrzeit schneidet er ab und
 sagt es. Was sich nicht eindeutig lesen lässt — „24“, „2024-13“, „1950er“ —, übernimmt
-er nicht und meldet es im Prüfbericht als Warnung, statt eine Jahreszahl zu raten. In der
+er nicht und meldet es im Prüfbericht als Warnung, statt eine Jahreszahl zu raten.
+Dasselbe gilt für offene Angaben wie „vor 1970“ oder „ab 1950“: Das Schema kennt keinen
+Zeitraum ohne Anfang oder Ende, und die Jahreszahl allein hieße etwas anderes. In der
 Vorschau steht bei solchen Werten ⚠ statt ✓.
 
 **Laufzeiten** verlangt das AVefi-Schema als `PT01H30M00S` — mindestens zweistellig.

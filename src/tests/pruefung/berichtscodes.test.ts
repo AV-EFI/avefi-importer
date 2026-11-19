@@ -95,7 +95,7 @@ describe('Berichtscodes', () => {
     })
 
     it(`hat keinen Satz ohne zugehoerigen Code (${sprache})`, () => {
-      const erzeugt = new Set([...berichtsCodes(), 'betrifft', 'beispiele'])
+      const erzeugt = new Set([...berichtsCodes(), 'betrifft', 'beispiele', 'zeilen'])
       const verwaist = Object.keys(bereich(sprache, 'issueText')).filter((k) => !erzeugt.has(basis(k)))
       expect(verwaist, `verwaist in ${sprache}`).toEqual([])
       const diag = new Set(diagnoseCodes())

@@ -8,13 +8,13 @@
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import type { MappingJson, MappingMessage } from '#shared/types/domain'
+import type { MappingJson, MappingMessage, ValidationIssue } from '#shared/types/domain'
 import { ISO_DATE_PATTERN, isIsoDate, toIsoDate } from '../../server/lib/mapping/isodate.js'
 import { getTarget, validateTargetValue } from '../../server/lib/mapping/targets.js'
 import { buildPreview } from '../../server/lib/mapping/preview.js'
 import { emptyMapping } from '../../server/lib/mapping/profile.js'
 import { ProfileRun, kettenMeldungen } from '../../server/lib/converters/mappingBridge.js'
-import { IssueCollector } from '../../server/lib/converters/types.js'
+import { IssueCollector, zeilenSpannen } from '../../server/lib/converters/types.js'
 import { testSchema } from './fixtures.js'
 
 function wandle(v: string, from = ''): { wert: string; meldungen: MappingMessage[] } {
@@ -101,6 +101,25 @@ describe('Konverter', () => {
     expect(r.meldungen.map((m) => [m.code, m.severity])).toEqual([['transform.dateYearExtracted', 'info']])
   })
 
+  it('nimmt aus offenen Zeitangaben kein Jahr (Nachtest #51, 18.11.2026)', () => {
+    // `vor 1970` heisst gerade nicht 1970. Das Schema kennt keinen offenen
+    // Zeitraum; also entfaellt der Wert, und die Warnung sagt warum.
+    for (const v of ['vor 1970', 'nach 1945', 'bis 1960', 'ab 1950', 'seit 1990', 'frühestens 1960',
+      'spätestens 1960', 'Before 1970', 'after 1945', 'since 1990', '<1970', '> 1945', '1953 bis heute']) {
+      const r = wandle(v)
+      expect(r.wert, v).toBe('')
+      expect(r.meldungen.map((m) => [m.code, m.severity]), v).toEqual([['transform.dateOpenRange', 'warning']])
+    }
+  })
+
+  it('verwechselt Woerter mit „ab“ oder „vor“ im Inneren nicht mit offenen Zeitangaben', () => {
+    for (const v of ['gedreht 1953', 'Abnahme 1953', 'Vorführung 1953', 'Nachdreh 1953']) {
+      const r = wandle(v)
+      expect(r.wert, v).toBe('1953')
+      expect(r.meldungen.map((m) => m.code), v).toEqual(['transform.dateYearExtracted'])
+    }
+  })
+
   it('kuerzt nie mehr still auf die ersten vier Ziffern', () => {
     // Lucas Spur: `12024` wurde zu `1202`.
     expect(wandle('12024').wert).toBe('')
@@ -184,6 +203,45 @@ describe('Pruefbericht', () => {
     expect(warnung.row).toBe(2)
     expect(c.all().find((i) => i.code === 'transform.dateTimeDropped')?.severity).toBe('info')
     expect(c.countBySeverity('warning')).toBe(4)
+  })
+
+  it('fasst den Hinweis zur vorbelegten Werkart zusammen (Nachtest #51, 18.11.2026)', () => {
+    // Das Profil ordnet keine Werkart zu; jede Zeile bekommt `Monographic`.
+    // Im Bericht soll das einmal stehen, mit Zahl, nicht fuenfmal.
+    const c = lauf(['1950', '1951', '1952', '1953', '1954'])
+    const hinweise = c.all().filter((i) => i.code === 'record.workTypeDefaulted')
+    expect(hinweise).toHaveLength(1)
+    expect(hinweise[0]).toMatchObject({ severity: 'info', row: 2 })
+    expect(hinweise[0]!.params?.['count']).toBe(5)
+    // Gezaehlt wird weiter jede Zeile.
+    expect(c.countBySeverity('info')).toBeGreaterThanOrEqual(5)
+  })
+
+  it('fasst „kein Exemplar“ je Art zusammen, mit Zeilen und ohne den Wert des ersten (#53)', () => {
+    const c = new IssueCollector()
+    const kein = (n: number, category: string): ValidationIssue => ({
+      severity: 'error', source: 'crossref', code: 'no_items_associated', row: n, record: n,
+      targetField: 'has_identifier', value: `r${n}_work`,
+      message: `Zu ${category} r${n}_work gehoert kein Exemplar.`, params: { category, key: `r${n}_work` }
+    })
+    for (const n of [1, 2, 3, 5, 6, 9]) c.add(kein(n, 'avefi:WorkVariant'))
+    c.add(kein(4, 'avefi:Manifestation'))
+    const alle = c.all().filter((i) => i.code === 'no_items_associated')
+    expect(alle).toHaveLength(2)
+    const werke = alle.find((i) => i.params?.['category'] === 'avefi:WorkVariant')!
+    expect(werke.params).toMatchObject({ count: 6, n: 6, kind: 'sammel', zeilen: '1–3, 5–6, 9' })
+    expect(werke.params?.['key']).toBeUndefined()
+    expect(werke.value).toBeUndefined()
+    expect(werke.row).toBe(1)
+    // Einzeln bleibt einzeln, mit Kennung.
+    expect(alle.find((i) => i.params?.['category'] === 'avefi:Manifestation')!.value).toBe('r4_work')
+    // Gezaehlt wird weiter jedes Vorkommen.
+    expect(c.countBySeverity('error')).toBe(7)
+  })
+
+  it('schreibt Zeilen als Spannen', () => {
+    expect(zeilenSpannen([5, 1, 2, 3, 3, 9, 10])).toBe('1–3, 5, 9–10')
+    expect(zeilenSpannen([])).toBe('')
   })
 
   it('nimmt nur Meldungen der Kette, nicht die des Ziels doppelt', () => {

@@ -118,6 +118,50 @@ export type { AvefiNode }
  * was der Vertrag verlangt — ohne dass fuenfhundert gleichlautende Zeilen die
  * eine Meldung verdecken, auf die es ankommt.
  */
+/**
+ * Welche Meldungen je Spalte, Code und Gewicht zusammengefasst werden: alle
+ * der Konverterkette (#51), der Hinweis, dass die Werkart vorbelegt wurde, und
+ * der satzuebergreifende Fehler „kein Exemplar“. Beide kommen in jeder Zeile
+ * gleich, und 104 gleiche Eintraege bei 52 Zeilen verdecken den einen, auf den
+ * es ankommt (Luca, #53; Nachtest #51, 18.11.2026). Welche Zeilen betroffen
+ * sind, steht im Sammeleintrag als `zeilen`.
+ *
+ * Bewusst nicht `record.titleBorrowed`: Dort ist der Titel je Satz ein
+ * anderer, und ein Sammeleintrag zeigte nur den ersten. Ebenso nicht
+ * `identifier_not_unique` und `dangling_reference`: Jede dieser Meldungen
+ * nennt ein anderes Paar, und genau das ist die Auskunft.
+ */
+const BUENDEL_CODES = new Set(['record.workTypeDefaulted', 'no_items_associated'])
+
+/**
+ * Sammeleintraege, deren Einzelsatz ein Objekt nennt („Zu avefi:WorkVariant
+ * …r1_work gehoert kein Exemplar“). Gebuendelt waere der Satz falsch; sie
+ * bekommen `kind: 'sammel'` und damit einen eigenen Satz in der Oberflaeche.
+ */
+const SAMMELSATZ = new Set(['no_items_associated'])
+
+/** So viele Zeilennummern nimmt ein Sammeleintrag hoechstens auf. */
+const MAX_ZEILEN = 2000
+
+/** `[1,2,3,5,7,8]` -> `1–3, 5, 7–8`. Kurz genug fuer 300.000 Zeilen am Stueck. */
+export function zeilenSpannen(zeilen: readonly number[]): string {
+  const sortiert = [...new Set(zeilen)].sort((a, b) => a - b)
+  const teile: string[] = []
+  let i = 0
+  while (i < sortiert.length) {
+    let j = i
+    while (j + 1 < sortiert.length && sortiert[j + 1] === sortiert[j]! + 1) j++
+    teile.push(j > i ? `${sortiert[i]}–${sortiert[j]}` : String(sortiert[i]))
+    i = j + 1
+  }
+  return teile.join(', ')
+}
+
+function gebuendelt(code: string | undefined): boolean {
+  const c = String(code ?? '')
+  return c.startsWith('transform.') || BUENDEL_CODES.has(c)
+}
+
 export class IssueCollector {
   private readonly items: ValidationIssue[] = []
   private readonly grouped = new Map<string, { issue: ValidationIssue; count: number; samples: string[] }>()
@@ -130,7 +174,7 @@ export class IssueCollector {
       this.group(issue)
       return
     }
-    if (String(issue.code ?? '').startsWith('transform.')) {
+    if (gebuendelt(issue.code)) {
       this.kette(issue)
       return
     }
@@ -149,16 +193,24 @@ export class IssueCollector {
    * Zeilen gleich falsch geschrieben ist, ist ein Befund, nicht fuenftausend.
    * Die Zeile des ersten Vorkommens bleibt stehen, damit man hinspringen kann.
    */
-  private readonly ketten = new Map<string, { issue: ValidationIssue; count: number; samples: string[] }>()
+  private readonly ketten = new Map<
+    string, { issue: ValidationIssue; count: number; samples: string[]; zeilen: number[] }
+  >()
 
   private kette(issue: ValidationIssue): void {
-    const key = `${issue.severity}|${issue.code ?? ''}|${issue.sourceField ?? ''}`
+    // Die Art gehoert in den Schluessel: Werke ohne Exemplar und
+    // Manifestationen ohne Exemplar sind zwei Befunde.
+    const art = issue.params?.['category'] ?? ''
+    const key = `${issue.severity}|${issue.code ?? ''}|${issue.sourceField ?? ''}|${art}`
     const found = this.ketten.get(key)
     if (found === undefined) {
-      this.ketten.set(key, { issue, count: 1, samples: issue.value ? [issue.value] : [] })
+      this.ketten.set(key, {
+        issue, count: 1, samples: issue.value ? [issue.value] : [], zeilen: issue.row !== undefined ? [issue.row] : []
+      })
       return
     }
     found.count++
+    if (issue.row !== undefined && found.zeilen.length < MAX_ZEILEN) found.zeilen.push(issue.row)
     if (issue.value && found.samples.length < 3 && !found.samples.includes(issue.value)) {
       found.samples.push(issue.value)
     }
@@ -180,16 +232,33 @@ export class IssueCollector {
   /** Die gesammelten Meldungen, gebuendelte zuletzt. */
   all(): ValidationIssue[] {
     const out = [...this.items]
-    for (const { issue, count, samples } of this.ketten.values()) {
+    for (const { issue, count, samples, zeilen } of this.ketten.values()) {
       if (count === 1) {
         out.push(issue)
         continue
       }
       const examples = samples.length > 0 ? ` Beispiele: ${samples.join(', ')}.` : ''
+      const spannen = zeilenSpannen(zeilen)
+      const params: Record<string, string | number> = {
+        ...(issue.params ?? {}), count, beispiele: samples.join(', '), ...(spannen !== '' ? { zeilen: spannen } : {})
+      }
+      if (SAMMELSATZ.has(String(issue.code))) {
+        // Der Einzelsatz nennt ein Objekt; der Sammelsatz nennt die Zahl.
+        // Den Wert des ersten Objekts weglassen, sonst stuende er fuer alle.
+        const { value: _erster, ...rest } = issue
+        delete params['key']
+        out.push({
+          ...rest,
+          params: { ...params, kind: 'sammel', n: count },
+          message: `Zu ${count} Datensaetzen der Art ${String(issue.params?.['category'] ?? '')} gehoert kein Exemplar.`
+            + (spannen !== '' ? ` Zeilen: ${spannen}.` : '') + examples
+        })
+        continue
+      }
       out.push({
         ...issue,
-        params: { ...(issue.params ?? {}), count, beispiele: samples.join(', ') },
-        message: `${issue.message} Betrifft ${count} Zeilen.${examples}`
+        params,
+        message: `${issue.message} Betrifft ${count} Zeilen.${spannen !== '' ? ` Zeilen: ${spannen}.` : ''}${examples}`
       })
     }
     if (this.dropped > 0) {

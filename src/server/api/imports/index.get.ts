@@ -55,7 +55,12 @@ export interface ImportListItem {
 export function toListItem(row: ImportRow, edited: number, profileVersion: number | null = null): ImportListItem {
   const report = row.report_json as (ImportRow['report_json'] & { stage?: string; sheets?: unknown[] }) | null
   const issues: Record<Severity, number> = { error: 0, warning: 0, info: 0 }
-  for (const issue of report?.issues ?? []) issues[issue.severity] = (issues[issue.severity] ?? 0) + 1
+  // Ein Sammeleintrag zaehlt so oft, wie er Vorkommen buendelt: „52 Beanstandungen“
+  // bleiben 52, auch wenn der Pruefbericht sie in einer Zeile zeigt (#53).
+  for (const issue of report?.issues ?? []) {
+    const n = issue.params?.['count']
+    issues[issue.severity] = (issues[issue.severity] ?? 0) + (typeof n === 'number' && n > 0 ? n : 1)
+  }
 
   const converted = row.status === 'converted'
   const hasAvefi = converted || report?.stage === 'convert'

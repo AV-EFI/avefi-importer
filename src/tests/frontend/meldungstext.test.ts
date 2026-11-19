@@ -69,6 +69,28 @@ describe('befund', () => {
     expect(fuer('en').befund(issue)).toMatch(/^The language was not taken over: .* Affects 3 records\. Examples: de, fr\.$/)
   })
 
+  it('baut den Sammelsatz „kein Exemplar“ mit Zahl und Zeilen (#53)', () => {
+    const issue: ValidationIssue = {
+      severity: 'error', code: 'no_items_associated', source: 'crossref', row: 1,
+      message: 'Zu 52 Datensaetzen der Art avefi:WorkVariant gehoert kein Exemplar.',
+      params: { category: 'avefi:WorkVariant', count: 52, n: 52, kind: 'sammel', zeilen: '1–52', beispiele: 'a, b, c' }
+    }
+    expect(fuer('de').befund(issue)).toBe(
+      'Zu 52 Datensätzen der Art avefi:WorkVariant gehört kein Exemplar. Zeilen: 1–52. Beispiele: a, b, c.'
+    )
+    expect(fuer('en').befund(issue)).toBe(
+      'No item belongs to 52 records of type avefi:WorkVariant. Rows: 1–52. Examples: a, b, c.'
+    )
+  })
+
+  it('nennt bei gebuendelten Meldungen der Konvertierung die Zeilen', () => {
+    const issue: ValidationIssue = {
+      severity: 'info', code: 'record.workTypeDefaulted', message: 'Die Werkart …', row: 1,
+      params: { wert: 'Monographic', count: 3, beispiele: '', zeilen: '1–2, 5' }
+    }
+    expect(fuer('de').befund(issue)).toMatch(/Monographic.* Betrifft 3 Datensätze\. Zeilen: 1–2, 5\.$/)
+  })
+
   it('uebersetzt Codes des Mappingkerns im Bericht, samt Feldname', () => {
     const issue: ValidationIssue = {
       severity: 'warning', code: 'merge.conflict', message: 'Die Zeilen …',
