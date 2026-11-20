@@ -24,6 +24,8 @@ export interface TransformParamSpec {
   type: 'text' | 'int' | 'bool' | 'map' | 'columns' | 'choice'
   optional?: boolean
   choices?: Record<string, string>
+  /** Nur anzeigen, wenn ein anderer Parameter diesen Text enthaelt. */
+  showIf?: { param: string; includes: string }
 }
 
 export interface TransformOpMeta {

@@ -99,8 +99,57 @@ export function jahrhundert(zweistellig: number, bezugsjahr: number = new Date()
   return jahr > bezugsjahr ? jahr - 100 : jahr
 }
 
-/** Datum nach einem vorgegebenen Quellformat lesen. */
-function nachFormat(v: string, format: string, errors: MappingMessage[] = []): string | null {
+/** Zeitraum des Bestands, in dem zweistellige Jahre liegen muessen. */
+export interface Bestandsrahmen {
+  von?: number
+  bis?: number
+}
+
+export type JahrAuswahl =
+  | { jahr: number; angenommen: boolean }
+  | { jahr: null; von: number; bis: number; kandidaten: number[] }
+
+function jahrOderNichts(n: number | undefined): number | undefined {
+  return n !== undefined && Number.isInteger(n) && n > 0 && n <= 9999 ? n : undefined
+}
+
+/**
+ * Zweistelliges Jahr nach dem Rahmen des Bestands auflösen.
+ *
+ * Ohne Rahmen gilt `jahrhundert` (nie in der Zukunft), und die Annahme wird
+ * gemeldet. Mit Rahmen zaehlen die Jahre darin, die auf die zwei Ziffern
+ * enden: genau eines wird genommen, ohne Hinweis, weil der Rahmen bewusst
+ * gesetzt ist; keines oder mehrere heisst, der Wert entfaellt mit Warnung.
+ * Ist nur ein Ende gesetzt, reicht der Rahmen hundert Jahre weit, ohne
+ * offenes Ende aber nie ueber das laufende Jahr hinaus. Ein vertauschter
+ * Rahmen (von 1980 bis 1920) wird umgedreht.
+ */
+export function zweistelligesJahr(
+  zweistellig: number, rahmen: Bestandsrahmen = {}, bezugsjahr: number = new Date().getFullYear()
+): JahrAuswahl {
+  const von = jahrOderNichts(rahmen.von)
+  const bis = jahrOderNichts(rahmen.bis)
+  if (von === undefined && bis === undefined) return { jahr: jahrhundert(zweistellig, bezugsjahr), angenommen: true }
+  let lo = von ?? (bis as number) - 99
+  let hi = bis ?? Math.min((von as number) + 99, bezugsjahr)
+  if (lo > hi) [lo, hi] = [hi, lo]
+  const kandidaten: number[] = []
+  for (let c = Math.floor(lo / 100) * 100 + zweistellig; c <= hi; c += 100) {
+    if (c >= lo) kandidaten.push(c)
+  }
+  return kandidaten.length === 1
+    ? { jahr: kandidaten[0] as number, angenommen: false }
+    : { jahr: null, von: lo, bis: hi, kandidaten }
+}
+
+/**
+ * Datum nach einem vorgegebenen Quellformat lesen.
+ *
+ * Gibt `''` zurueck, wenn das Format passte, das zweistellige Jahr aber nicht
+ * in den Rahmen; die Warnung steht dann schon in `errors`, und die
+ * allgemeinen Regeln sollen es nicht noch einmal versuchen.
+ */
+function nachFormat(v: string, format: string, errors: MappingMessage[] = [], rahmen: Bestandsrahmen = {}): string | null {
   const order: string[] = []
   let pattern = '^'
   for (const ch of format) {
@@ -121,16 +170,33 @@ function nachFormat(v: string, format: string, errors: MappingMessage[] = []): s
   let month = 1
   let day = 1
   let geraten = false
+  let ausserhalb: Extract<JahrAuswahl, { jahr: null }> | null = null
   order.forEach((ch, i) => {
     const n = Number.parseInt(m[i + 1] ?? '', 10)
     if (!Number.isFinite(n)) return
     if (ch === 'Y') year = n
     else if (ch === 'y') {
-      year = jahrhundert(n)
-      geraten = true
+      const auswahl = zweistelligesJahr(n, rahmen)
+      if (auswahl.jahr === null) ausserhalb = auswahl
+      else {
+        year = auswahl.jahr
+        geraten = auswahl.angenommen
+      }
     } else if (ch === 'm' || ch === 'n') month = n
     else if (ch === 'd' || ch === 'j') day = n
   })
+  if (ausserhalb !== null) {
+    const a = ausserhalb as Extract<JahrAuswahl, { jahr: null }>
+    if (a.kandidaten.length === 0) {
+      errors.push({ ...meldung('transform.dateOutsideRange', { wert: v, von: a.von, bis: a.bis }), severity: 'warning' })
+    } else {
+      errors.push({
+        ...meldung('transform.dateCenturyAmbiguous', { wert: v, von: a.von, bis: a.bis, kandidaten: a.kandidaten.join(', ') }),
+        severity: 'warning'
+      })
+    }
+    return ''
+  }
   if (year === 0) return null
   const out = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   if (!kalendergueltig(out)) return null
@@ -158,6 +224,9 @@ const OFFEN = /(?:^|\s)(?:vor|nach|bis|ab|seit|fr(?:ü|ue)hestens|sp(?:ä|ae)tes
  *  - `transform.badDate` (Warnung): nicht eindeutig umzuwandeln, der Wert entfaellt,
  *  - `transform.dateCenturyGuessed` (Hinweis): zweistelliges Jahr aus dem
  *    Quellformat (`y`) auf ein Jahrhundert gesetzt, siehe `jahrhundert`,
+ *  - `transform.dateOutsideRange` / `transform.dateCenturyAmbiguous`
+ *    (Warnung): zweistelliges Jahr passt nicht oder mehrdeutig in den
+ *    Bestandsrahmen, der Wert entfaellt,
  *  - `transform.dateOpenRange` (Warnung): offener Zeitraum wie `vor 1970`, den
  *    das Schema nicht abbilden kann; der Wert entfaellt,
  *  - `transform.dateTimeDropped` (Hinweis): Uhrzeit abgeschnitten,
@@ -169,19 +238,19 @@ const OFFEN = /(?:^|\s)(?:vor|nach|bis|ab|seit|fr(?:ü|ue)hestens|sp(?:ä|ae)tes
  * Verlustfreie Umwandlungen melden nichts. Vorher und nachher stehen in der
  * Vorschau ohnehin nebeneinander.
  */
-export function toIsoDate(input: string, from: string, errors: MappingMessage[]): string {
+export function toIsoDate(input: string, from: string, errors: MappingMessage[], rahmen: Bestandsrahmen = {}): string {
   const v = input.trim().replace(/\s+/gu, ' ')
   if (v === '') return ''
 
-  const ergebnis = lies(v, from, errors)
+  const ergebnis = lies(v, from, errors, rahmen)
   if (ergebnis !== null) return ergebnis
   errors.push({ ...meldung('transform.badDate', { wert: v }), severity: 'warning' })
   return ''
 }
 
-function lies(v: string, from: string, errors: MappingMessage[]): string | null {
+function lies(v: string, from: string, errors: MappingMessage[], rahmen: Bestandsrahmen = {}): string | null {
   if (from !== '') {
-    const parsed = nachFormat(v, from, errors)
+    const parsed = nachFormat(v, from, errors, rahmen)
     if (parsed !== null) return parsed
   }
 

@@ -454,11 +454,25 @@ Datensatz bleibt exportierbar, denn ein Datum am Ereignis ist keine Pflicht.
 Mit `from` wird ein festes Quellformat gelesen; die Buchstaben folgen der
 PHP-Schreibweise und sind `d`, `j`, `m`, `n`, `Y`, `y`. Ein Tag, den es im Monat
 nicht gibt, wird dabei abgelehnt.
-Ein zweistelliges Jahr (`y`) kommt nie in die Zukunft: Was im laufenden Jahrhundert
-nach dem heutigen Jahr läge, gilt als voriges Jahrhundert (2026: `45` → 1945,
-`26` → 2026). Weil das Jahrhundert angenommen ist, steht dazu ein Hinweis im
-Prüfbericht (`transform.dateCenturyGuessed`). Bis zum 20.11.2026 galt eine feste
-Grenze bei 70, und `05.04.45` wurde still zu 2045.
+Für ein zweistelliges Jahr (`y`) lässt sich der Zeitraum des Bestands angeben,
+`yearFrom` und `yearTo`. Im Editor erscheinen die beiden Felder erst, wenn das
+Quellformat ein `y` enthält. Es gilt:
+
+| Rahmen | `05.04.25` wird | Meldung |
+|---|---|---|
+| keiner | `2025-04-05` (nie in der Zukunft: 2026 wird `45` zu 1945, `26` zu 2026) | Hinweis `transform.dateCenturyGuessed` |
+| 1900–1999 | `1925-04-05` | – |
+| nur `yearTo` 1965 | `1925-04-05` (hundert Jahre bis 1965) | – |
+| nur `yearFrom` 1950 | `2025-04-05`; ohne oberes Ende nie über das laufende Jahr hinaus | – |
+| 1960–1990 | entfällt, kein Jahrhundert passt | Warnung `transform.dateOutsideRange` |
+| 1895–2026 | entfällt, 1925 und 2025 passen | Warnung `transform.dateCenturyAmbiguous` |
+
+Ein vertauschter Rahmen wird umgedreht. Bis zum 20.11.2026 galt eine feste Grenze
+bei 70, und `05.04.45` wurde still zu 2045 (#54).
+
+```jsonc
+{ "op": "date", "from": "d.m.y", "yearFrom": 1920, "yearTo": 1999 }
+```
 
 ```jsonc
 { "op": "date" }                      // "14.03.1935" -> "1935-03-14"

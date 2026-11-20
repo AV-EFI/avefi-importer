@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { MappingJson, MappingMessage, ValidationIssue } from '#shared/types/domain'
-import { ISO_DATE_PATTERN, isIsoDate, jahrhundert, toIsoDate } from '../../server/lib/mapping/isodate.js'
+import { ISO_DATE_PATTERN, isIsoDate, jahrhundert, toIsoDate, zweistelligesJahr } from '../../server/lib/mapping/isodate.js'
 import { getTarget, validateTargetValue } from '../../server/lib/mapping/targets.js'
 import { buildPreview } from '../../server/lib/mapping/preview.js'
 import { emptyMapping } from '../../server/lib/mapping/profile.js'
@@ -140,6 +140,53 @@ describe('Konverter', () => {
     expect(r.meldungen.map((m) => [m.code, m.severity])).toEqual([['transform.dateCenturyGuessed', 'info']])
     // Vierstellig bleibt still.
     expect(wandle('05.04.1945', 'd.m.Y').meldungen).toEqual([])
+  })
+
+  it('löst zweistellige Jahre nach dem Bestandsrahmen auf', () => {
+    // Genau ein Kandidat: genommen, ohne Hinweis.
+    expect(zweistelligesJahr(25, { von: 1900, bis: 1999 }, 2026)).toEqual({ jahr: 1925, angenommen: false })
+    expect(zweistelligesJahr(25, { von: 2000, bis: 2030 }, 2026)).toEqual({ jahr: 2025, angenommen: false })
+    // Nur ein Ende: hundert Jahre weit, ohne Ende nie über das laufende Jahr.
+    expect(zweistelligesJahr(30, { bis: 1965 }, 2026)).toEqual({ jahr: 1930, angenommen: false })
+    expect(zweistelligesJahr(45, { von: 1950 }, 2026)).toMatchObject({ jahr: null, kandidaten: [] })
+    expect(zweistelligesJahr(10, { von: 1950 }, 2026)).toEqual({ jahr: 2010, angenommen: false })
+    // Mehr als hundert Jahre: mehrdeutig.
+    expect(zweistelligesJahr(25, { von: 1895, bis: 2026 }, 2026))
+      .toEqual({ jahr: null, von: 1895, bis: 2026, kandidaten: [1925, 2025] })
+    // Vertauscht wird umgedreht; kein Rahmen ist das gleitende Fenster.
+    expect(zweistelligesJahr(45, { von: 1980, bis: 1920 }, 2026)).toEqual({ jahr: 1945, angenommen: false })
+    expect(zweistelligesJahr(45, {}, 2026)).toEqual({ jahr: 1945, angenommen: true })
+  })
+
+  it('wendet den Bestandsrahmen im Konverter an und meldet, was nicht passt', () => {
+    const mit = (v: string, von?: number, bis?: number) => {
+      const meldungen: MappingMessage[] = []
+      return { wert: toIsoDate(v, 'd.m.y', meldungen, { von, bis }), meldungen }
+    }
+    const a = mit('05.04.25', 1900, 1999)
+    expect(a.wert).toBe('1925-04-05')
+    expect(a.meldungen).toEqual([])
+
+    const b = mit('05.04.45', 1960, 1990)
+    expect(b.wert).toBe('')
+    expect(b.meldungen.map((m) => [m.code, m.severity])).toEqual([['transform.dateOutsideRange', 'warning']])
+
+    const c = mit('05.04.25', 1895, 2026)
+    expect(c.wert).toBe('')
+    expect(c.meldungen.map((m) => m.code)).toEqual(['transform.dateCenturyAmbiguous'])
+    expect(c.meldungen[0]!.params).toMatchObject({ kandidaten: '1925, 2025' })
+  })
+
+  it('reicht den Bestandsrahmen aus dem Profil an den Konverter durch', () => {
+    const m: MappingJson = emptyMapping(['Datum'], '1.2.3')
+    m.columns['Datum'] = {
+      pre: [{ op: 'date', from: 'd.m.y', yearFrom: 1900, yearTo: 1999 }],
+      targets: [{ target: 'work.production.date', post: [] }]
+    }
+    const run = new ProfileRun(m, { schema: testSchema })
+    const issues = run.runRow({ Datum: '05.04.25' }, 'r1', 2).issues.filter((i) => String(i.code).startsWith('transform.'))
+    expect(issues).toEqual([])
+    expect(JSON.stringify(run.runRow({ Datum: '05.04.25' }, 'r2', 3).canonical)).toContain('1925-04-05')
   })
 
   it('liest weiter ein vorgegebenes Quellformat', () => {

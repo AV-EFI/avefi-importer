@@ -42,6 +42,8 @@ export interface TransformParamSpec {
   type: 'text' | 'int' | 'bool' | 'map' | 'columns' | 'choice'
   optional?: boolean
   choices?: Record<string, string>
+  /** Nur anzeigen, wenn ein anderer Parameter diesen Text enthaelt. */
+  showIf?: { param: string; includes: string }
 }
 
 export interface TransformOpMeta {
@@ -245,7 +247,12 @@ export const TRANSFORM_CATALOG: Record<string, TransformOpMeta> = {
   },
   date: {
     op: 'date', label: 'Datum nach ISO', group: 'Typen', in: 'text', out: 'text',
-    params: [P('from', 'Quellformat (z. B. d.m.Y)', 'text', { optional: true })]
+    params: [
+      P('from', 'Quellformat (z. B. d.m.Y)', 'text', { optional: true }),
+      // Nur sichtbar, wenn das Quellformat ein zweistelliges Jahr (y) hat.
+      P('yearFrom', 'Bestand von (Jahr)', 'int', { optional: true, showIf: { param: 'from', includes: 'y' } }),
+      P('yearTo', 'Bestand bis (Jahr)', 'int', { optional: true, showIf: { param: 'from', includes: 'y' } })
+    ]
   },
   duration: {
     op: 'duration', label: 'Laufzeit nach ISO 8601', group: 'Typen', in: 'text', out: 'text',
@@ -775,7 +782,10 @@ function apply(
     }
 
     case 'date':
-      return toIsoDate(str(value), paramStr(p, 'from'), errors)
+      return toIsoDate(str(value), paramStr(p, 'from'), errors, {
+        von: paramInt(p, 'yearFrom', 0) || undefined,
+        bis: paramInt(p, 'yearTo', 0) || undefined
+      })
 
     case 'duration':
       return toIsoDuration(str(value), paramStr(p, 'unit', 'auto'), errors)

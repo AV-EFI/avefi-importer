@@ -44,9 +44,20 @@ als 20xx, alle anderen als 19xx.
 - Weil das Jahrhundert angenommen ist, meldet der Prüfbericht es als Hinweis
   (`transform.dateCenturyGuessed`, DE/EN), gebündelt wie die übrigen Meldungen
   der Konverterkette. Mit vierstelligem Jahr (`Y`) bleibt alles still.
-- Doku: `docs/mapping-profile.md`, Abschnitt „Datum nach ISO“.
+- Neu: Im Konverter „Datum nach ISO“ lässt sich der Zeitraum des Bestands
+  angeben („Bestand von / bis“, `yearFrom`/`yearTo`). Die Felder erscheinen nur,
+  wenn das Quellformat ein zweistelliges Jahr hat. Passt genau ein Jahrhundert,
+  wird es ohne Hinweis genommen („1900–1999“: `25` → 1925). Passt keines oder
+  passen mehrere (Rahmen über hundert Jahre), entfällt der Wert mit Warnung
+  (`transform.dateOutsideRange`, `transform.dateCenturyAmbiguous`). Anregung von
+  Andreas am 20.11.2026, damit `25` je nach Bestand 1925 oder 2025 sein kann.
+- Ein geleertes Zahlenfeld im Zuordnungseditor entfernt den Wert, statt 0 zu
+  speichern.
+- Doku: `docs/mapping-profile.md`, Abschnitt „Datum nach ISO“, und Handbuch
+  Kapitel 7.
 
-Nachweis: neuer Fall in `tests/mapping/isodate.test.ts` mit festem Bezugsjahr.
+Nachweis: neue Fälle in `tests/mapping/isodate.test.ts` mit festem Bezugsjahr,
+einer davon über das Mappingprofil.
 
 ---
 

@@ -39,6 +39,8 @@ export const MELDUNGEN: Record<string, string> = {
   'transform.dateTimeDropped': '"{wert}": Uebernommen wurde das Datum {datum}, die Uhrzeit nicht',
   'transform.dateYearExtracted': '"{wert}": Uebernommen wurde nur die Jahreszahl {datum}',
   'transform.dateCenturyGuessed': '"{wert}": zweistelliges Jahr als {datum} gelesen; das Jahrhundert ist angenommen',
+  'transform.dateOutsideRange': '"{wert}" passt in keinem Jahrhundert in den Bestand {von}-{bis} und wurde nicht uebernommen',
+  'transform.dateCenturyAmbiguous': '"{wert}": das zweistellige Jahr passt im Bestand {von}-{bis} auf {kandidaten}; der Wert wurde nicht uebernommen',
   'transform.dateOpenRange': '"{wert}" beschreibt einen offenen Zeitraum, den das AVefi-Schema nicht abbilden kann; der Wert wurde nicht uebernommen',
   'transform.badDuration': '"{wert}" konnte nicht als Laufzeit gelesen werden',
   'transform.notInValuemap': 'Wert "{wert}" ist in der Zuordnung nicht enthalten',

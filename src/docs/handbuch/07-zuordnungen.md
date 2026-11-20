@@ -177,7 +177,11 @@ Er wandelt außerdem um, was eindeutig ist: Spannen wie „1976 - 1977“ oder �
 sagt es. Was sich nicht eindeutig lesen lässt — „24“, „2024-13“, „1950er“ —, übernimmt
 er nicht und meldet es im Prüfbericht als Warnung, statt eine Jahreszahl zu raten.
 Dasselbe gilt für offene Angaben wie „vor 1970“ oder „ab 1950“: Das Schema kennt keinen
-Zeitraum ohne Anfang oder Ende, und die Jahreszahl allein hieße etwas anderes. In der
+Zeitraum ohne Anfang oder Ende, und die Jahreszahl allein hieße etwas anderes.
+Hat die Quelle zweistellige Jahre („05.04.45“, Quellformat `d.m.y`), kann im selben
+Konverter der Zeitraum des Bestands stehen, etwa 1920 bis 1999. Dann wird aus „45“
+eindeutig 1945. Ohne Angabe gilt: nie in der Zukunft, mit Hinweis im Prüfbericht.
+Passt ein Jahr gar nicht oder auf zwei Jahrhunderte, wird es nicht übernommen. In der
 Vorschau steht bei solchen Werten ⚠ statt ✓.
 
 **Laufzeiten** verlangt das AVefi-Schema als `PT01H30M00S` — mindestens zweistellig.
