@@ -821,7 +821,9 @@
         "whenFalse": "Output when false"
       },
       "date": {
-        "from": "Source format (e.g. d.m.Y)"
+        "from": "Source format (e.g. d.m.Y)",
+        "yearFrom": "Holdings from (year)",
+        "yearTo": "Holdings to (year)"
       },
       "duration": {
         "unit": "Unit of the source"
@@ -978,6 +980,9 @@
       "transform_badDate": "“{wert}” is not an unambiguous date and was not taken over.",
       "transform_dateTimeDropped": "“{wert}”: the date {datum} was taken over, the time was not.",
       "transform_dateYearExtracted": "“{wert}”: only the year {datum} was taken over.",
+      "transform_dateCenturyGuessed": "“{wert}”: the two-digit year was read as {datum}. The century is assumed; a date in the future is taken as the previous century.",
+      "transform_dateOutsideRange": "“{wert}” does not fit the holdings period {von}–{bis} in any century and was not taken over.",
+      "transform_dateCenturyAmbiguous": "“{wert}”: within the holdings period {von}–{bis} the two-digit year could be {kandidaten}. The value was not taken over; a narrower period makes it unambiguous.",
       "transform_dateOpenRange": "“{wert}” describes an open-ended period, which the AVefi schema cannot express. The value was not taken over.",
       "transform_badDuration": "“{wert}” could not be read as a duration",
       "transform_badRegex": "Invalid regular expression: {muster}",

@@ -39,7 +39,15 @@ function choiceLabel(param: TransformParamSpec, value: string): string {
   return te(key) ? t(key) : (param.choices?.[value] ?? value)
 }
 
-const params = computed(() => props.meta?.params ?? [])
+// Parameter mit `showIf` erscheinen nur, wenn sie gebraucht werden: der
+// Bestandsrahmen etwa nur bei einem Quellformat mit zweistelligem Jahr.
+const params = computed(() => (props.meta?.params ?? []).filter((p) =>
+  p.showIf === undefined || String(props.step[p.showIf.param] ?? '').includes(p.showIf.includes)))
+
+/** Ein geleertes Zahlenfeld entfernt den Wert, statt 0 zu speichern. */
+function intOderLeer(raw: string): number | undefined {
+  return raw.trim() === '' ? undefined : Number(raw)
+}
 
 function value(name: string): unknown {
   return props.step[name]
@@ -151,7 +159,7 @@ function paramId(param: TransformParamSpec): string {
           <input :id="paramId(param)" class="ui-input" :type="param.type === 'int' ? 'number' : 'text'"
                  :value="String(value(param.name) ?? '')"
                  @change="set(param.name, param.type === 'int'
-                   ? Number(($event.target as HTMLInputElement).value)
+                   ? intOderLeer(($event.target as HTMLInputElement).value)
                    : ($event.target as HTMLInputElement).value)">
         </template>
       </div>
