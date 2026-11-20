@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { MappingJson, MappingMessage, ValidationIssue } from '#shared/types/domain'
-import { ISO_DATE_PATTERN, isIsoDate, toIsoDate } from '../../server/lib/mapping/isodate.js'
+import { ISO_DATE_PATTERN, isIsoDate, jahrhundert, toIsoDate } from '../../server/lib/mapping/isodate.js'
 import { getTarget, validateTargetValue } from '../../server/lib/mapping/targets.js'
 import { buildPreview } from '../../server/lib/mapping/preview.js'
 import { emptyMapping } from '../../server/lib/mapping/profile.js'
@@ -124,6 +124,22 @@ describe('Konverter', () => {
     // Lucas Spur: `12024` wurde zu `1202`.
     expect(wandle('12024').wert).toBe('')
     expect(wandle('2024~').wert).toBe('2024~')
+  })
+
+  it('setzt zweistellige Jahre nie in die Zukunft und sagt es (Luca, #54)', () => {
+    // Bezugsjahr fest, damit der Test nicht mit dem Kalender altert.
+    expect(jahrhundert(45, 2026)).toBe(1945)
+    expect(jahrhundert(26, 2026)).toBe(2026)
+    expect(jahrhundert(27, 2026)).toBe(1927)
+    expect(jahrhundert(0, 2026)).toBe(2000)
+    expect(jahrhundert(99, 2026)).toBe(1999)
+    expect(jahrhundert(10, 2101)).toBe(2010)
+
+    const r = wandle('05.04.45', 'd.m.y')
+    expect(r.wert).toBe('1945-04-05')
+    expect(r.meldungen.map((m) => [m.code, m.severity])).toEqual([['transform.dateCenturyGuessed', 'info']])
+    // Vierstellig bleibt still.
+    expect(wandle('05.04.1945', 'd.m.Y').meldungen).toEqual([])
   })
 
   it('liest weiter ein vorgegebenes Quellformat', () => {

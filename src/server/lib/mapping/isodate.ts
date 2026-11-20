@@ -83,8 +83,24 @@ const DATE_TOKENS: Record<string, string> = {
   Y: '(\\d{4})', y: '(\\d{2})'
 }
 
+/**
+ * Zweistelliges Jahr (`y`) auf ein Jahrhundert setzen.
+ *
+ * Bis zum 20.11.2026 galt eine feste Grenze: unter 70 wurde 20xx, sonst 19xx.
+ * Aus `05.04.45` wurde so still 2045 (Luca, #54). Ein Filmbestand hat kein
+ * Datum in der Zukunft; deshalb gilt jetzt das gleitende Fenster: Was im
+ * laufenden Jahrhundert in der Zukunft laege, gehoert ins vorige. 2026 heisst
+ * das: `26` wird 2026, `27` wird 1927, `45` wird 1945. Geraten bleibt es, und
+ * das sagt ein Hinweis.
+ */
+export function jahrhundert(zweistellig: number, bezugsjahr: number = new Date().getFullYear()): number {
+  const basis = Math.floor(bezugsjahr / 100) * 100
+  const jahr = basis + zweistellig
+  return jahr > bezugsjahr ? jahr - 100 : jahr
+}
+
 /** Datum nach einem vorgegebenen Quellformat lesen. */
-function nachFormat(v: string, format: string): string | null {
+function nachFormat(v: string, format: string, errors: MappingMessage[] = []): string | null {
   const order: string[] = []
   let pattern = '^'
   for (const ch of format) {
@@ -104,17 +120,24 @@ function nachFormat(v: string, format: string): string | null {
   let year = 0
   let month = 1
   let day = 1
+  let geraten = false
   order.forEach((ch, i) => {
     const n = Number.parseInt(m[i + 1] ?? '', 10)
     if (!Number.isFinite(n)) return
     if (ch === 'Y') year = n
-    else if (ch === 'y') year = n < 70 ? 2000 + n : 1900 + n
-    else if (ch === 'm' || ch === 'n') month = n
+    else if (ch === 'y') {
+      year = jahrhundert(n)
+      geraten = true
+    } else if (ch === 'm' || ch === 'n') month = n
     else if (ch === 'd' || ch === 'j') day = n
   })
   if (year === 0) return null
   const out = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-  return kalendergueltig(out) ? out : null
+  if (!kalendergueltig(out)) return null
+  if (geraten) {
+    errors.push({ ...meldung('transform.dateCenturyGuessed', { wert: v, datum: out }), severity: 'info' })
+  }
+  return out
 }
 
 /** Ungefaehr-Angaben, die genau `~` des Schemas bedeuten. */
@@ -133,6 +156,8 @@ const OFFEN = /(?:^|\s)(?:vor|nach|bis|ab|seit|fr(?:ü|ue)hestens|sp(?:ä|ae)tes
  * `errors`, was der Nutzer erfahren muss:
  *
  *  - `transform.badDate` (Warnung): nicht eindeutig umzuwandeln, der Wert entfaellt,
+ *  - `transform.dateCenturyGuessed` (Hinweis): zweistelliges Jahr aus dem
+ *    Quellformat (`y`) auf ein Jahrhundert gesetzt, siehe `jahrhundert`,
  *  - `transform.dateOpenRange` (Warnung): offener Zeitraum wie `vor 1970`, den
  *    das Schema nicht abbilden kann; der Wert entfaellt,
  *  - `transform.dateTimeDropped` (Hinweis): Uhrzeit abgeschnitten,
@@ -156,7 +181,7 @@ export function toIsoDate(input: string, from: string, errors: MappingMessage[])
 
 function lies(v: string, from: string, errors: MappingMessage[]): string | null {
   if (from !== '') {
-    const parsed = nachFormat(v, from)
+    const parsed = nachFormat(v, from, errors)
     if (parsed !== null) return parsed
   }
 

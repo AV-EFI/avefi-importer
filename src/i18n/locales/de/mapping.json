@@ -978,6 +978,7 @@
       "transform_badDate": "„{wert}“ ist kein eindeutiges Datum und wurde nicht übernommen.",
       "transform_dateTimeDropped": "„{wert}“: Übernommen wurde das Datum {datum}, die Uhrzeit nicht.",
       "transform_dateYearExtracted": "„{wert}“: Übernommen wurde nur die Jahreszahl {datum}.",
+      "transform_dateCenturyGuessed": "„{wert}“: Das zweistellige Jahr wurde als {datum} gelesen. Das Jahrhundert ist angenommen; ein Datum in der Zukunft gilt als voriges Jahrhundert.",
       "transform_dateOpenRange": "„{wert}“ beschreibt einen offenen Zeitraum, den das AVefi-Schema nicht abbilden kann. Der Wert wurde nicht übernommen.",
       "transform_badDuration": "„{wert}“ konnte nicht als Laufzeit gelesen werden",
       "transform_badRegex": "Ungültiger regulärer Ausdruck: {muster}",

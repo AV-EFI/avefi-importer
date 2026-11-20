@@ -454,6 +454,11 @@ Datensatz bleibt exportierbar, denn ein Datum am Ereignis ist keine Pflicht.
 Mit `from` wird ein festes Quellformat gelesen; die Buchstaben folgen der
 PHP-Schreibweise und sind `d`, `j`, `m`, `n`, `Y`, `y`. Ein Tag, den es im Monat
 nicht gibt, wird dabei abgelehnt.
+Ein zweistelliges Jahr (`y`) kommt nie in die Zukunft: Was im laufenden Jahrhundert
+nach dem heutigen Jahr läge, gilt als voriges Jahrhundert (2026: `45` → 1945,
+`26` → 2026). Weil das Jahrhundert angenommen ist, steht dazu ein Hinweis im
+Prüfbericht (`transform.dateCenturyGuessed`). Bis zum 20.11.2026 galt eine feste
+Grenze bei 70, und `05.04.45` wurde still zu 2045.
 
 ```jsonc
 { "op": "date" }                      // "14.03.1935" -> "1935-03-14"

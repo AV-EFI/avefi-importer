@@ -30,6 +30,26 @@ GitHub weiter.
 
 ---
 
+## 2026-11-20 — Luca Wollny: zweistellige Jahre im Quellformat (#54)
+
+Gemeldet in #54: Mit dem Quellformat `d.m.y` wurde `05.04.45` ohne Hinweis zu
+`2045-04-05`. Ursache war eine feste Grenze: Zweistellige Jahre unter 70 galten
+als 20xx, alle anderen als 19xx.
+
+**Was daraus wurde:**
+
+- Ein zweistelliges Jahr kommt nie in die Zukunft. Was im laufenden Jahrhundert
+  nach dem heutigen Jahr läge, gilt als voriges Jahrhundert (2026: `45` → 1945,
+  `26` → 2026, `27` → 1927). Ein Filmbestand hat kein Datum in der Zukunft.
+- Weil das Jahrhundert angenommen ist, meldet der Prüfbericht es als Hinweis
+  (`transform.dateCenturyGuessed`, DE/EN), gebündelt wie die übrigen Meldungen
+  der Konverterkette. Mit vierstelligem Jahr (`Y`) bleibt alles still.
+- Doku: `docs/mapping-profile.md`, Abschnitt „Datum nach ISO“.
+
+Nachweis: neuer Fall in `tests/mapping/isodate.test.ts` mit festem Bezugsjahr.
+
+---
+
 ## 2026-11-18 — Luca Wollny (#53) und Nachtest #51: Sammelmeldungen, offene Zeitangaben, Überschrift im Prüfbericht (#54)
 
 Anlass: Andreas' Zugang zur Produktion; dort lagen die Nachtestdateien vom
